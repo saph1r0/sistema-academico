@@ -1,27 +1,36 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from abc import ABC, abstractmethod
+from typing import List
+from dominio.modelo.usuario.usuario import Usuario
+from dominio.modelo.usuario.rol import Rol   # o RolUsuario, según como lo tengas definido
 
-class IUsuarioRepository:
-    def __init__(self):
+class IUsuarioRepository(ABC):
+
+    @abstractmethod
+    def agregar(self, usuario: Usuario) -> None:
         pass
 
-    def agregar(self, usuario):
+    @abstractmethod
+    def obtener_por_id(self, id: str) -> Usuario | None:
         pass
 
-    def obtener_por_id(self, id):
+    @abstractmethod
+    def obtener_por_correo(self, correo: str) -> Usuario | None:
         pass
 
-    def obtener_por_correo(self, correo):
+    @abstractmethod
+    def eliminar(self, id: str) -> None:
         pass
 
-    def eliminar(self, id):
+    @abstractmethod
+    def listar_activos(self) -> List[Usuario]:
         pass
 
-    def listar_activos(): list[Usuario](self, ):
+    @abstractmethod
+    def listar_por_rol(self, rol: Rol) -> List[Usuario]:
         pass
 
-    def listar_por_rol(rol: RolUsuario): list[Usuario](self, ):
-        pass
-
-    def buscar_por_id(self, id):
+    @abstractmethod
+    def buscar_por_id(self, id: str) -> Usuario | None:
         pass

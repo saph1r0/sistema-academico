@@ -10,6 +10,7 @@ class Usuario:
         self.contrasena_hash = None
         self.activo = None
         self.ultimo_acceso = None
+        self.rol = None  # "estudiante", "profesor", "secretaria", "admin" YA QUE CADA USUARIO 1 ROL
 
     def autenticar(self, credenciales):
         pass

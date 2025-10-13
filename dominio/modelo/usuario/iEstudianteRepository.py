@@ -1,15 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from abc import ABC, abstractmethod
+from typing import List
+from dominio.modelo.usuario.estudiante import Estudiante  # o Alumno si esa es tu clase
 
-class IEstudianteRepository:
-    def __init__(self):
+class IEstudianteRepository(ABC):
+
+    @abstractmethod
+    def listar_por_anio_ingreso(self, anio: int) -> List[Estudiante]:
         pass
 
-    def listar_por_año_ingreso(año: int): list[Alumno](self, ):
+    @abstractmethod
+    def buscar_por_apellido(self, apellido: str) -> List[Estudiante]:
         pass
 
-    def buscar_por_apellido(apellido: str): list[Alumno](self, ):
+    @abstractmethod
+    def obtener_alumnos_curso(self, curso_id: str) -> List[Estudiante]:
         pass
-
-    def obtener_alumnos_curso(curso_id: str): list[Alumno](self, ):
-        pass
+    
