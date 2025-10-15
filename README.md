@@ -85,6 +85,3 @@ sistema-academico/
     └── datos_iniciales.sql
 ```
 
----
-
-**La base está lista. ¡A trabajar equipo! 💪**
