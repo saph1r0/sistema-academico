@@ -60,7 +60,7 @@ pytest tests/repositorio/ -v
 ```
 ---
 
-## 📁 Estructura (Actualizazvion y nuevos archivos)
+## 📁 Estructura (Actualizacion y nuevos archivos)
 
 ```
 sistema-academico/
