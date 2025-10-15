@@ -1,0 +1,28 @@
+[project]
+name = "modelsistak"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "saph1r0", email = "sophiqwe123@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "django (>=5.2.7,<6.0.0)",
+    "psycopg2-binary (>=2.9.11,<3.0.0)",
+    "pandas (>=2.3.3,<3.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+[dependency-groups]
+dev = [
+    "pytest (>=8.4.2,<9.0.0)",
+    "pytest-django (>=4.11.1,<5.0.0)",
+    "pytest-cov (>=7.0.0,<8.0.0)"
+]
