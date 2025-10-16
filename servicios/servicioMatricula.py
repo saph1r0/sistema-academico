@@ -37,12 +37,11 @@ class ServicioMatricula:
                  
             anio_ingreso = cui[:4]
 
-            est = Estudiante(student_id= cui)
-            
-              # asignar atributos manualmente (heredados de Usuario)
-            est.nombre = nombres
-            est.apellido = apellidos
-            est.año_ingreso = anio_ingreso  
+            est = Estudiante(
+            codigo=cui,
+            apellidos=apellidos, # <-- ¡NUEVO!
+            nombres=nombres      # <-- ¡NUEVO!
+        ) 
 
             self.repo.guardar(est)
             estudiantes.append(est)

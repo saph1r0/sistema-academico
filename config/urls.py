@@ -20,9 +20,7 @@ from presentacion.controladores.matricula_controller import MatriculaAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Mapea el POST de la clase MatriculaAPIView
-    path('api/matriculas/upload_excel/', MatriculaAPIView.as_view(), name='matriculas-upload'),
     
-    # Mapea el GET de la clase MatriculaAPIView
+    path('api/matriculas/upload_excel/', MatriculaAPIView.as_view(), name='matriculas-upload'),
     path('api/matriculas/', MatriculaAPIView.as_view(), name='matriculas-list'),
 ]
