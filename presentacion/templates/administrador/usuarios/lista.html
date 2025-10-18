@@ -1,0 +1,466 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-status-badge {
+        transition: all 0.2s ease;
+    }
+
+    .user-actions button {
+        transition: all 0.2s ease;
+    }
+
+    .user-actions button:hover {
+        transform: translateY(-1px);
+    }
+
+    .search-input:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .filter-dropdown {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ page_title }}</h1>
+            <p class="mt-1 text-sm text-gray-600">
+                Gestiona usuarios del sistema, activa o desactiva cuentas
+            </p>
+        </div>
+        <div class="mt-4 sm:mt-0">
+            <div class="flex space-x-3 text-sm">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span class="text-gray-600">{{ usuarios_activos }} Activos</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    <span class="text-gray-600">{{ usuarios_inactivos }} Inactivos</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-gray-400 rounded-full mr-2"></div>
+                    <span class="text-gray-600">{{ total_usuarios }} Total</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Search Section -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <form method="GET" id="filter-form" class="space-y-4 sm:space-y-0 sm:flex sm:items-end sm:space-x-4">
+            <!-- Search Input -->
+            <div class="flex-1">
+                <label for="search" class="block text-sm font-medium text-gray-700 mb-1">
+                    Buscar usuarios
+                </label>
+                <div class="relative">
+                    <input type="text" id="search" name="search" value="{{ current_filters.search }}"
+                        placeholder="Buscar por nombre, apellido o email..."
+                        class="search-input block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="h-5 w-5 text-gray-400"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Role Filter -->
+            <div class="sm:w-48">
+                <label for="rol" class="block text-sm font-medium text-gray-700 mb-1">
+                    Filtrar por rol
+                </label>
+                <select id="rol" name="rol"
+                    class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                    <option value="todos" {% if current_filters.rol == 'todos' %}selected{% endif %}>
+                        Todos los roles
+                    </option>
+                    {% for value, label in roles_choices %}
+                    <option value="{{ value }}" {% if current_filters.rol == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+            </div>
+
+            <!-- Status Filter -->
+            <div class="sm:w-48">
+                <label for="estado" class="block text-sm font-medium text-gray-700 mb-1">
+                    Filtrar por estado
+                </label>
+                <select id="estado" name="estado"
+                    class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+                    <option value="todos" {% if current_filters.estado == 'todos' %}selected{% endif %}>
+                        Todos los estados
+                    </option>
+                    <option value="activo" {% if current_filters.estado == 'activo' %}selected{% endif %}>
+                        Activos
+                    </option>
+                    <option value="inactivo" {% if current_filters.estado == 'inactivo' %}selected{% endif %}>
+                        Inactivos
+                    </option>
+                </select>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div class="flex space-x-2">
+                <button type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="filter" class="h-4 w-4 mr-2"></i>
+                    Filtrar
+                </button>
+                <a href="{% url 'admin:usuarios' %}"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="x" class="h-4 w-4 mr-2"></i>
+                    Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+        {% if usuarios %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Usuario
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Rol
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Estado
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Último acceso
+                        </th>
+                        <th scope="col"
+                            class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Acciones
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200" id="users-table-body">
+                    {% for usuario in usuarios %}
+                    <tr class="hover:bg-gray-50" data-user-id="{{ usuario.id }}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-sm font-medium text-gray-700">
+                                            {{ usuario.nombre.0 }}{{ usuario.apellido.0 }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ usuario.nombre }} {{ usuario.apellido }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        {{ usuario.email }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if usuario.rol == 'admin' %}bg-purple-100 text-purple-800
+                                        {% elif usuario.rol == 'docente' %}bg-blue-100 text-blue-800
+                                        {% elif usuario.rol == 'secretaria' %}bg-green-100 text-green-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ usuario.get_rol_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span
+                                class="user-status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if usuario.activo %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                <div class="w-1.5 h-1.5 rounded-full mr-1.5
+                                            {% if usuario.activo %}bg-green-400{% else %}bg-red-400{% endif %}">
+                                </div>
+                                {% if usuario.activo %}Activo{% else %}Inactivo{% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if usuario.ultimo_acceso %}
+                            {{ usuario.ultimo_acceso|date:"d/m/Y H:i" }}
+                            {% else %}
+                            <span class="text-gray-400">Nunca</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium user-actions">
+                            {% if usuario.id != request.user.id %}
+                            {% if usuario.activo %}
+                            <button type="button" onclick="toggleUserStatus('{{ usuario.id }}', 'desactivar')"
+                                class="inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                                <i data-lucide="user-x" class="h-3 w-3 mr-1"></i>
+                                Desactivar
+                            </button>
+                            {% else %}
+                            <button type="button" onclick="toggleUserStatus('{{ usuario.id }}', 'activar')"
+                                class="inline-flex items-center px-3 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <i data-lucide="user-check" class="h-3 w-3 mr-1"></i>
+                                Activar
+                            </button>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-xs text-gray-400">Tu cuenta</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if page_obj.has_previous %}
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                    class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Anterior
+                </a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                    class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    Siguiente
+                </a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700">
+                        Mostrando
+                        <span class="font-medium">{{ page_obj.start_index }}</span>
+                        a
+                        <span class="font-medium">{{ page_obj.end_index }}</span>
+                        de
+                        <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                        usuarios
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+                            class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                            <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                        </a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <span
+                            class="relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600">
+                            {{ num }}
+                        </span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a
+                            href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}"
+                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            {{ num }}
+                            </a>
+                            {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                            </a>
+                            {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+            <i data-lucide="users" class="mx-auto h-12 w-12 text-gray-400"></i>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No se encontraron usuarios</h3>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if current_filters.search or current_filters.rol != 'todos' or current_filters.estado != 'todos' %}
+                Intenta ajustar los filtros de búsqueda.
+                {% else %}
+                No hay usuarios registrados en el sistema.
+                {% endif %}
+            </p>
+            {% if current_filters.search or current_filters.rol != 'todos' or current_filters.estado != 'todos' %}
+            <div class="mt-6">
+                <a href="{% url 'administrador:usuarios' %}"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Limpiar filtros
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast-notification" class="fixed top-4 right-4 z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <div id="toast-icon" class="h-6 w-6"></div>
+            </div>
+            <div class="ml-3 w-0 flex-1">
+                <p id="toast-message" class="text-sm font-medium text-gray-900"></p>
+            </div>
+            <div class="ml-4 flex-shrink-0 flex">
+                <button onclick="hideToast()"
+                    class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <i data-lucide="x" class="h-5 w-5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // CSRF Token for AJAX requests
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Auto-submit form on filter changes
+    document.getElementById('rol').addEventListener('change', function () {
+        document.getElementById('filter-form').submit();
+    });
+
+    document.getElementById('estado').addEventListener('change', function () {
+        document.getElementById('filter-form').submit();
+    });
+
+    // Search with debounce
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filter-form').submit();
+        }, 500);
+    });
+
+    // Toggle user status function
+    function toggleUserStatus(userId, action) {
+        const button = event.target.closest('button');
+        const row = document.querySelector(`tr[data-user-id="${userId}"]`);
+
+        // Disable button during request
+        button.disabled = true;
+        button.innerHTML = '<i data-lucide="loader-2" class="h-3 w-3 mr-1 animate-spin"></i>Procesando...';
+
+        fetch('{% url "administrador:usuarios_api" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: `action=${action}&user_id=${userId}`
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update status badge
+                    const statusBadge = row.querySelector('.user-status-badge');
+                    const statusDot = statusBadge.querySelector('div');
+
+                    if (data.user_status) {
+                        statusBadge.className = 'user-status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                        statusDot.className = 'w-1.5 h-1.5 rounded-full mr-1.5 bg-green-400';
+                        statusBadge.innerHTML = '<div class="w-1.5 h-1.5 rounded-full mr-1.5 bg-green-400"></div>Activo';
+
+                        // Update button
+                        button.className = 'inline-flex items-center px-3 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500';
+                        button.innerHTML = '<i data-lucide="user-x" class="h-3 w-3 mr-1"></i>Desactivar';
+                        button.onclick = () => toggleUserStatus(userId, 'desactivar');
+                    } else {
+                        statusBadge.className = 'user-status-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
+                        statusDot.className = 'w-1.5 h-1.5 rounded-full mr-1.5 bg-red-400';
+                        statusBadge.innerHTML = '<div class="w-1.5 h-1.5 rounded-full mr-1.5 bg-red-400"></div>Inactivo';
+
+                        // Update button
+                        button.className = 'inline-flex items-center px-3 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500';
+                        button.innerHTML = '<i data-lucide="user-check" class="h-3 w-3 mr-1"></i>Activar';
+                        button.onclick = () => toggleUserStatus(userId, 'activar');
+                    }
+
+                    // Re-initialize Lucide icons
+                    lucide.createIcons();
+
+                    // Show success toast
+                    showToast(data.message, 'success');
+                } else {
+                    // Show error toast
+                    showToast(data.error, 'error');
+
+                    // Reset button
+                    resetButton(button, action);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error de conexión. Intenta nuevamente.', 'error');
+                resetButton(button, action);
+            })
+            .finally(() => {
+                button.disabled = false;
+            });
+    }
+
+    function resetButton(button, action) {
+        if (action === 'activar') {
+            button.innerHTML = '<i data-lucide="user-check" class="h-3 w-3 mr-1"></i>Activar';
+        } else {
+            button.innerHTML = '<i data-lucide="user-x" class="h-3 w-3 mr-1"></i>Desactivar';
+        }
+        lucide.createIcons();
+    }
+
+    // Toast notification functions
+    function showToast(message, type) {
+        const toast = document.getElementById('toast-notification');
+        const icon = document.getElementById('toast-icon');
+        const messageEl = document.getElementById('toast-message');
+
+        messageEl.textContent = message;
+
+        if (type === 'success') {
+            icon.innerHTML = '<i data-lucide="check-circle" class="h-6 w-6 text-green-400"></i>';
+        } else {
+            icon.innerHTML = '<i data-lucide="alert-circle" class="h-6 w-6 text-red-400"></i>';
+        }
+
+        lucide.createIcons();
+
+        toast.classList.remove('hidden');
+
+        // Auto-hide after 5 seconds
+        setTimeout(hideToast, 5000);
+    }
+
+    function hideToast() {
+        document.getElementById('toast-notification').classList.add('hidden');
+    }
+</script>
+{% endblock %}

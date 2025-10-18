@@ -1,0 +1,468 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}Dashboard Administrativo{% endblock %}
+{% block page_title %}Dashboard Administrativo{% endblock %}
+{% block breadcrumb_current %}Dashboard{% endblock %}
+
+{% block styles %}
+<style>
+    .metric-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .alert-card {
+        animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .loading-skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+    }
+    @keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Alertas críticas -->
+{% if tiene_alertas_criticas %}
+<div class="mb-6">
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-400"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-red-700">
+                    <strong>Atención:</strong> Hay alertas críticas que requieren su atención inmediata.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Métricas principales -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Usuarios Activos -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Usuarios Activos</p>
+                <p class="text-2xl font-bold text-gray-900" id="usuarios-activos">
+                    {{ metricas.usuarios_activos|default:0 }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    {{ porcentaje_usuarios_activos|floatformat:1 }}% del total
+                </p>
+            </div>
+            <div class="p-3 bg-blue-50 rounded-full">
+                <i data-lucide="users" class="w-6 h-6 text-blue-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cursos Activos -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Cursos Activos</p>
+                <p class="text-2xl font-bold text-gray-900" id="cursos-activos">
+                    {{ metricas.cursos_activos|default:0 }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Con matrículas vigentes
+                </p>
+            </div>
+            <div class="p-3 bg-green-50 rounded-full">
+                <i data-lucide="book-open" class="w-6 h-6 text-green-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promedio Asistencia -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Asistencia Global</p>
+                <p class="text-2xl font-bold text-gray-900" id="promedio-asistencia">
+                    {{ metricas.promedio_asistencia|default:0 }}%
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Promedio general
+                </p>
+            </div>
+            <div class="p-3 bg-yellow-50 rounded-full">
+                <i data-lucide="calendar-check" class="w-6 h-6 text-yellow-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promedio Notas -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Promedio Notas</p>
+                <p class="text-2xl font-bold text-gray-900" id="promedio-notas">
+                    {{ metricas.promedio_notas|default:0 }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Escala 0-20
+                </p>
+            </div>
+            <div class="p-3 bg-purple-50 rounded-full">
+                <i data-lucide="trending-up" class="w-6 h-6 text-purple-600"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenido principal en dos columnas -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Columna izquierda - Alertas y actividad -->
+    <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Alertas del Sistema -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Alertas del Sistema</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        {{ metricas.alertas_pendientes|default:0 }} pendientes
+                    </span>
+                </div>
+            </div>
+            <div class="p-6">
+                {% if alertas_pendientes %}
+                    <div class="space-y-4">
+                        {% for alerta in alertas_pendientes %}
+                        <div class="alert-card flex items-start space-x-3 p-4 rounded-lg border-l-4 
+                                    {% if alerta.prioridad == 'alta' %}border-red-400 bg-red-50
+                                    {% elif alerta.prioridad == 'media' %}border-yellow-400 bg-yellow-50
+                                    {% else %}border-blue-400 bg-blue-50{% endif %}">
+                            <div class="flex-shrink-0">
+                                {% if alerta.tipo == 'error' %}
+                                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-500"></i>
+                                {% elif alerta.tipo == 'warning' %}
+                                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-500"></i>
+                                {% else %}
+                                    <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium 
+                                          {% if alerta.prioridad == 'alta' %}text-red-800
+                                          {% elif alerta.prioridad == 'media' %}text-yellow-800
+                                          {% else %}text-blue-800{% endif %}">
+                                    {{ alerta.titulo }}
+                                </p>
+                                <p class="text-sm 
+                                          {% if alerta.prioridad == 'alta' %}text-red-700
+                                          {% elif alerta.prioridad == 'media' %}text-yellow-700
+                                          {% else %}text-blue-700{% endif %} mt-1">
+                                    {{ alerta.descripcion }}
+                                </p>
+                                {% if alerta.fecha %}
+                                <p class="text-xs 
+                                          {% if alerta.prioridad == 'alta' %}text-red-600
+                                          {% elif alerta.prioridad == 'media' %}text-yellow-600
+                                          {% else %}text-blue-600{% endif %} mt-2">
+                                    {{ alerta.fecha|date:"d/m/Y H:i" }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8">
+                        <i data-lucide="check-circle" class="w-12 h-12 text-green-500 mx-auto mb-4"></i>
+                        <p class="text-gray-500">No hay alertas pendientes</p>
+                        <p class="text-sm text-gray-400 mt-1">El sistema está funcionando correctamente</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-blue-50 rounded-full">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ metricas.actividad_reciente.usuarios_activos_semana|default:0 }} usuarios activos
+                            </p>
+                            <p class="text-xs text-gray-500">En la última semana</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-green-50 rounded-full">
+                            <i data-lucide="user-check" class="w-4 h-4 text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ metricas.actividad_reciente.nuevas_matriculas|default:0 }} nuevas matrículas
+                            </p>
+                            <p class="text-xs text-gray-500">En el último mes</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-purple-50 rounded-full">
+                            <i data-lucide="calendar" class="w-4 h-4 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                {{ metricas.actividad_reciente.reservas_automaticas|default:0 }} reservas automáticas
+                            </p>
+                            <p class="text-xs text-gray-500">Procesadas hoy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna derecha - Resumen por roles -->
+    <div class="space-y-6">
+        
+        <!-- Usuarios por Rol -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Usuarios por Rol</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-blue-50 rounded-full">
+                                <i data-lucide="graduation-cap" class="w-4 h-4 text-blue-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">Estudiantes</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-900">
+                            {{ metricas.usuarios_por_rol.estudiantes|default:0 }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-green-50 rounded-full">
+                                <i data-lucide="user-check" class="w-4 h-4 text-green-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">Docentes</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-900">
+                            {{ metricas.usuarios_por_rol.docentes|default:0 }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-yellow-50 rounded-full">
+                                <i data-lucide="clipboard" class="w-4 h-4 text-yellow-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">Secretarias</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-900">
+                            {{ metricas.usuarios_por_rol.secretarias|default:0 }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-purple-50 rounded-full">
+                                <i data-lucide="shield" class="w-4 h-4 text-purple-600"></i>
+                            </div>
+                            <span class="text-sm font-medium text-gray-900">Administradores</span>
+                        </div>
+                        <span class="text-sm font-bold text-gray-900">
+                            {{ metricas.usuarios_por_rol.administradores|default:0 }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Acciones Rápidas</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3">
+                    <a href="{% url 'admin:usuarios' %}" 
+                       class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="users" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Gestionar Usuarios</span>
+                    </a>
+                    
+                    <a href="{% url 'admin:reportes' %}" 
+                       class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="file-text" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Generar Reportes</span>
+                    </a>
+                    
+                    <a href="{% url 'admin:recursos' %}" 
+                       class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="monitor" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Ver Recursos</span>
+                    </a>
+                    
+                    <a href="{% url 'admin:configuracion' %}" 
+                       class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="settings" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Configuración</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actualización automática -->
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 text-gray-500"></i>
+                    <span class="text-xs text-gray-600">Última actualización</span>
+                </div>
+                <button id="refresh-metrics" 
+                        class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                    Actualizar
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-1" id="last-update">
+                Hace unos momentos
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Función para actualizar métricas via AJAX
+    function actualizarMetricas() {
+        const refreshButton = document.getElementById('refresh-metrics');
+        const lastUpdateElement = document.getElementById('last-update');
+        
+        // Mostrar estado de carga
+        refreshButton.textContent = 'Actualizando...';
+        refreshButton.disabled = true;
+        
+        fetch('{% url "admin:dashboard_api" %}', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Actualizar métricas en la interfaz
+                const metricas = data.data;
+                
+                document.getElementById('usuarios-activos').textContent = metricas.usuarios_activos || 0;
+                document.getElementById('cursos-activos').textContent = metricas.cursos_activos || 0;
+                document.getElementById('promedio-asistencia').textContent = (metricas.promedio_asistencia || 0) + '%';
+                document.getElementById('promedio-notas').textContent = metricas.promedio_notas || 0;
+                
+                // Actualizar timestamp
+                const now = new Date();
+                lastUpdateElement.textContent = `${now.toLocaleTimeString()}`;
+                
+                // Mostrar notificación de éxito
+                mostrarNotificacion('Métricas actualizadas correctamente', 'success');
+            } else {
+                mostrarNotificacion('Error al actualizar métricas: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('Error de conexión al actualizar métricas', 'error');
+        })
+        .finally(() => {
+            // Restaurar botón
+            refreshButton.textContent = 'Actualizar';
+            refreshButton.disabled = false;
+        });
+    }
+    
+    // Función para mostrar notificaciones toast
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+        
+        if (tipo === 'success') {
+            toast.className += ' bg-green-500 text-white';
+        } else if (tipo === 'error') {
+            toast.className += ' bg-red-500 text-white';
+        } else {
+            toast.className += ' bg-blue-500 text-white';
+        }
+        
+        toast.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <i data-lucide="${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'alert-circle' : 'info'}" class="w-5 h-5"></i>
+                <span class="text-sm font-medium">${mensaje}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        lucide.createIcons();
+        
+        // Animar entrada
+        setTimeout(() => {
+            toast.classList.remove('translate-x-full');
+        }, 100);
+        
+        // Remover después de 3 segundos
+        setTimeout(() => {
+            toast.classList.add('translate-x-full');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+    
+    // Event listener para el botón de actualizar
+    document.getElementById('refresh-metrics')?.addEventListener('click', actualizarMetricas);
+    
+    // Actualización automática cada 5 minutos
+    setInterval(actualizarMetricas, 300000);
+    
+    // Inicializar iconos de Lucide
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

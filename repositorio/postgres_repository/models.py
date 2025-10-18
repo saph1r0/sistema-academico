@@ -3,7 +3,138 @@ Modelos Django ORM para PostgreSQL
 Estos modelos representan las tablas en la base de datos
 """
 from django.db import models
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import MinLengthValidator, EmailValidator
+
+
+class UsuarioManager(BaseUserManager):
+    """
+    Manager personalizado para el modelo UsuarioModel
+    """
+    def create_user(self, email, password=None, **extra_fields):
+        """
+        Crea y guarda un usuario con el email y contraseña dados
+        """
+        if not email:
+            raise ValueError('El email es obligatorio')
+        
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+    
+    def create_superuser(self, email, password=None, **extra_fields):
+        """
+        Crea y guarda un superusuario con el email y contraseña dados
+        """
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('rol', 'admin')
+        extra_fields.setdefault('activo', True)
+        
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+        
+        return self.create_user(email, password, **extra_fields)
+
+
+class UsuarioModel(AbstractUser):
+    """
+    Modelo de usuario personalizado que extiende AbstractUser
+    Integra con el dominio Usuario existente
+    """
+    ROLES = [
+        ('estudiante', 'Estudiante'),
+        ('docente', 'Docente'),
+        ('secretaria', 'Secretaria'),
+        ('admin', 'Administrador'),
+    ]
+    
+    # Usar email como username
+    username = None
+    email = models.EmailField(
+        unique=True,
+        validators=[EmailValidator()],
+        verbose_name="Correo Institucional"
+    )
+    
+    # Campos adicionales del dominio
+    nombre = models.CharField(max_length=200, verbose_name="Nombre")
+    apellido = models.CharField(max_length=200, verbose_name="Apellido")
+    rol = models.CharField(
+        max_length=20,
+        choices=ROLES,
+        default='estudiante',
+        db_index=True,
+        verbose_name="Rol"
+    )
+    activo = models.BooleanField(
+        default=True,
+        verbose_name="Usuario Activo"
+    )
+    ultimo_acceso = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Último Acceso"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['nombre', 'apellido', 'rol']
+    
+    objects = UsuarioManager()
+    
+    class Meta:
+        db_table = 'usuarios'
+        verbose_name = 'Usuario'
+        verbose_name_plural = 'Usuarios'
+        ordering = ['apellido', 'nombre']
+        indexes = [
+            models.Index(fields=['email'], name='idx_usuario_email'),
+            models.Index(fields=['rol'], name='idx_usuario_rol'),
+            models.Index(fields=['activo'], name='idx_usuario_activo'),
+        ]
+    
+    def __str__(self):
+        return f"{self.email} - {self.get_rol_display()}"
+    
+    def is_admin(self):
+        """Verifica si el usuario tiene rol de administrador"""
+        return self.rol == 'admin' and self.activo and self.is_active
+    
+    def is_secretaria(self):
+        """Verifica si el usuario tiene rol de secretaria"""
+        return self.rol == 'secretaria' and self.activo and self.is_active
+    
+    def is_docente(self):
+        """Verifica si el usuario tiene rol de docente"""
+        return self.rol == 'docente' and self.activo and self.is_active
+    
+    def is_estudiante(self):
+        """Verifica si el usuario tiene rol de estudiante"""
+        return self.rol == 'estudiante' and self.activo and self.is_active
+    
+    def activar_usuario(self):
+        """Activa el usuario"""
+        self.activo = True
+        self.is_active = True
+        self.save()
+    
+    def desactivar_usuario(self):
+        """Desactiva el usuario"""
+        self.activo = False
+        self.is_active = False
+        self.save()
+    
+    def actualizar_ultimo_acceso(self):
+        """Actualiza la fecha de último acceso"""
+        from django.utils import timezone
+        self.ultimo_acceso = timezone.now()
+        self.save(update_fields=['ultimo_acceso'])
 
 
 class EstudianteModel(models.Model):
