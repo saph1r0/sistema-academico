@@ -18,6 +18,10 @@ urlpatterns = [
     # Recursos y laboratorios
     path('recursos/', views.AdminRecursosView.as_view(), name='recursos'),
     
+    # Sistema de monitoreo y supervisión
+    path('monitoreo/', views.AdminMonitoreoView.as_view(), name='monitoreo'),
+    path('monitoreo/api/<str:endpoint>/', views.AdminMonitoreoAPIView.as_view(), name='monitoreo_api'),
+    
     # Configuración del sistema
     path('configuracion/', views.AdminConfiguracionView.as_view(), name='configuracion'),
 ]

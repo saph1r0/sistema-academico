@@ -137,6 +137,142 @@ class UsuarioModel(AbstractUser):
         self.save(update_fields=['ultimo_acceso'])
 
 
+class LaboratorioModel(models.Model):
+    """
+    Modelo ORM para laboratorios/ambientes
+    """
+    TIPOS_LABORATORIO = [
+        ('COMPUTO', 'Laboratorio de Cómputo'),
+        ('FISICA', 'Laboratorio de Física'),
+        ('QUIMICA', 'Laboratorio de Química'),
+        ('ELECTRONICA', 'Laboratorio de Electrónica'),
+        ('AULA', 'Aula Regular'),
+        ('AUDITORIO', 'Auditorio'),
+    ]
+    
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Laboratorio")
+    codigo = models.CharField(max_length=20, unique=True, verbose_name="Código")
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPOS_LABORATORIO,
+        default='COMPUTO',
+        verbose_name="Tipo de Laboratorio"
+    )
+    capacidad = models.PositiveIntegerField(verbose_name="Capacidad Máxima")
+    ubicacion = models.CharField(max_length=200, verbose_name="Ubicación")
+    equipamiento = models.TextField(blank=True, verbose_name="Descripción del Equipamiento")
+    activo = models.BooleanField(default=True, verbose_name="Laboratorio Activo")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'laboratorios'
+        verbose_name = 'Laboratorio'
+        verbose_name_plural = 'Laboratorios'
+        ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['codigo'], name='idx_laboratorio_codigo'),
+            models.Index(fields=['tipo'], name='idx_laboratorio_tipo'),
+            models.Index(fields=['activo'], name='idx_laboratorio_activo'),
+        ]
+    
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+
+class ReservaModel(models.Model):
+    """
+    Modelo ORM para reservas de laboratorios
+    """
+    ESTADOS_RESERVA = [
+        ('PENDIENTE', 'Pendiente'),
+        ('APROBADA', 'Aprobada Automáticamente'),
+        ('APROBADA_MANUAL', 'Aprobada Manualmente'),
+        ('RECHAZADA', 'Rechazada'),
+        ('CANCELADA', 'Cancelada'),
+        ('COMPLETADA', 'Completada'),
+    ]
+    
+    laboratorio = models.ForeignKey(
+        LaboratorioModel,
+        on_delete=models.CASCADE,
+        related_name='reservas',
+        verbose_name="Laboratorio"
+    )
+    docente = models.ForeignKey(
+        UsuarioModel,
+        on_delete=models.CASCADE,
+        limit_choices_to={'rol': 'docente'},
+        related_name='reservas_docente',
+        verbose_name="Docente Solicitante"
+    )
+    fecha_reserva = models.DateField(verbose_name="Fecha de Reserva")
+    hora_inicio = models.TimeField(verbose_name="Hora de Inicio")
+    hora_fin = models.TimeField(verbose_name="Hora de Fin")
+    proposito = models.CharField(max_length=200, verbose_name="Propósito de la Reserva")
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADOS_RESERVA,
+        default='PENDIENTE',
+        db_index=True,
+        verbose_name="Estado"
+    )
+    aprobada_automaticamente = models.BooleanField(
+        default=False,
+        verbose_name="Aprobada Automáticamente"
+    )
+    motivo_rechazo = models.TextField(blank=True, verbose_name="Motivo de Rechazo")
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    procesada_por = models.ForeignKey(
+        UsuarioModel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reservas_procesadas',
+        verbose_name="Procesada Por"
+    )
+    
+    class Meta:
+        db_table = 'reservas'
+        verbose_name = 'Reserva'
+        verbose_name_plural = 'Reservas'
+        ordering = ['-fecha_solicitud']
+        indexes = [
+            models.Index(fields=['laboratorio', 'fecha_reserva'], name='idx_reserva_lab_fecha'),
+            models.Index(fields=['estado'], name='idx_reserva_estado'),
+            models.Index(fields=['docente'], name='idx_reserva_docente'),
+            models.Index(fields=['fecha_reserva', 'hora_inicio'], name='idx_reserva_horario'),
+        ]
+        unique_together = [
+            ['laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin']
+        ]
+    
+    def __str__(self):
+        return f"{self.laboratorio.codigo} - {self.fecha_reserva} {self.hora_inicio}-{self.hora_fin}"
+    
+    def tiene_conflicto(self):
+        """Verifica si existe conflicto con otras reservas"""
+        conflictos = ReservaModel.objects.filter(
+            laboratorio=self.laboratorio,
+            fecha_reserva=self.fecha_reserva,
+            estado__in=['APROBADA', 'APROBADA_MANUAL']
+        ).exclude(id=self.id if self.id else None)
+        
+        for reserva in conflictos:
+            if (self.hora_inicio < reserva.hora_fin and self.hora_fin > reserva.hora_inicio):
+                return True
+        return False
+    
+    def duracion_horas(self):
+        """Calcula la duración de la reserva en horas"""
+        from datetime import datetime, timedelta
+        inicio = datetime.combine(self.fecha_reserva, self.hora_inicio)
+        fin = datetime.combine(self.fecha_reserva, self.hora_fin)
+        duracion = fin - inicio
+        return duracion.total_seconds() / 3600
+
+
 class EstudianteModel(models.Model):
     """
     Modelo ORM para la tabla de estudiantes

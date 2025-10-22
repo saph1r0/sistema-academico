@@ -40,7 +40,7 @@
   - Write integration tests for user management operations
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 6. Implement global reports generation system
+- [x] 6. Implement global reports generation system
 
   - Create AdminReportesView for report generation interface
   - Integrate with existing ServicioReportes for attendance, grades, and statistics
@@ -50,7 +50,7 @@
   - Write tests for report generation and export functionality
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-- [ ] 7. Build laboratory and resources monitoring
+- [x] 7. Build laboratory and resources monitoring
 
   - Create AdminRecursosView for laboratory availability consultation
   - Implement automatic reservation status display (pending/approved by system)
@@ -78,7 +78,7 @@
   - Test responsive behavior across different viewport sizes
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 10. Implement global system supervision and monitoring
+- [x] 10. Implement global system supervision and monitoring
 
   - Create automatic inconsistency detection system for data validation
   - Build alert system for data loading errors and duplicates detection
