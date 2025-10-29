@@ -9,7 +9,7 @@ from django.core.paginator import Paginator
 from .mixins import AdminRequiredMixin, SecretariaOrAdminMixin
 from servicios.servicioMetricas import ServicioMetricas
 from servicios.servicioMonitoreo import ServicioMonitoreo
-from repositorio.postgres_repository.models import UsuarioModel, LaboratorioModel, ReservaModel
+from repositorio.postgres_repository.models import UsuarioModel, LaboratorioModel
 from datetime import datetime, timedelta
 import logging
 
@@ -154,27 +154,27 @@ class AdminUsuariosView(AdminRequiredMixin, ListView):
     
     def get_queryset(self):
         """Obtiene la lista de usuarios con filtros aplicados"""
-        queryset = UsuarioModel.objects.all().order_by('apellido', 'nombre')
+        queryset = UsuarioModel.objects.all().order_by('last_name', 'first_name')
         
         # Filtro por rol
         rol_filter = self.request.GET.get('rol')
         if rol_filter and rol_filter != 'todos':
-            queryset = queryset.filter(rol=rol_filter)
+            queryset = queryset.filter(role=rol_filter)
         
         # Filtro por estado (activo/inactivo)
         estado_filter = self.request.GET.get('estado')
         if estado_filter == 'activo':
-            queryset = queryset.filter(activo=True)
+            queryset = queryset.filter(is_active=True)
         elif estado_filter == 'inactivo':
-            queryset = queryset.filter(activo=False)
+            queryset = queryset.filter(is_active=False)
         
         # Búsqueda por texto
         search_query = self.request.GET.get('search')
         if search_query:
             queryset = queryset.filter(
-                Q(nombre__icontains=search_query) |
-                Q(apellido__icontains=search_query) |
-                Q(email__icontains=search_query)
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(institutional_email__icontains=search_query)
             )
         
         return queryset
@@ -183,15 +183,15 @@ class AdminUsuariosView(AdminRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context.update({
             'page_title': 'Gestión de Usuarios',
-            'roles_choices': UsuarioModel.ROLES,
+            'roles_choices': UsuarioModel.ROLE_CHOICES,
             'current_filters': {
                 'rol': self.request.GET.get('rol', 'todos'),
                 'estado': self.request.GET.get('estado', 'todos'),
                 'search': self.request.GET.get('search', '')
             },
             'total_usuarios': UsuarioModel.objects.count(),
-            'usuarios_activos': UsuarioModel.objects.filter(activo=True).count(),
-            'usuarios_inactivos': UsuarioModel.objects.filter(activo=False).count(),
+            'usuarios_activos': UsuarioModel.objects.filter(is_active=True).count(),
+            'usuarios_inactivos': UsuarioModel.objects.filter(is_active=False).count(),
         })
         return context
     
@@ -217,11 +217,13 @@ class AdminUsuariosView(AdminRequiredMixin, ListView):
                 }, status=400)
             
             if action == 'activar':
-                usuario.activar_usuario()
-                message = f'Usuario {usuario.email} activado correctamente'
+                usuario.is_active = True
+                usuario.save()
+                message = f'Usuario {usuario.institutional_email} activado correctamente'
             elif action == 'desactivar':
-                usuario.desactivar_usuario()
-                message = f'Usuario {usuario.email} desactivado correctamente'
+                usuario.is_active = False
+                usuario.save()
+                message = f'Usuario {usuario.institutional_email} desactivado correctamente'
             else:
                 return JsonResponse({
                     'success': False,
@@ -231,7 +233,7 @@ class AdminUsuariosView(AdminRequiredMixin, ListView):
             return JsonResponse({
                 'success': True,
                 'message': message,
-                'user_status': usuario.activo
+                'user_status': usuario.is_active
             })
             
         except UsuarioModel.DoesNotExist:
@@ -271,11 +273,13 @@ class AdminUsuariosAPIView(AdminRequiredMixin, TemplateView):
                 }, status=400)
             
             if action == 'activar':
-                usuario.activar_usuario()
-                message = f'Usuario {usuario.email} activado correctamente'
+                usuario.is_active = True
+                usuario.save()
+                message = f'Usuario {usuario.institutional_email} activado correctamente'
             elif action == 'desactivar':
-                usuario.desactivar_usuario()
-                message = f'Usuario {usuario.email} desactivado correctamente'
+                usuario.is_active = False
+                usuario.save()
+                message = f'Usuario {usuario.institutional_email} desactivado correctamente'
             else:
                 return JsonResponse({
                     'success': False,
@@ -285,8 +289,8 @@ class AdminUsuariosAPIView(AdminRequiredMixin, TemplateView):
             return JsonResponse({
                 'success': True,
                 'message': message,
-                'user_status': usuario.activo,
-                'user_email': usuario.email
+                'user_status': usuario.is_active,
+                'user_email': usuario.institutional_email
             })
             
         except UsuarioModel.DoesNotExist:
@@ -553,11 +557,149 @@ class AdminRecursosView(AdminRequiredMixin, TemplateView):
 class AdminConfiguracionView(AdminRequiredMixin, FormView):
     """Vista para configuración de parámetros del sistema"""
     template_name = 'administrador/configuracion/index.html'
+    form_class = None  # Will be imported from forms
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Import here to avoid circular imports
+        from .forms import ConfiguracionSistemaForm
+        self.form_class = ConfiguracionSistemaForm
+        from dominio.modelo.admin_sistema.configuracion_sistema import ConfiguracionSistema
+        self.configuracion_sistema = ConfiguracionSistema()
+        self.logger = logging.getLogger('admin_panel.configuracion')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = 'Configuración del Sistema'
+        
+        try:
+            # Obtener configuración actual
+            configuracion_actual = self.configuracion_sistema.obtener_configuracion_actual()
+            
+            context.update({
+                'page_title': 'Configuración del Sistema',
+                'configuracion_actual': configuracion_actual,
+                'parametros_criticos': [
+                    'capacidad_maxima_laboratorio',
+                    'tiempo_sesion_minutos',
+                    'backup_automatico'
+                ],
+                'ultima_modificacion': configuracion_actual.get('fecha_modificacion'),
+                'usuario_modificacion': configuracion_actual.get('usuario_modificacion')
+            })
+            
+        except Exception as e:
+            self.logger.error(f'Error al cargar configuración: {str(e)}')
+            messages.error(self.request, f'Error al cargar la configuración del sistema: {str(e)}')
+            context.update({
+                'page_title': 'Configuración del Sistema',
+                'configuracion_actual': {},
+                'parametros_criticos': [],
+                'error_carga': True
+            })
+        
         return context
+    
+    def get_initial(self):
+        """Obtiene los valores iniciales del formulario"""
+        try:
+            configuracion_actual = self.configuracion_sistema.obtener_configuracion_actual()
+            return {
+                'capacidad_maxima_laboratorio': configuracion_actual.get('capacidad_maxima_laboratorio', 30),
+                'tiempo_sesion_minutos': configuracion_actual.get('tiempo_sesion_minutos', 120),
+                'backup_automatico': configuracion_actual.get('backup_automatico', True),
+                'frecuencia_backup_horas': configuracion_actual.get('frecuencia_backup_horas', 24),
+                'alertas_activas': configuracion_actual.get('alertas_activas', True)
+            }
+        except Exception as e:
+            self.logger.error(f'Error al obtener configuración inicial: {str(e)}')
+            return {}
+    
+    def form_valid(self, form):
+        """Procesa el formulario válido"""
+        try:
+            # Obtener datos del formulario
+            parametros = form.cleaned_data
+            
+            # Validar parámetros
+            errores = self.configuracion_sistema.validar_parametros(parametros)
+            if errores:
+                for error in errores:
+                    form.add_error(None, error)
+                return self.form_invalid(form)
+            
+            # Verificar si hay parámetros críticos que requieren confirmación
+            parametros_criticos_modificados = []
+            for param, valor in parametros.items():
+                if self.configuracion_sistema.es_parametro_critico(param):
+                    parametros_criticos_modificados.append(param)
+            
+            # Si hay parámetros críticos y no se ha confirmado, solicitar confirmación
+            if parametros_criticos_modificados and not self.request.POST.get('confirmar_cambios'):
+                messages.warning(
+                    self.request,
+                    f'Los siguientes parámetros son críticos: {", ".join(parametros_criticos_modificados)}. '
+                    'Confirme los cambios para continuar.'
+                )
+                context = self.get_context_data(form=form)
+                context['requiere_confirmacion'] = True
+                context['parametros_criticos_modificados'] = parametros_criticos_modificados
+                return self.render_to_response(context)
+            
+            # Actualizar configuración
+            resultado = self.configuracion_sistema.actualizar_configuracion(
+                parametros, 
+                str(self.request.user.id)
+            )
+            
+            if resultado:
+                # Registrar acción en auditoría
+                from servicios.servicioMonitoreo import ServicioMonitoreo
+                servicio_monitoreo = ServicioMonitoreo()
+                servicio_monitoreo.registrar_accion_administrativa(
+                    usuario_id=str(self.request.user.id),
+                    usuario_nombre=f"{self.request.user.first_name} {self.request.user.last_name}".strip() or self.request.user.institutional_email,
+                    accion="configuracion_actualizada",
+                    descripcion=f"Actualización de configuración del sistema: {', '.join(parametros.keys())}",
+                    entidad_afectada="ConfiguracionSistema",
+                    contexto_request={
+                        'parametros_modificados': list(parametros.keys()),
+                        'valores_anteriores': self.get_initial(),
+                        'valores_nuevos': parametros,
+                        'ip': self.request.META.get('REMOTE_ADDR', ''),
+                        'user_agent': self.request.META.get('HTTP_USER_AGENT', '')
+                    }
+                )
+                
+                messages.success(
+                    self.request,
+                    'Configuración del sistema actualizada correctamente.'
+                )
+                
+                # Log de la acción
+                self.logger.info(
+                    f'Configuración actualizada por usuario {self.request.user.institutional_email}: '
+                    f'{", ".join(parametros.keys())}'
+                )
+                
+            else:
+                messages.error(
+                    self.request,
+                    'Error al actualizar la configuración del sistema.'
+                )
+            
+            return super().form_valid(form)
+            
+        except Exception as e:
+            self.logger.error(f'Error al procesar configuración: {str(e)}')
+            messages.error(
+                self.request,
+                f'Error al procesar la configuración: {str(e)}'
+            )
+            return self.form_invalid(form)
+    
+    def get_success_url(self):
+        """URL de redirección después del éxito"""
+        return self.request.path
 
 
 class AdminMonitoreoView(AdminRequiredMixin, TemplateView):

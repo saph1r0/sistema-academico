@@ -1,0 +1,226 @@
+{% extends 'base_estudiante.html' %}
+
+{% block title %}Dashboard - Portal Estudiante{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido, {{ user.first_name }}!</h1>
+                <p class="text-gray-600 mt-1">Aquí tienes un resumen de tu progreso académico</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Último acceso</p>
+                <p class="text-sm font-medium text-gray-900">{{ user.last_login|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Cursos Matriculados -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-50 rounded-full">
+                    <i data-lucide="book-open" class="h-6 w-6 text-blue-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Cursos Matriculados</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ cursos_matriculados|length|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Promedio de Asistencia -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-50 rounded-full">
+                    <i data-lucide="calendar-check" class="h-6 w-6 text-green-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Asistencia Promedio</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ porcentaje_asistencia|floatformat:1|default:"0.0" }}%
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Avance de Cursos -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-50 rounded-full">
+                    <i data-lucide="trending-up" class="h-6 w-6 text-purple-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Avance Promedio</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ porcentaje_avance|floatformat:1|default:"0.0" }}%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Laboratorios -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-orange-50 rounded-full">
+                    <i data-lucide="flask-conical" class="h-6 w-6 text-orange-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Laboratorios</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ laboratorios_matriculados|length|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Horario de Hoy -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900">Horario de Hoy</h2>
+                        <a href="{% url 'estudiante:horarios' %}" class="text-sm text-blue-600 hover:text-blue-700">Ver
+                            completo</a>
+                    </div>
+                </div>
+                <div class="p-6">
+                    {% if horario_actual %}
+                    <div class="space-y-4">
+                        {% for clase in horario_actual %}
+                        <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i data-lucide="clock" class="h-6 w-6 text-blue-600"></i>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <h3 class="text-sm font-medium text-gray-900">{{ clase.curso_nombre }}</h3>
+                                <p class="text-sm text-gray-600">{{ clase.aula }} - {{ clase.profesor }}</p>
+                                <p class="text-xs text-gray-500">{{ clase.hora_inicio }} - {{ clase.hora_fin }}</p>
+                            </div>
+                            <div class="flex-shrink-0">
+                                {% if clase.es_laboratorio %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                    Laboratorio
+                                </span>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Teoría
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i data-lucide="calendar-x" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                        <p class="text-gray-500">No tienes clases programadas para hoy</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Acciones Rápidas -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Acciones Rápidas</h2>
+                </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'estudiante:notas' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="file-text" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Ver Mis Notas
+                    </a>
+                    <a href="{% url 'estudiante:horarios' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="calendar" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Ver Horario Completo
+                    </a>
+                    <a href="{% url 'estudiante:laboratorios' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="flask-conical" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Gestionar Laboratorios
+                    </a>
+                </div>
+            </div>
+
+            <!-- Progreso por Curso -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Progreso por Curso</h2>
+                </div>
+                <div class="p-6">
+                    {% if cursos_matriculados %}
+                    <div class="space-y-4">
+                        {% for curso in cursos_matriculados %}
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium text-gray-900">{{ curso.nombre|truncatechars:20 }}</span>
+                                <span class="text-gray-600">{{ curso.avance|floatformat:0 }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: {{ curso.avance }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="book-x" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No hay cursos matriculados</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Próximas Evaluaciones -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Próximas Evaluaciones</h2>
+                </div>
+                <div class="p-6">
+                    {% if proximas_evaluaciones %}
+                    <div class="space-y-3">
+                        {% for evaluacion in proximas_evaluaciones %}
+                        <div class="flex items-center p-3 bg-yellow-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="alert-circle" class="h-5 w-5 text-yellow-600"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{ evaluacion.tipo }}</p>
+                                <p class="text-xs text-gray-600">{{ evaluacion.curso }} - {{
+                                    evaluacion.fecha|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="calendar-check" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No hay evaluaciones próximas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Actualizar iconos después de cargar el contenido
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

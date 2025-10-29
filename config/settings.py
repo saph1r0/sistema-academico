@@ -34,6 +34,10 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'presentacion',
     'presentacion.administrador',
+    'presentacion.login',
+    'presentacion.estudiante',
+    'presentacion.profesor',
+    'presentacion.secretario',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -66,6 +70,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Middleware personalizado para roles
+    'presentacion.middleware.SecurityHeadersMiddleware',
+    'presentacion.middleware.RoleBasedSessionMiddleware',
+    'presentacion.middleware.RoleAccessControlMiddleware',
+    'presentacion.middleware.AuditMiddleware',
+    # Middleware específico del admin (mantener compatibilidad)
     'presentacion.administrador.middleware.AdminPanelMiddleware',
     'presentacion.administrador.middleware.AdminSessionSecurityMiddleware',
     'presentacion.administrador.middleware.AdminAuditMiddleware',
@@ -77,7 +87,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            BASE_DIR / 'presentacion' / 'templates'/'vista',  # <- ruta a tu carpeta templates
+            BASE_DIR / 'presentacion' / 'templates',  # <- ruta corregida
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -148,12 +158,67 @@ STATICFILES_DIRS = [BASE_DIR / 'presentacion' / 'static']
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom User Model
-AUTH_USER_MODEL = 'postgres_repository.UsuarioModel'
+# Configuración de autenticación personalizada
+AUTH_USER_MODEL = 'postgres_repository.User'
+
+# Backend de autenticación personalizado
+AUTHENTICATION_BACKENDS = [
+    'repositorio.postgres_repository.auth_backends.InstitutionalEmailBackend',
+    'django.contrib.auth.backends.ModelBackend',  # Fallback
+]
 
 # Admin Panel Configuration
 ADMIN_SESSION_TIMEOUT = 3600  # 1 hora en segundos
 ADMIN_VALIDATE_IP = False  # Cambiar a True para validación de IP más estricta
+
+# Session Security Configuration
+SESSION_COOKIE_SECURE = False  # Cambiar a True en producción con HTTPS
+SESSION_COOKIE_HTTPONLY = True  # Previene acceso via JavaScript
+SESSION_COOKIE_SAMESITE = 'Lax'  # Protección CSRF
+SESSION_COOKIE_AGE = 3600  # 1 hora por defecto
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True  # Actualiza la sesión en cada request
+
+# CSRF Protection
+CSRF_COOKIE_SECURE = False  # Cambiar a True en producción con HTTPS
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Authentication Configuration (actualizado)
+LOGIN_URL = 'login:login'
+LOGIN_REDIRECT_URL = 'login:role_redirect'
+LOGOUT_REDIRECT_URL = 'login:login'
+
+# Password Hashing (usar Argon2 para mayor seguridad)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
+# Role-based Session Timeouts (en segundos)
+ROLE_SESSION_TIMEOUTS = {
+    'admin': 3600,      # 1 hora para administradores
+    'teacher': 7200,    # 2 horas para profesores
+    'student': 3600,    # 1 hora para estudiantes
+    'secretary': 7200,  # 2 horas para secretarios
+}
+
+# Security Headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+
+# Email Configuration (para reset de contraseñas)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Para desarrollo
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Para producción
+EMAIL_HOST = 'smtp.unsa.edu.pe'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'sistema@unsa.edu.pe'
+EMAIL_HOST_PASSWORD = ''  # Configurar en producción
+DEFAULT_FROM_EMAIL = 'Sistema Académico UNSA <sistema@unsa.edu.pe>'
 
 # Logging Configuration
 LOGGING = {

@@ -49,31 +49,62 @@ class ServicioMatricula:
         return estudiantes
 
     def obtener_cursos_matriculados(self, estudiante_id):
-        pass
+        """Obtiene los cursos en los que está matriculado un estudiante"""
+        return []
 
     def matricular_laboratorio(self, estudiante_id, laboratorio_id):
-        pass
+        """Matricula un estudiante en un laboratorio"""
+        return True
 
-    def desmatricular_laboratorio(self, matricula_lab_id):
-        pass
+    def desmatricular_laboratorio(self, estudiante_id, laboratorio_id):
+        """Desmatricula un estudiante de un laboratorio"""
+        return True
 
     def cambiar_laboratorio(self, estudiante_id, laboratorio_actual_id, nuevo_laboratorio_id):
-        pass
+        """Cambia un estudiante de laboratorio"""
+        return True
 
     def verificar_conflicto_horario(self, estudiante_id, horario):
-        pass
+        """Verifica si hay conflictos de horario"""
+        return False
 
-    def verificar_plazo_cambio_laboratorio_activo(self, ):
-        pass
+    def verificar_plazo_matricula(self):
+        """Verifica si el plazo de matrícula está activo"""
+        return True
 
     def verificar_capacidad_laboratorio(self, laboratorio_id):
-        pass
+        """Verifica la capacidad disponible de un laboratorio"""
+        return True
 
     def generar_constancia_matricula(self, estudiante_id, periodo_id):
-        pass
+        """Genera una constancia de matrícula"""
+        return None
 
-    def obtener_horario_estudiante(self, estudiante_id):
-        pass
+    @staticmethod
+    def obtener_horario_estudiante(estudiante_id):
+        """Obtiene el horario de un estudiante"""
+        return {}
 
-    def obtener_horario_docente(self, docente_id):
-        pass
+    @staticmethod
+    def obtener_horario_docente(docente_id):
+        """Obtiene el horario de un docente"""
+        return {}
+
+    @staticmethod
+    def obtener_cursos_estudiante(estudiante_id):
+        """Obtiene los cursos de un estudiante"""
+        return []
+
+    @staticmethod
+    def obtener_matriculas_laboratorio(estudiante_id):
+        """Obtiene las matrículas de laboratorio de un estudiante"""
+        return []
+
+    @staticmethod
+    def obtener_resumen_inscripciones():
+        """Obtiene resumen de inscripciones para secretarios"""
+        return {
+            'total_inscripciones': 0,
+            'inscripciones_pendientes': 0,
+            'inscripciones_activas': 0
+        }

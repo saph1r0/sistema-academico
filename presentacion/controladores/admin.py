@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
-
+from presentacion.permisos import get_user_dashboard_url
 
 @csrf_protect
 @never_cache
@@ -14,7 +14,7 @@ def login_view(request):
     """
     # Si el usuario ya está autenticado, redirigir al dashboard
     if request.user.is_authenticated:
-        return redirect('admin:dashboard')
+        return redirect(get_user_dashboard_url(request.user))
     
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -27,12 +27,15 @@ def login_view(request):
                     login(request, user)
                     
                     # Actualizar último acceso si el modelo lo soporta
-                    if hasattr(user, 'actualizar_ultimo_acceso'):
-                        user.actualizar_ultimo_acceso()
+                    if hasattr(user, 'ultimo_acceso'):
+                        from django.utils import timezone
+                        user.ultimo_acceso = timezone.now()
+                        user.save(update_fields=['ultimo_acceso'])
                     
                     # Redirigir al dashboard de admin
-                    next_url = request.GET.get('next', 'admin:dashboard')
-                    return redirect(next_url)
+                    #next_url = request.GET.get('next', 'admin:dashboard')
+                    #return redirect(next_url)
+                    return redirect(get_user_dashboard_url(user))
                 else:
                     messages.error(request, "Tu cuenta está desactivada. Contacta al administrador.")
             else:
@@ -46,7 +49,8 @@ def login_view(request):
 # Vistas legacy para compatibilidad (redirigen a las nuevas vistas)
 def dashboard_view(request):
     """Vista legacy - redirige al nuevo dashboard"""
-    return redirect('admin:dashboard')
+    #return redirect('admin:dashboard')
+    return redirect(get_user_dashboard_url(request.user))
 
 
 def usuarios_list(request):

@@ -23,23 +23,8 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         """
         Verifica si el usuario tiene permisos de administrador
         """
-        user = self.request.user
-        
-        # Verificar autenticación
-        if not user.is_authenticated:
-            return False
-        
-        # Verificar rol de administrador usando el método del modelo
-        if hasattr(user, 'is_admin') and callable(user.is_admin):
-            return user.is_admin()
-        
-        # Fallback para compatibilidad con otros sistemas
-        return (
-            hasattr(user, 'rol') and 
-            user.rol == 'admin' and 
-            getattr(user, 'activo', True) and
-            user.is_active
-        )
+        from presentacion.permisos import is_admin
+        return is_admin(self.request.user)
     
     def handle_no_permission(self):
         """
@@ -52,12 +37,12 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
                 self.request, 
                 'Debe iniciar sesión para acceder al panel administrativo.'
             )
-            return redirect('login')
+            return redirect('login:login')
         
         # Log del intento de acceso no autorizado
         logger.warning(
-            f"Acceso denegado al panel admin para usuario {user.email} "
-            f"con rol {getattr(user, 'rol', 'desconocido')}"
+            f"Acceso denegado al panel admin para usuario {getattr(user, 'institutional_email', 'unknown')} "
+            f"con rol {getattr(user, 'role', 'desconocido')}"
         )
         
         messages.error(
@@ -66,16 +51,10 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             'Contacta al administrador del sistema si crees que esto es un error.'
         )
         
-        # Redirigir según el rol del usuario
-        if hasattr(user, 'rol'):
-            if user.rol == 'secretaria':
-                return redirect('secretaria:dashboard')
-            elif user.rol == 'docente':
-                return redirect('docente:dashboard')
-            elif user.rol == 'estudiante':
-                return redirect('estudiante:dashboard')
-        
-        return redirect('login')
+        # Redirigir al dashboard apropiado según el rol
+        from presentacion.permisos import get_user_dashboard_url
+        dashboard_url = get_user_dashboard_url(user)
+        return redirect(dashboard_url)
     
     def dispatch(self, request, *args, **kwargs):
         """
@@ -83,7 +62,7 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         """
         if self.test_func():
             logger.info(
-                f"Acceso autorizado al panel admin para usuario {request.user.email}"
+                f"Acceso autorizado al panel admin para usuario {getattr(request.user, 'institutional_email', 'unknown')}"
             )
         
         return super().dispatch(request, *args, **kwargs)

@@ -10,6 +10,12 @@ urlpatterns = [
     path('matriculas/upload_excel/', MatriculaAPIView.as_view(), name='matriculas-upload'),  
     path('matriculas/', MatriculaAPIView.as_view(), name='matriculas-list'),
     
-    # Admin panel routes
-    path('admin/', include('presentacion.administrador.urls')),
+    # Authentication routes
+    path('login/', include('presentacion.login.urls')),
+    
+    # Role-based module routes
+    path('administrador/', include('presentacion.administrador.urls')),
+    path('estudiante/', include('presentacion.estudiante.urls')),
+    path('profesor/', include('presentacion.profesor.urls')),
+    path('secretario/', include('presentacion.secretario.urls')),
 ]

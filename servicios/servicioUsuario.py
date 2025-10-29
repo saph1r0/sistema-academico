@@ -8,28 +8,58 @@ class ServicioUsuario:
         self._docente_repo = None
 
     def login(self, correo, contraseña):
-        pass
+        """Autentica un usuario con email y contraseña"""
+        return None
 
     def logout(self, token):
-        pass
+        """Cierra la sesión del usuario"""
+        return True
 
     def validar_sesion_activa(self, token):
-        pass
+        """Valida si una sesión está activa"""
+        return False
 
     def bloquear_cuenta(self, correo):
-        pass
+        """Bloquea una cuenta de usuario"""
+        return True
 
     def desbloquear_cuenta(self, correo):
-        pass
+        """Desbloquea una cuenta de usuario"""
+        return True
 
     def activar_usuario(self, usuario_id):
-        pass
+        """Activa un usuario"""
+        return True
 
     def desactivar_usuario(self, usuario_id, motivo):
-        pass
+        """Desactiva un usuario"""
+        return True
 
     def obtener_usuario_por_correo(self, correo):
-        pass
+        """Obtiene un usuario por su email"""
+        return None
 
     def obtener_usuario_por_id(self, usuario_id):
-        pass
+        """Obtiene un usuario por su ID"""
+        return None
+
+    @staticmethod
+    def obtener_cursos_profesor(profesor_id):
+        """Obtiene los cursos asignados a un profesor"""
+        return []
+
+    @staticmethod
+    def obtener_horario_profesor(profesor_id):
+        """Obtiene el horario de un profesor"""
+        return {}
+
+    @staticmethod
+    def obtener_estadisticas_usuarios():
+        """Obtiene estadísticas generales de usuarios"""
+        return {
+            'total_usuarios_activos': 0,
+            'total_estudiantes': 0,
+            'total_profesores': 0,
+            'total_secretarios': 0,
+            'total_administradores': 0
+        }

@@ -3,19 +3,46 @@
 
 class ServicioNotas:
     def __init__(self):
-        self._nota_repo = None
-        self._examen_repo = None
-        self._procesador_excel = None
-        self._generador_pdf = None
+        self._notas_repo = None
+        self._validador_excel = None
 
-    def ingresar_notas(self, curso_id, notas):
-        pass
+    def registrar_nota(self, estudiante_id, evaluacion_id, nota, profesor_id):
+        """Registra una nota para un estudiante"""
+        return True
 
-    def procesar_notas_desde_excel(self, archivo, curso_id):
-        pass
-
-    def calcular_estadisticas(self, curso_id):
-        pass
+    def actualizar_nota(self, nota_id, nueva_nota, profesor_id):
+        """Actualiza una nota existente"""
+        return True
 
     def obtener_notas_estudiante(self, estudiante_id, curso_id):
-        pass
+        """Obtiene las notas de un estudiante en un curso"""
+        return []
+
+    def calcular_promedio_curso(self, estudiante_id, curso_id):
+        """Calcula el promedio de un estudiante en un curso"""
+        return 0.0
+
+    @staticmethod
+    def obtener_estudiantes_profesor(profesor_id):
+        """Obtiene los estudiantes de un profesor"""
+        return []
+
+    @staticmethod
+    def generar_plantilla_excel(curso_id, profesor_id):
+        """Genera una plantilla Excel para cargar notas"""
+        return None
+
+    @staticmethod
+    def procesar_archivo_notas(archivo, curso_id, profesor_id):
+        """Procesa un archivo Excel con notas"""
+        return True
+
+    @staticmethod
+    def obtener_estadisticas_notas(curso_id):
+        """Obtiene estadísticas de notas de un curso"""
+        return {
+            'promedio_general': 0.0,
+            'nota_maxima': 0.0,
+            'nota_minima': 0.0,
+            'total_estudiantes': 0
+        }

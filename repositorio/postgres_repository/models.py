@@ -1,140 +1,294 @@
 """
-Modelos Django ORM para PostgreSQL
-Estos modelos representan las tablas en la base de datos
+Modelos Django ORM simplificados para PostgreSQL
 """
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.core.validators import MinLengthValidator, EmailValidator
+from django.utils import timezone
 
 
-class UsuarioManager(BaseUserManager):
-    """
-    Manager personalizado para el modelo UsuarioModel
-    """
-    def create_user(self, email, password=None, **extra_fields):
-        """
-        Crea y guarda un usuario con el email y contraseña dados
-        """
-        if not email:
-            raise ValueError('El email es obligatorio')
+class UserManager(BaseUserManager):
+    """Manager personalizado para el modelo User"""
+    
+    def create_user(self, institutional_email, password=None, **extra_fields):
+        if not institutional_email:
+            raise ValueError('El email institucional es obligatorio')
         
-        email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+        institutional_email = self.normalize_email(institutional_email)
+        user = self.model(institutional_email=institutional_email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
     
-    def create_superuser(self, email, password=None, **extra_fields):
-        """
-        Crea y guarda un superusuario con el email y contraseña dados
-        """
+    def create_superuser(self, institutional_email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('rol', 'admin')
-        extra_fields.setdefault('activo', True)
+        extra_fields.setdefault('role', 'admin')
+        extra_fields.setdefault('is_active', True)
         
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
-        
-        return self.create_user(email, password, **extra_fields)
+        return self.create_user(institutional_email, password, **extra_fields)
 
 
-class UsuarioModel(AbstractUser):
-    """
-    Modelo de usuario personalizado que extiende AbstractUser
-    Integra con el dominio Usuario existente
-    """
-    ROLES = [
-        ('estudiante', 'Estudiante'),
-        ('docente', 'Docente'),
-        ('secretaria', 'Secretaria'),
+class User(AbstractUser):
+    """Modelo de usuario que mapea a la tabla 'users' de PostgreSQL"""
+    
+    ROLE_CHOICES = [
+        ('student', 'Estudiante'),
+        ('teacher', 'Profesor'),
+        ('secretary', 'Secretario'),
         ('admin', 'Administrador'),
     ]
     
-    # Usar email como username
+    # Reemplazar username con institutional_email
     username = None
-    email = models.EmailField(
-        unique=True,
-        validators=[EmailValidator()],
-        verbose_name="Correo Institucional"
-    )
     
-    # Campos adicionales del dominio
-    nombre = models.CharField(max_length=200, verbose_name="Nombre")
-    apellido = models.CharField(max_length=200, verbose_name="Apellido")
-    rol = models.CharField(
-        max_length=20,
-        choices=ROLES,
-        default='estudiante',
-        db_index=True,
-        verbose_name="Rol"
-    )
-    activo = models.BooleanField(
-        default=True,
-        verbose_name="Usuario Activo"
-    )
-    ultimo_acceso = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="Último Acceso"
-    )
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    institutional_email = models.CharField(max_length=100, unique=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    dni = models.CharField(max_length=8, unique=True, null=True, blank=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nombre', 'apellido', 'rol']
+    # Campos heredados de AbstractUser que necesitamos mantener
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    last_login = models.DateTimeField(null=True, blank=True)
+    date_joined = models.DateTimeField(default=timezone.now)
     
-    objects = UsuarioManager()
+    USERNAME_FIELD = 'institutional_email'
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'role']
+    
+    objects = UserManager()
     
     class Meta:
-        db_table = 'usuarios'
+        db_table = 'users'
         verbose_name = 'Usuario'
         verbose_name_plural = 'Usuarios'
-        ordering = ['apellido', 'nombre']
-        indexes = [
-            models.Index(fields=['email'], name='idx_usuario_email'),
-            models.Index(fields=['rol'], name='idx_usuario_rol'),
-            models.Index(fields=['activo'], name='idx_usuario_activo'),
-        ]
     
     def __str__(self):
-        return f"{self.email} - {self.get_rol_display()}"
+        return f"{self.institutional_email} - {self.get_role_display()}"
+    
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
     
     def is_admin(self):
-        """Verifica si el usuario tiene rol de administrador"""
-        return self.rol == 'admin' and self.activo and self.is_active
+        return self.role == 'admin' and self.is_active
     
+    def is_teacher(self):
+        return self.role == 'teacher' and self.is_active
+    
+    def is_student(self):
+        return self.role == 'student' and self.is_active
+    
+    def is_secretary(self):
+        return self.role == 'secretary' and self.is_active
+    
+    # Métodos adicionales para compatibilidad con el sistema de permisos
     def is_secretaria(self):
-        """Verifica si el usuario tiene rol de secretaria"""
-        return self.rol == 'secretaria' and self.activo and self.is_active
+        """Alias para compatibilidad"""
+        return self.is_secretary()
     
     def is_docente(self):
-        """Verifica si el usuario tiene rol de docente"""
-        return self.rol == 'docente' and self.activo and self.is_active
+        """Alias para compatibilidad"""
+        return self.is_teacher()
     
     def is_estudiante(self):
-        """Verifica si el usuario tiene rol de estudiante"""
-        return self.rol == 'estudiante' and self.activo and self.is_active
+        """Alias para compatibilidad"""
+        return self.is_student()
+
+
+# Alias para compatibilidad con el código existente
+UsuarioModel = User
+
+
+class Student(models.Model):
+    """Modelo de estudiante que mapea a la tabla 'students'"""
     
-    def activar_usuario(self):
-        """Activa el usuario"""
-        self.activo = True
-        self.is_active = True
-        self.save()
+    ACADEMIC_STATUS_CHOICES = [
+        ('active', 'Activo'),
+        ('inactive', 'Inactivo'),
+    ]
     
-    def desactivar_usuario(self):
-        """Desactiva el usuario"""
-        self.activo = False
-        self.is_active = False
-        self.save()
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
+    student_code = models.CharField(max_length=20, unique=True)  # CUI
+    career = models.CharField(max_length=100, null=True, blank=True)
+    current_cycle = models.IntegerField(null=True, blank=True)
+    academic_status = models.CharField(max_length=20, choices=ACADEMIC_STATUS_CHOICES, default='active')
     
-    def actualizar_ultimo_acceso(self):
-        """Actualiza la fecha de último acceso"""
-        from django.utils import timezone
-        self.ultimo_acceso = timezone.now()
-        self.save(update_fields=['ultimo_acceso'])
+    class Meta:
+        db_table = 'students'
+        verbose_name = 'Estudiante'
+        verbose_name_plural = 'Estudiantes'
+    
+    def __str__(self):
+        return f"{self.student_code} - {self.user.get_full_name()}"
+
+
+class Teacher(models.Model):
+    """Modelo de profesor que mapea a la tabla 'teachers'"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher')
+    teacher_code = models.CharField(max_length=20, unique=True)
+    department = models.CharField(max_length=100, null=True, blank=True)
+    specialty = models.CharField(max_length=100, null=True, blank=True)
+    hours_per_week = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'teachers'
+        verbose_name = 'Profesor'
+        verbose_name_plural = 'Profesores'
+    
+    def __str__(self):
+        return f"{self.teacher_code} - {self.user.get_full_name()}"
+
+
+class AcademicPeriod(models.Model):
+    """Modelo de período académico"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=50)  # Ej: '2024-I', '2024-II'
+    start_date = models.DateField()
+    end_date = models.DateField()
+    laboratory_enrollment_start = models.DateField()
+    laboratory_enrollment_end = models.DateField()
+    enrollment_change_deadline = models.DateField()
+    is_active = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'academic_periods'
+        verbose_name = 'Período Académico'
+        verbose_name_plural = 'Períodos Académicos'
+    
+    def __str__(self):
+        return self.name
+
+
+class Course(models.Model):
+    """Modelo de curso"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=200)
+    credits = models.IntegerField()
+    theory_hours = models.IntegerField(default=0)
+    practice_hours = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'courses'
+        verbose_name = 'Curso'
+        verbose_name_plural = 'Cursos'
+    
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class CourseGroup(models.Model):
+    """Modelo de grupo de curso (secciones)"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    academic_period = models.ForeignKey(AcademicPeriod, on_delete=models.CASCADE)
+    group_code = models.CharField(max_length=10)  # 'A', 'B', 'C'
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
+    capacity = models.IntegerField()
+    enrolled_students = models.IntegerField(default=0)
+    schedule_info = models.JSONField(null=True, blank=True)
+    classroom = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'course_groups'
+        verbose_name = 'Grupo de Curso'
+        verbose_name_plural = 'Grupos de Curso'
+        unique_together = ['course', 'academic_period', 'group_code']
+    
+    def __str__(self):
+        return f"{self.course.code} - {self.group_code} ({self.academic_period.name})"
+
+
+class Laboratory(models.Model):
+    """Modelo de laboratorio"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE)
+    lab_code = models.CharField(max_length=10)  # 'L1', 'L2'
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
+    capacity = models.IntegerField()
+    enrolled_students = models.IntegerField(default=0)
+    schedule_info = models.JSONField()
+    lab_room = models.CharField(max_length=50, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'laboratories'
+        verbose_name = 'Laboratorio'
+        verbose_name_plural = 'Laboratorios'
+    
+    def __str__(self):
+        return f"{self.course_group.course.code} - {self.lab_code}"
+
+
+class Enrollment(models.Model):
+    """Modelo de matrícula principal"""
+    
+    ENROLLMENT_TYPE_CHOICES = [
+        ('regular', 'Regular'),
+        ('special', 'Especial'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Activo'),
+        ('withdrawn', 'Retirado'),
+        ('failed', 'Desaprobado'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE)
+    academic_period = models.ForeignKey(AcademicPeriod, on_delete=models.CASCADE)
+    enrollment_date = models.DateField(default=timezone.now)
+    enrollment_type = models.CharField(max_length=20, choices=ENROLLMENT_TYPE_CHOICES, default='regular')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    class Meta:
+        db_table = 'enrollments'
+        verbose_name = 'Matrícula'
+        verbose_name_plural = 'Matrículas'
+        unique_together = ['student', 'course_group', 'academic_period']
+    
+    def __str__(self):
+        return f"{self.student.student_code} - {self.course_group}"
+
+
+class LaboratoryEnrollment(models.Model):
+    """Modelo de matrícula en laboratorio"""
+    
+    STATUS_CHOICES = [
+        ('active', 'Activo'),
+        ('withdrawn', 'Retirado'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)
+    laboratory = models.ForeignKey(Laboratory, on_delete=models.CASCADE)
+    enrollment_date = models.DateField(default=timezone.now)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'laboratory_enrollments'
+        verbose_name = 'Matrícula de Laboratorio'
+        verbose_name_plural = 'Matrículas de Laboratorio'
+        unique_together = ['student', 'laboratory']
+    
+    def __str__(self):
+        return f"{self.student.student_code} - {self.laboratory}"
 
 
 class LaboratorioModel(models.Model):
@@ -180,205 +334,90 @@ class LaboratorioModel(models.Model):
         return f"{self.codigo} - {self.nombre}"
 
 
-class ReservaModel(models.Model):
-    """
-    Modelo ORM para reservas de laboratorios
-    """
-    ESTADOS_RESERVA = [
-        ('PENDIENTE', 'Pendiente'),
-        ('APROBADA', 'Aprobada Automáticamente'),
-        ('APROBADA_MANUAL', 'Aprobada Manualmente'),
-        ('RECHAZADA', 'Rechazada'),
-        ('CANCELADA', 'Cancelada'),
-        ('COMPLETADA', 'Completada'),
-    ]
-    
-    laboratorio = models.ForeignKey(
-        LaboratorioModel,
-        on_delete=models.CASCADE,
-        related_name='reservas',
-        verbose_name="Laboratorio"
-    )
-    docente = models.ForeignKey(
-        UsuarioModel,
-        on_delete=models.CASCADE,
-        limit_choices_to={'rol': 'docente'},
-        related_name='reservas_docente',
-        verbose_name="Docente Solicitante"
-    )
-    fecha_reserva = models.DateField(verbose_name="Fecha de Reserva")
-    hora_inicio = models.TimeField(verbose_name="Hora de Inicio")
-    hora_fin = models.TimeField(verbose_name="Hora de Fin")
-    proposito = models.CharField(max_length=200, verbose_name="Propósito de la Reserva")
-    estado = models.CharField(
-        max_length=20,
-        choices=ESTADOS_RESERVA,
-        default='PENDIENTE',
-        db_index=True,
-        verbose_name="Estado"
-    )
-    aprobada_automaticamente = models.BooleanField(
-        default=False,
-        verbose_name="Aprobada Automáticamente"
-    )
-    motivo_rechazo = models.TextField(blank=True, verbose_name="Motivo de Rechazo")
-    fecha_solicitud = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
-    procesada_por = models.ForeignKey(
-        UsuarioModel,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='reservas_procesadas',
-        verbose_name="Procesada Por"
-    )
-    
-    class Meta:
-        db_table = 'reservas'
-        verbose_name = 'Reserva'
-        verbose_name_plural = 'Reservas'
-        ordering = ['-fecha_solicitud']
-        indexes = [
-            models.Index(fields=['laboratorio', 'fecha_reserva'], name='idx_reserva_lab_fecha'),
-            models.Index(fields=['estado'], name='idx_reserva_estado'),
-            models.Index(fields=['docente'], name='idx_reserva_docente'),
-            models.Index(fields=['fecha_reserva', 'hora_inicio'], name='idx_reserva_horario'),
-        ]
-        unique_together = [
-            ['laboratorio', 'fecha_reserva', 'hora_inicio', 'hora_fin']
-        ]
-    
-    def __str__(self):
-        return f"{self.laboratorio.codigo} - {self.fecha_reserva} {self.hora_inicio}-{self.hora_fin}"
-    
-    def tiene_conflicto(self):
-        """Verifica si existe conflicto con otras reservas"""
-        conflictos = ReservaModel.objects.filter(
-            laboratorio=self.laboratorio,
-            fecha_reserva=self.fecha_reserva,
-            estado__in=['APROBADA', 'APROBADA_MANUAL']
-        ).exclude(id=self.id if self.id else None)
-        
-        for reserva in conflictos:
-            if (self.hora_inicio < reserva.hora_fin and self.hora_fin > reserva.hora_inicio):
-                return True
-        return False
-    
-    def duracion_horas(self):
-        """Calcula la duración de la reserva en horas"""
-        from datetime import datetime, timedelta
-        inicio = datetime.combine(self.fecha_reserva, self.hora_inicio)
-        fin = datetime.combine(self.fecha_reserva, self.hora_fin)
-        duracion = fin - inicio
-        return duracion.total_seconds() / 3600
-
+# Modelos de compatibilidad con el código existente
 
 class EstudianteModel(models.Model):
-    """
-    Modelo ORM para la tabla de estudiantes
-    """
-    codigo = models.CharField(
-        max_length=20,
-        unique=True,
-        validators=[MinLengthValidator(6)],
-        db_index=True,
-        verbose_name="Código CUI"
-    )
-    apellidos = models.CharField(max_length=200, verbose_name="Apellidos")
-    nombres = models.CharField(max_length=200, verbose_name="Nombres")
-    correo_institucional = models.EmailField(
-        unique=True,
-        validators=[EmailValidator()],
-        verbose_name="Correo Institucional"
-    )
+    """Modelo de compatibilidad para el código existente"""
+    
+    ESTADOS_ESTUDIANTE = [
+        ('DESACTIVADO', 'Desactivado'),
+        ('ACTIVO', 'Activo'),
+        ('RETIRADO', 'Retirado'),
+        ('ABANDONO', 'Abandono'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    codigo = models.CharField(max_length=20, unique=True, verbose_name="Código de Estudiante")
+    apellidos = models.CharField(max_length=100, verbose_name="Apellidos")
+    nombres = models.CharField(max_length=100, verbose_name="Nombres")
+    correo_institucional = models.EmailField(unique=True, verbose_name="Correo Institucional")
     estado = models.CharField(
         max_length=20,
-        choices=[
-            ('DESACTIVADO', 'Desactivado'),  
-            ('ACTIVO', 'Activo'),
-            ('RETIRADO', 'Retirado'),
-            ('ABANDONO', 'Abandono'),
-        ],
-        default='DESACTIVADO',  
-        db_index=True,
+        choices=ESTADOS_ESTUDIANTE,
+        default='DESACTIVADO',
         verbose_name="Estado"
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     
+    # Relación opcional con el nuevo sistema de usuarios
+    usuario = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='estudiante_legacy',
+        null=True, 
+        blank=True,
+        verbose_name="Usuario Asociado"
+    )
+    
     class Meta:
-        db_table = 'estudiantes'
-        verbose_name = 'Estudiante'
-        verbose_name_plural = 'Estudiantes'
+        db_table = 'estudiantes_legacy'
+        verbose_name = 'Estudiante (Legacy)'
+        verbose_name_plural = 'Estudiantes (Legacy)'
         ordering = ['apellidos', 'nombres']
         indexes = [
             models.Index(fields=['codigo'], name='idx_estudiante_codigo'),
+            models.Index(fields=['correo_institucional'], name='idx_estudiante_correo'),
             models.Index(fields=['estado'], name='idx_estudiante_estado'),
         ]
     
     def __str__(self):
         return f"{self.codigo} - {self.apellidos}, {self.nombres}"
+    
+    def get_nombre_completo(self):
+        return f"{self.nombres} {self.apellidos}"
 
 
 class MatriculaModel(models.Model):
-    """
-    Modelo ORM para la tabla de matrículas
-    """
-    estudiante_codigo = models.CharField(
-        max_length=20,
-        validators=[MinLengthValidator(6)],
-        db_index=True,
-        verbose_name="Código del Estudiante"
-    )
-    curso_codigo = models.CharField(
-        max_length=20,
-        db_index=True,
-        verbose_name="Código del Curso"
-    )
-    ciclo = models.CharField(
-        max_length=10,
-        db_index=True,
-        verbose_name="Ciclo Académico"
-    )
-    grupo = models.CharField(
-        max_length=1,
-        choices=[
-            ('A', 'Grupo A'),
-            ('B', 'Grupo B'),
-            ('C', 'Grupo C'),
-            ('D', 'Grupo D'),
-        ],
-        verbose_name="Grupo"
-    )
-    orden = models.PositiveIntegerField(
-        verbose_name="Orden Alfabético"
-    )
+    """Modelo de matrícula para compatibilidad"""
+    
+    ESTADOS_MATRICULA = [
+        ('ACTIVA', 'Activa'),
+        ('RETIRADA', 'Retirada'),
+        ('ANULADA', 'Anulada'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    estudiante = models.ForeignKey(EstudianteModel, on_delete=models.CASCADE, related_name='matriculas', null=True, blank=True)
+    periodo_academico = models.CharField(max_length=20, verbose_name="Período Académico")
+    fecha_matricula = models.DateTimeField(auto_now_add=True)
     estado = models.CharField(
         max_length=20,
-        choices=[
-            ('MATRICULADO', 'Matriculado'),
-            ('RETIRADO', 'Retirado'),
-        ],
-        default='MATRICULADO',
-        db_index=True,
+        choices=ESTADOS_MATRICULA,
+        default='ACTIVA',
         verbose_name="Estado"
     )
-    fecha_matricula = models.DateTimeField(auto_now_add=True)
-    fecha_actualizacion = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'matriculas'
-        verbose_name = 'Matrícula'
-        verbose_name_plural = 'Matrículas'
-        ordering = ['curso_codigo', 'grupo', 'orden']
-        unique_together = [
-            ['estudiante_codigo', 'curso_codigo', 'ciclo']
-        ]
-        indexes = [
-            models.Index(fields=['estudiante_codigo'], name='idx_matricula_estudiante'),
-            models.Index(fields=['curso_codigo', 'ciclo'], name='idx_matricula_curso'),
-            models.Index(fields=['ciclo', 'grupo'], name='idx_matricula_ciclo_grupo'),
-        ]
+        db_table = 'matriculas_legacy'
+        verbose_name = 'Matrícula (Legacy)'
+        verbose_name_plural = 'Matrículas (Legacy)'
+        unique_together = ['estudiante', 'periodo_academico']
     
     def __str__(self):
-        return f"{self.estudiante_codigo} - {self.curso_codigo} ({self.ciclo}-{self.grupo})"
+        return f"{self.estudiante.codigo} - {self.periodo_academico}"
+
+
+# Alias para compatibilidad con el código existente
+UsuarioModel = User
+DocenteModel = Teacher
