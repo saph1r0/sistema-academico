@@ -1,0 +1,1004 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Gestión de Notas - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gestión de Notas</h1>
+                <p class="text-gray-600 mt-1">Administra las calificaciones de tus estudiantes</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="downloadTemplate()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="download" class="h-4 w-4"></i>
+                    <span>Descargar Plantilla</span>
+                </button>
+                <button onclick="openUploadModal()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="upload" class="h-4 w-4"></i>
+                    <span>Subir Excel de Notas</span>
+                </button>
+                <button onclick="saveAllGrades()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="save" class="h-4 w-4"></i>
+                    <span>Guardar Notas Manuales</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Estadísticas -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Filtros -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Filtros</h3>
+
+                <div class="space-y-4">
+                    <!-- Curso -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos los cursos</option>
+                            {% for course in courses %}
+                            <option value="{{ course.id }}" {% if course.id == selected_course %}selected{% endif %}>
+                                {{ course.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Evaluación -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evaluación</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todas</option>
+                            <option value="examen_parcial">Examen Parcial</option>
+                            <option value="examen_final">Examen Final</option>
+                            <option value="practica">Práctica</option>
+                            <option value="laboratorio">Laboratorio</option>
+                            <option value="proyecto">Proyecto</option>
+                        </select>
+                    </div>
+
+                    <!-- Período -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Período</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos</option>
+                            <option value="2024-1">2024-I</option>
+                            <option value="2024-2">2024-II</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="lg:col-span-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- Promedio General -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="trending-up" class="h-8 w-8 text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Promedio General</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ grade_stats.average|default:"14.2" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estudiantes Aprobados -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="check-circle" class="h-8 w-8 text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Aprobados</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ grade_stats.approved|default:"42" }}/{{
+                                grade_stats.total|default:"53" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estudiantes en Riesgo -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="alert-triangle" class="h-8 w-8 text-red-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">En Riesgo</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ grade_stats.at_risk|default:"8" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Notas -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Registro de Notas</h3>
+                        <div class="flex items-center space-x-2">
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="filter" class="h-5 w-5"></i>
+                            </button>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="download" class="h-5 w-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Estudiante
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Código
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Parcial 1
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Parcial 2
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Parcial 3
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Promedio
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Estado
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Acciones
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for student in students %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div
+                                                class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                                <span class="text-sm font-medium text-blue-600">
+                                                    {{ student.first_name|first }}{{ student.last_name|first }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ student.full_name }}
+                                            </div>
+                                            <div class="text-sm text-gray-500">
+                                                {{ student.student_code }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ student.student_code }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number"
+                                        class="w-16 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        min="0" max="20" step="0.1" value="{{ student.grades.parcial1|default:'' }}"
+                                        placeholder="0.0" name="parcial1_{{ student.id }}">
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number"
+                                        class="w-16 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        min="0" max="20" step="0.1" value="{{ student.grades.parcial2|default:'' }}"
+                                        placeholder="0.0" name="parcial2_{{ student.id }}">
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="number"
+                                        class="w-16 border border-gray-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        min="0" max="20" step="0.1" value="{{ student.grades.parcial3|default:'' }}"
+                                        placeholder="0.0" name="parcial3_{{ student.id }}">
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm font-medium text-gray-900">
+                                        {{ student.grades.promedio|default:"--" }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if student.grades.promedio %}
+                                    {% if student.grades.promedio >= 10.5 %}
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Aprobado
+                                    </span>
+                                    {% else %}
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Desaprobado
+                                    </span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        Pendiente
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button class="text-blue-600 hover:text-blue-900 mr-3">
+                                        <i data-lucide="edit" class="h-4 w-4"></i>
+                                    </button>
+                                    <button class="text-green-600 hover:text-green-900">
+                                        <i data-lucide="save" class="h-4 w-4"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                    No hay estudiantes registrados en este curso
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos Estadísticos -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Análisis Visual de Notas</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Gráfico de Distribución de Notas -->
+            <div>
+                <h4 class="text-md font-medium text-gray-800 mb-3">Distribución por Rangos</h4>
+                <div class="chart-container">
+                    <canvas id="gradeDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico de Evolución de Promedios -->
+            <div>
+                <h4 class="text-md font-medium text-gray-800 mb-3">Evolución de Promedios</h4>
+                <div class="chart-container">
+                    <canvas id="gradeEvolutionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reportes de Notas -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Reportes de Notas</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Estadísticas Detalladas -->
+            <div>
+                <h4 class="text-md font-medium text-gray-800 mb-3">Estadísticas de la Clase</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span class="text-sm font-medium text-blue-900">Promedio Parcial 1</span>
+                        <span class="text-lg font-bold text-blue-900">{{ grade_stats.parcial1_avg|default:"--" }}</span>
+                        <span class="text-xs text-blue-700">({{ grade_stats.parcial1_count }} notas)</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                        <span class="text-sm font-medium text-green-900">Promedio Parcial 2</span>
+                        <span class="text-lg font-bold text-green-900">{{ grade_stats.parcial2_avg|default:"--"
+                            }}</span>
+                        <span class="text-xs text-green-700">({{ grade_stats.parcial2_count }} notas)</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                        <span class="text-sm font-medium text-purple-900">Promedio Parcial 3</span>
+                        <span class="text-lg font-bold text-purple-900">{{ grade_stats.parcial3_avg|default:"--"
+                            }}</span>
+                        <span class="text-xs text-purple-700">({{ grade_stats.parcial3_count }} notas)</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm font-medium text-gray-900">Promedio Final</span>
+                        <span class="text-lg font-bold text-gray-900">{{ grade_stats.average|default:"14.4" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mejores y Peores Notas -->
+            <div>
+                <h4 class="text-md font-medium text-gray-800 mb-3">Destacados</h4>
+                <div class="space-y-3">
+                    <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="text-sm font-medium text-green-800">Mejor Nota</h5>
+                            <button
+                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs flex items-center space-x-1"
+                                onclick="takePhoto('best')">
+                                <i data-lucide="camera" class="h-3 w-3"></i>
+                                <span>Foto</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-green-700">{{ best_student.name|default:"María González" }}</p>
+                        <p class="text-lg font-bold text-green-900">{{ best_student.grade|default:"18.5" }}</p>
+                    </div>
+
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <h5 class="text-sm font-medium text-red-800">Nota Más Baja</h5>
+                            <button
+                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs flex items-center space-x-1"
+                                onclick="takePhoto('worst')">
+                                <i data-lucide="camera" class="h-3 w-3"></i>
+                                <span>Foto</span>
+                            </button>
+                        </div>
+                        <p class="text-sm text-red-700">{{ worst_student.name|default:"Carlos Pérez" }}</p>
+                        <p class="text-lg font-bold text-red-900">{{ worst_student.grade|default:"8.2" }}</p>
+                    </div>
+
+                    <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h5 class="text-sm font-medium text-yellow-800">Estudiantes en Riesgo</h5>
+                        <p class="text-lg font-bold text-yellow-900">{{ grade_stats.at_risk|default:"8" }} estudiantes
+                        </p>
+                        <p class="text-xs text-yellow-700">Promedio menor a 10.5</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Masivas -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Acciones</h3>
+        <div class="flex flex-wrap items-center gap-4">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="save" class="h-4 w-4"></i>
+                <span>Guardar Todas las Notas</span>
+            </button>
+            <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="download" class="h-4 w-4"></i>
+                <span>Descargar Plantilla Excel</span>
+            </button>
+            <button
+                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="upload" class="h-4 w-4"></i>
+                <span>Subir Notas Excel</span>
+            </button>
+            <button
+                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="file-text" class="h-4 w-4"></i>
+                <span>Generar Reporte PDF</span>
+            </button>
+            <button
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="send" class="h-4 w-4"></i>
+                <span>Enviar a Secretaría</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Subir Archivo -->
+<div id="uploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Subir Archivo de Notas</h3>
+                        <button type="button" onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center" id="dropZone">
+                        <i data-lucide="upload" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                        <p class="text-sm text-gray-600 mb-2">Arrastra tu archivo Excel aquí o</p>
+                        <input type="file" name="archivo_notas" id="fileInput" accept=".xlsx,.xls" class="hidden">
+                        <button type="button" onclick="document.getElementById('fileInput').click()"
+                            class="text-blue-600 hover:text-blue-700 font-medium">selecciona un archivo</button>
+                        <p class="text-xs text-gray-500 mt-2">Solo archivos .xlsx y .xls</p>
+                        <div id="selectedFile" class="mt-3 hidden">
+                            <p class="text-sm text-green-600 font-medium"></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeUploadModal()"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="uploadButton" disabled
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg">
+                            Subir Archivo
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}{% block extra_js %}
+<script>
+    // Funcionalidad para tomar fotos
+    function takePhoto(type) {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    // Crear modal para la cámara
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center';
+                    modal.innerHTML = `
+                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">
+                                Tomar foto de ${type === 'best' ? 'mejor' : 'peor'} nota
+                            </h3>
+                            <video id="camera" width="100%" height="300" autoplay class="rounded-lg mb-4"></video>
+                            <canvas id="canvas" style="display: none;"></canvas>
+                            <div class="flex justify-end space-x-3">
+                                <button onclick="closeCamera()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                                    Cancelar
+                                </button>
+                                <button onclick="capturePhoto('${type}')" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                                    Capturar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(modal);
+
+                    const video = document.getElementById('camera');
+                    video.srcObject = stream;
+                    window.currentStream = stream;
+                })
+                .catch(function (err) {
+                    alert('Error al acceder a la cámara: ' + err.message);
+                });
+        } else {
+            alert('Tu navegador no soporta acceso a la cámara');
+        }
+    }
+
+    function capturePhoto(type) {
+        const video = document.getElementById('camera');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+
+        // Convertir a blob y enviar a servidor
+        canvas.toBlob(function (blob) {
+            const formData = new FormData();
+            formData.append('photo', blob, `${type}_grade_photo.jpg`);
+            formData.append('type', type);
+
+            fetch('/profesor/notas/upload-photo/', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Foto enviada exitosamente a secretaría');
+                    } else {
+                        alert('Error al enviar foto: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error al enviar foto: ' + error);
+                });
+
+            closeCamera();
+        }, 'image/jpeg', 0.8);
+    }
+
+    function closeCamera() {
+        if (window.currentStream) {
+            window.currentStream.getTracks().forEach(track => track.stop());
+        }
+        const modal = document.querySelector('.fixed.inset-0.bg-gray-600');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    // Calcular promedio automáticamente
+    function calculateAverage(studentId) {
+        const parcial1 = parseFloat(document.querySelector(`input[name="parcial1_${studentId}"]`).value) || 0;
+        const parcial2 = parseFloat(document.querySelector(`input[name="parcial2_${studentId}"]`).value) || 0;
+        const parcial3 = parseFloat(document.querySelector(`input[name="parcial3_${studentId}"]`).value) || 0;
+
+        const count = (parcial1 > 0 ? 1 : 0) + (parcial2 > 0 ? 1 : 0) + (parcial3 > 0 ? 1 : 0);
+        if (count === 0) return 0;
+
+        const average = (parcial1 + parcial2 + parcial3) / count;
+        return average.toFixed(1);
+    }
+
+    // Funciones para manejo de archivos y notas
+    function openUploadModal() {
+        document.getElementById('uploadModal').classList.remove('hidden');
+    }
+
+    function closeUploadModal() {
+        document.getElementById('uploadModal').classList.add('hidden');
+    }
+
+    function downloadTemplate() {
+        // Crear un enlace temporal para descargar plantilla
+        const link = document.createElement('a');
+        link.href = '/profesor/notas/download-template/';
+        link.download = 'plantilla_notas.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showNotification('Descargando plantilla de Excel...', 'info');
+    }
+
+    function saveAllGrades() {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.href;
+
+        // Agregar CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+
+        // Agregar acción
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'save_manual_grades';
+        form.appendChild(actionInput);
+
+        // Recopilar todas las notas de los inputs
+        const gradeInputs = document.querySelectorAll('input[type="number"]');
+        gradeInputs.forEach(input => {
+            if (input.value && input.value.trim() !== '') {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = input.name;
+                hiddenInput.value = input.value;
+                form.appendChild(hiddenInput);
+            }
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+
+        showNotification('Guardando notas...', 'info');
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${getNotificationClasses(type)}`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    ${getNotificationIcon(type)}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">${message}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            class="text-gray-400 hover:text-gray-600">
+                        <span class="sr-only">Cerrar</span>
+                        ×
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    function getNotificationClasses(type) {
+        switch (type) {
+            case 'success': return 'bg-green-50 border border-green-200 text-green-800';
+            case 'error': return 'bg-red-50 border border-red-200 text-red-800';
+            case 'warning': return 'bg-yellow-50 border border-yellow-200 text-yellow-800';
+            default: return 'bg-blue-50 border border-blue-200 text-blue-800';
+        }
+    }
+
+    function getNotificationIcon(type) {
+        switch (type) {
+            case 'success': return '✓';
+            case 'error': return '✗';
+            case 'warning': return '⚠';
+            default: return 'ℹ';
+        }
+    }
+
+    // Funciones para modales y acciones
+    function openUploadModal() {
+        document.getElementById('uploadModal').classList.remove('hidden');
+    }
+
+    function closeUploadModal() {
+        document.getElementById('uploadModal').classList.add('hidden');
+        document.getElementById('fileInput').value = '';
+        document.getElementById('selectedFile').classList.add('hidden');
+        document.getElementById('uploadButton').disabled = true;
+    }
+
+    function downloadTemplate() {
+        // Crear y descargar plantilla Excel
+        window.location.href = '/profesor/notas/download-template/';
+    }
+
+    function saveAllGrades() {
+        // Recopilar todas las notas y enviarlas
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "profesor:notas" %}';
+
+        // Agregar CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+
+        // Agregar action
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'save_manual_grades';
+        form.appendChild(actionInput);
+
+        // Recopilar todas las notas de los inputs
+        const gradeInputs = document.querySelectorAll('input[type="number"]');
+        gradeInputs.forEach(input => {
+            if (input.value && input.value.trim() !== '') {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = input.name;
+                hiddenInput.value = input.value;
+                form.appendChild(hiddenInput);
+            }
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+
+        showNotification('Guardando notas...', 'info');
+    }
+
+    function calculateAverage(studentId) {
+        const parcial1 = parseFloat(document.querySelector(`input[name="parcial1_${studentId}"]`).value) || 0;
+        const parcial2 = parseFloat(document.querySelector(`input[name="parcial2_${studentId}"]`).value) || 0;
+        const parcial3 = parseFloat(document.querySelector(`input[name="parcial3_${studentId}"]`).value) || 0;
+
+        const validGrades = [parcial1, parcial2, parcial3].filter(grade => grade > 0);
+
+        if (validGrades.length === 0) return '--';
+
+        const average = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+        return average.toFixed(1);
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${getNotificationClasses(type)}`;
+        notification.innerHTML = `
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    ${getNotificationIcon(type)}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">${message}</p>
+                </div>
+                <div class="ml-4 flex-shrink-0">
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                            class="text-gray-400 hover:text-gray-600">
+                        <span class="sr-only">Cerrar</span>
+                        ×
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    function getNotificationClasses(type) {
+        switch (type) {
+            case 'success': return 'bg-green-50 border border-green-200 text-green-800';
+            case 'error': return 'bg-red-50 border border-red-200 text-red-800';
+            case 'warning': return 'bg-yellow-50 border border-yellow-200 text-yellow-800';
+            default: return 'bg-blue-50 border border-blue-200 text-blue-800';
+        }
+    }
+
+    function getNotificationIcon(type) {
+        switch (type) {
+            case 'success': return '✓';
+            case 'error': return '✗';
+            case 'warning': return '⚠';
+            default: return 'ℹ';
+        }
+    }
+
+    // Inicializar gráficos
+    let gradeDistributionChart = null;
+    let gradeEvolutionChart = null;
+
+    function initializeCharts() {
+        console.log('Inicializando gráficos...');
+
+        // Verificar que Chart.js esté disponible
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js no está cargado');
+            return;
+        }
+
+        // Verificar que las clases personalizadas estén disponibles
+        if (typeof GradeDistributionChart === 'undefined' || typeof GradeEvolutionChart === 'undefined') {
+            console.error('Clases de gráficos no están disponibles');
+            // Usar implementación básica
+            initializeBasicCharts();
+            return;
+        }
+
+        try {
+            // Gráfico de distribución de notas
+            gradeDistributionChart = new GradeDistributionChart('gradeDistributionChart');
+            gradeDistributionChart.loadAndRender('{% url "profesor:api_grade_statistics" %}?evaluation_type=Parcial 1');
+
+            // Gráfico de evolución de promedios
+            gradeEvolutionChart = new GradeEvolutionChart('gradeEvolutionChart');
+            gradeEvolutionChart.loadAndRender('{% url "profesor:api_grade_statistics" %}');
+
+            console.log('Gráficos inicializados correctamente');
+        } catch (error) {
+            console.error('Error inicializando gráficos:', error);
+            initializeBasicCharts();
+        }
+    }
+
+    function initializeBasicCharts() {
+        console.log('Inicializando gráficos básicos...');
+
+        // Cargar datos de la API
+        fetch('{% url "profesor:api_grade_statistics" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.distribution) {
+                    createBasicDistributionChart(data.distribution);
+                }
+                if (data.success && data.evolution) {
+                    createBasicEvolutionChart(data.evolution);
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando datos de API:', error);
+                showChartError();
+            });
+    }
+
+    function createBasicDistributionChart(distributionData) {
+        const canvas = document.getElementById('gradeDistributionChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['0-5', '6-10', '11-15', '16-20'],
+                datasets: [{
+                    label: 'Estudiantes',
+                    data: [
+                        distributionData.ranges['0-5'] || 0,
+                        distributionData.ranges['6-10'] || 0,
+                        distributionData.ranges['11-15'] || 0,
+                        distributionData.ranges['16-20'] || 0
+                    ],
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(6, 182, 212, 0.8)',
+                        'rgba(34, 197, 94, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(239, 68, 68)',
+                        'rgb(249, 115, 22)',
+                        'rgb(6, 182, 212)',
+                        'rgb(34, 197, 94)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribución de Notas por Rangos'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function createBasicEvolutionChart(evolutionData) {
+        const canvas = document.getElementById('gradeEvolutionChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Parcial 1', 'Parcial 2', 'Parcial 3'],
+                datasets: [{
+                    label: 'Promedio de Clase',
+                    data: [
+                        evolutionData.averages?.parcial1 || 0,
+                        evolutionData.averages?.parcial2 || 0,
+                        evolutionData.averages?.parcial3 || 0
+                    ],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolución de Promedios por Evaluación'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 20
+                    }
+                }
+            }
+        });
+    }
+
+    function showChartError() {
+        const containers = ['gradeDistributionChart', 'gradeEvolutionChart'];
+        containers.forEach(containerId => {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.parentElement.innerHTML = `
+                    <div class="chart-error">
+                        <p class="font-medium text-red-600">Error al cargar el gráfico</p>
+                        <button onclick="initializeCharts()" class="mt-2 px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+                            Reintentar
+                        </button>
+                    </div>
+                `;
+            }
+        });
+    }
+
+    // Agregar event listeners para calcular promedio automáticamente
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+
+        // Inicializar gráficos después de que se cargue la página
+        setTimeout(initializeCharts, 500);
+
+        const gradeInputs = document.querySelectorAll('input[type="number"]');
+        gradeInputs.forEach(input => {
+            input.addEventListener('input', function () {
+                const studentId = this.name.split('_')[1];
+                const averageSpan = this.closest('tr').querySelector('td:nth-child(6) span');
+                const statusSpan = this.closest('tr').querySelector('td:nth-child(7) span');
+
+                const average = calculateAverage(studentId);
+                averageSpan.textContent = average;
+
+                // Actualizar estado
+                if (average >= 10.5) {
+                    statusSpan.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                    statusSpan.textContent = 'Aprobado';
+                } else if (average > 0) {
+                    statusSpan.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
+                    statusSpan.textContent = 'Desaprobado';
+                } else {
+                    statusSpan.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800';
+                    statusSpan.textContent = 'Pendiente';
+                }
+            });
+        });
+
+        // Event listeners para el modal de subida
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const selectedFileDiv = document.getElementById('selectedFile');
+
+        fileInput.addEventListener('change', function () {
+            if (this.files.length > 0) {
+                const file = this.files[0];
+                selectedFileDiv.querySelector('p').textContent = `Archivo seleccionado: ${file.name}`;
+                selectedFileDiv.classList.remove('hidden');
+                uploadButton.disabled = false;
+            } else {
+                selectedFileDiv.classList.add('hidden');
+                uploadButton.disabled = true;
+            }
+        });
+
+        // Event listeners para el modal
+        document.getElementById('uploadModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeUploadModal();
+            }
+        });
+    });
+
+    // Limpiar gráficos al salir de la página
+    window.addEventListener('beforeunload', function () {
+        if (gradeDistributionChart) gradeDistributionChart.destroy();
+        if (gradeEvolutionChart) gradeEvolutionChart.destroy();
+    });
+</script>
+
+{% endblock extra_js %}

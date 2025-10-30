@@ -8,54 +8,68 @@
     <div class="bg-white rounded-lg shadow-sm p-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido, {{ user.first_name }}!</h1>
-                <p class="text-gray-600 mt-1">Panel de control académico y administrativo</p>
+                <h1 class="text-2xl font-bold text-gray-900">{{ welcome_message|default:"¡Bienvenida, Secretaria!" }}
+                </h1>
+                <p class="text-gray-600 mt-1">Supervisión Institucional Completa - Super Usuario</p>
+                {% if current_period %}
+                <p class="text-sm text-purple-600 mt-1">
+                    Período Académico: {{ current_period.name }}
+                    (Semana {{ current_period.weeks_elapsed }} de {{ current_period.total_weeks }})
+                </p>
+                {% endif %}
             </div>
             <div class="text-right">
                 <p class="text-sm text-gray-500">Último acceso</p>
-                <p class="text-sm font-medium text-gray-900">{{ user.last_login|date:"d/m/Y H:i" }}</p>
+                <p class="text-sm font-medium text-gray-900">{{ user.last_login|date:"d/m/Y H:i"|default:"Primera vez"
+                    }}</p>
+                <div class="mt-2">
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <i data-lucide="shield-check" class="h-3 w-3 mr-1"></i>
+                        Super Usuario
+                    </span>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Stats Cards -->
+    <!-- Stats Cards Institucionales -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Inscripciones Pendientes -->
+        <!-- Total Profesores -->
         <div class="bg-white rounded-lg shadow-sm p-6">
             <div class="flex items-center">
-                <div class="p-3 bg-yellow-50 rounded-full">
-                    <i data-lucide="clock" class="h-6 w-6 text-yellow-600"></i>
+                <div class="p-3 bg-green-50 rounded-full">
+                    <i data-lucide="graduation-cap" class="h-6 w-6 text-green-600"></i>
                 </div>
                 <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Inscripciones Pendientes</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ resumen_inscripciones.pendientes|default:0 }}</p>
+                    <p class="text-sm font-medium text-gray-600">Total Profesores</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_teachers|default:0 }}</p>
                 </div>
             </div>
         </div>
 
-        <!-- Total Laboratorios -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-purple-50 rounded-full">
-                    <i data-lucide="flask-conical" class="h-6 w-6 text-purple-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Total Laboratorios</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ laboratorios_ocupacion.total|default:0 }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Ocupación Promedio -->
+        <!-- Total Estudiantes -->
         <div class="bg-white rounded-lg shadow-sm p-6">
             <div class="flex items-center">
                 <div class="p-3 bg-blue-50 rounded-full">
                     <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
                 </div>
                 <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Ocupación Promedio</p>
-                    <p class="text-2xl font-bold text-gray-900">{{
-                        laboratorios_ocupacion.promedio|floatformat:1|default:"0.0" }}%</p>
+                    <p class="text-sm font-medium text-gray-600">Total Estudiantes</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_students|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Cursos -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-50 rounded-full">
+                    <i data-lucide="book-open" class="h-6 w-6 text-purple-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Cursos</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_courses|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -68,7 +82,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Alertas Activas</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ alertas_sistema|length|default:0 }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ alerts_count|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -76,64 +90,66 @@
 
     <!-- Main Content Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Inscripciones Recientes -->
+        <!-- Gestión de Profesores -->
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow-sm">
                 <div class="p-6 border-b border-gray-200">
                     <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-semibold text-gray-900">Inscripciones Recientes</h2>
-                        <a href="{% url 'secretario:laboratorios' %}"
-                            class="text-sm text-purple-600 hover:text-purple-700">Ver todas</a>
+                        <h2 class="text-lg font-semibold text-gray-900">Profesores del Sistema</h2>
+                        <a href="#" class="text-sm text-purple-600 hover:text-purple-700">Ver todos</a>
                     </div>
                 </div>
                 <div class="p-6">
-                    {% if inscripciones_recientes %}
+                    {% if teachers_stats %}
                     <div class="space-y-4">
-                        {% for inscripcion in inscripciones_recientes %}
+                        {% for teacher_stat in teachers_stats %}
                         <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0">
-                                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                        <i data-lucide="user" class="h-5 w-5 text-purple-600"></i>
+                                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="graduation-cap" class="h-5 w-5 text-green-600"></i>
                                     </div>
                                 </div>
                                 <div class="ml-4">
-                                    <h3 class="text-sm font-medium text-gray-900">{{ inscripcion.estudiante_nombre }}
+                                    <h3 class="text-sm font-medium text-gray-900">
+                                        {{ teacher_stat.teacher.user.get_full_name }}
                                     </h3>
-                                    <p class="text-sm text-gray-600">{{ inscripcion.curso_nombre }} - {{
-                                        inscripcion.laboratorio_codigo }}</p>
-                                    <p class="text-xs text-gray-500">{{ inscripcion.fecha_inscripcion|date:"d/m/Y H:i"
-                                        }}</p>
+                                    <p class="text-sm text-gray-600">
+                                        {{ teacher_stat.teacher.teacher_code }} - {{ teacher_stat.teacher.department }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ teacher_stat.courses_count }} curso(s) | {{ teacher_stat.hours_per_week }}
+                                        hrs/semana
+                                    </p>
                                 </div>
                             </div>
-                            <div class="flex-shrink-0">
-                                {% if inscripcion.estado == 'pending' %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                    <i data-lucide="clock" class="h-3 w-3 mr-1"></i>
-                                    Pendiente
-                                </span>
-                                {% elif inscripcion.estado == 'approved' %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <i data-lucide="check" class="h-3 w-3 mr-1"></i>
-                                    Aprobada
-                                </span>
-                                {% elif inscripcion.estado == 'rejected' %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    <i data-lucide="x" class="h-3 w-3 mr-1"></i>
-                                    Rechazada
-                                </span>
-                                {% endif %}
+                            <div class="flex-shrink-0 text-right">
+                                <div class="flex items-center space-x-2">
+                                    {% if teacher_stat.status == 'activo' %}
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
+                                        Activo
+                                    </span>
+                                    {% else %}
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <i data-lucide="x-circle" class="h-3 w-3 mr-1"></i>
+                                        Inactivo
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    {{ teacher_stat.virtual_percentage }}% virtual
+                                </p>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                     {% else %}
                     <div class="text-center py-8">
-                        <i data-lucide="inbox" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
-                        <p class="text-gray-500">No hay inscripciones recientes</p>
+                        <i data-lucide="users-x" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                        <p class="text-gray-500">No hay profesores registrados</p>
                     </div>
                     {% endif %}
                 </div>
@@ -166,34 +182,33 @@
                 </div>
             </div>
 
-            <!-- Ocupación de Laboratorios -->
+            <!-- Estado del Sistema -->
             <div class="bg-white rounded-lg shadow-sm">
                 <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">Ocupación de Laboratorios</h2>
+                    <h2 class="text-lg font-semibold text-gray-900">Estado del Sistema</h2>
                 </div>
                 <div class="p-6">
-                    {% if laboratorios_ocupacion.detalle %}
                     <div class="space-y-4">
-                        {% for lab in laboratorios_ocupacion.detalle %}
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span class="font-medium text-gray-900">{{ lab.nombre }}</span>
-                                <span class="text-gray-600">{{ lab.ocupados }}/{{ lab.capacidad }}</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="{% if lab.porcentaje >= 90 %}bg-red-600{% elif lab.porcentaje >= 70 %}bg-yellow-600{% else %}bg-green-600{% endif %} h-2 rounded-full"
-                                    style="width: {{ lab.porcentaje }}%"></div>
-                            </div>
-                            <div class="text-xs text-gray-500 mt-1">{{ lab.porcentaje|floatformat:1 }}% ocupado</div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Estado del Servidor</span>
+                            <span
+                                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                Operativo
+                            </span>
                         </div>
-                        {% endfor %}
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Base de Datos</span>
+                            <span class="text-sm font-medium text-gray-900">PostgreSQL</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Usuarios Conectados</span>
+                            <span class="text-sm font-medium text-gray-900">{{ active_users|default:0 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Último Backup</span>
+                            <span class="text-sm font-medium text-gray-900">Ayer</span>
+                        </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i data-lucide="flask-conical-off" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
-                        <p class="text-sm text-gray-500">No hay datos de ocupación</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
 
@@ -203,15 +218,15 @@
                     <h2 class="text-lg font-semibold text-gray-900">Alertas del Sistema</h2>
                 </div>
                 <div class="p-6">
-                    {% if alertas_sistema %}
+                    {% if system_alerts %}
                     <div class="space-y-3">
-                        {% for alerta in alertas_sistema %}
+                        {% for alert in system_alerts %}
                         <div
-                            class="flex items-start p-3 {% if alerta.tipo == 'error' %}bg-red-50 border border-red-200{% elif alerta.tipo == 'warning' %}bg-yellow-50 border border-yellow-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-lg">
+                            class="flex items-start p-3 {% if alert.type == 'error' %}bg-red-50 border border-red-200{% elif alert.type == 'warning' %}bg-yellow-50 border border-yellow-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-lg">
                             <div class="flex-shrink-0">
-                                {% if alerta.tipo == 'error' %}
+                                {% if alert.type == 'error' %}
                                 <i data-lucide="alert-circle" class="h-5 w-5 text-red-600"></i>
-                                {% elif alerta.tipo == 'warning' %}
+                                {% elif alert.type == 'warning' %}
                                 <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-600"></i>
                                 {% else %}
                                 <i data-lucide="info" class="h-5 w-5 text-blue-600"></i>
@@ -219,14 +234,18 @@
                             </div>
                             <div class="ml-3 flex-1">
                                 <p
-                                    class="text-sm font-medium {% if alerta.tipo == 'error' %}text-red-800{% elif alerta.tipo == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
-                                    {{ alerta.titulo }}
+                                    class="text-sm font-medium {% if alert.type == 'error' %}text-red-800{% elif alert.type == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
+                                    {{ alert.title }}
                                 </p>
                                 <p
-                                    class="text-xs {% if alerta.tipo == 'error' %}text-red-700{% elif alerta.tipo == 'warning' %}text-yellow-700{% else %}text-blue-700{% endif %} mt-1">
-                                    {{ alerta.descripcion }}
+                                    class="text-xs {% if alert.type == 'error' %}text-red-700{% elif alert.type == 'warning' %}text-yellow-700{% else %}text-blue-700{% endif %} mt-1">
+                                    {{ alert.message }}
                                 </p>
-                                <p class="text-xs text-gray-500 mt-1">{{ alerta.fecha|date:"d/m/Y H:i" }}</p>
+                                {% if alert.action %}
+                                <p class="text-xs text-gray-600 mt-1 font-medium">
+                                    Acción: {{ alert.action }}
+                                </p>
+                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
@@ -242,38 +261,109 @@
         </div>
     </div>
 
-    <!-- Estadísticas Generales -->
-    <div class="bg-white rounded-lg shadow-sm">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Estadísticas Generales</h2>
+    <!-- Estadísticas Institucionales Detalladas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Métricas de Rendimiento -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Métricas de Rendimiento</h2>
+            </div>
+            <div class="p-6">
+                {% if performance_metrics %}
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center p-4 bg-blue-50 rounded-lg">
+                        <div class="text-2xl font-bold text-blue-900">{{ performance_metrics.average_grade|floatformat:1
+                            }}</div>
+                        <div class="text-sm text-blue-700">Nota Promedio</div>
+                    </div>
+                    <div class="text-center p-4 bg-green-50 rounded-lg">
+                        <div class="text-2xl font-bold text-green-900">{{
+                            performance_metrics.approval_rate|floatformat:1 }}%</div>
+                        <div class="text-sm text-green-700">Tasa de Aprobación</div>
+                    </div>
+                    <div class="text-center p-4 bg-red-50 rounded-lg">
+                        <div class="text-2xl font-bold text-red-900">{{ performance_metrics.dropout_rate|floatformat:1
+                            }}%</div>
+                        <div class="text-sm text-red-700">Tasa de Deserción</div>
+                    </div>
+                    <div class="text-center p-4 bg-purple-50 rounded-lg">
+                        <div class="text-2xl font-bold text-purple-900">{{
+                            performance_metrics.excellence_rate|floatformat:1 }}%</div>
+                        <div class="text-sm text-purple-700">Excelencia Académica</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i data-lucide="trending-up" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                    <p class="text-gray-500">No hay métricas de rendimiento disponibles</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        <div class="p-6">
-            {% if estadisticas_generales %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-gray-900">{{ estadisticas_generales.total_estudiantes }}</div>
-                    <div class="text-sm text-gray-600">Total Estudiantes</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-gray-900">{{ estadisticas_generales.total_profesores }}</div>
-                    <div class="text-sm text-gray-600">Total Profesores</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-gray-900">{{ estadisticas_generales.total_cursos }}</div>
-                    <div class="text-sm text-gray-600">Total Cursos</div>
-                </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-gray-900">{{
-                        estadisticas_generales.promedio_asistencia|floatformat:1 }}%</div>
-                    <div class="text-sm text-gray-600">Asistencia Promedio</div>
-                </div>
+
+        <!-- Estadísticas de Asistencia -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Estadísticas de Asistencia</h2>
             </div>
-            {% else %}
-            <div class="text-center py-8">
-                <i data-lucide="bar-chart-3" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
-                <p class="text-gray-500">No hay estadísticas disponibles</p>
+            <div class="p-6">
+                {% if attendance_stats %}
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="users" class="h-5 w-5 text-blue-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">Asistencia Global</p>
+                                <p class="text-xs text-gray-600">Promedio institucional</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-gray-900">{{
+                                attendance_stats.global_attendance_rate|floatformat:1 }}%</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="graduation-cap" class="h-5 w-5 text-green-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">Asistencia Docente</p>
+                                <p class="text-xs text-gray-600">Profesores activos</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-gray-900">{{
+                                attendance_stats.teacher_attendance_rate|floatformat:1 }}%</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i data-lucide="user-check" class="h-5 w-5 text-purple-600"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-gray-900">Asistencia Estudiantil</p>
+                                <p class="text-xs text-gray-600">Estudiantes matriculados</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-gray-900">{{
+                                attendance_stats.student_attendance_rate|floatformat:1 }}%</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i data-lucide="calendar-check" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                    <p class="text-gray-500">No hay estadísticas de asistencia disponibles</p>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </div>
 </div>

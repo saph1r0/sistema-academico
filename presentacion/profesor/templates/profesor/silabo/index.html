@@ -1,0 +1,396 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Gestión de Sílabo - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gestión de Sílabo</h1>
+                <p class="text-gray-600 mt-1">Administra el contenido y progreso de tus cursos</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="upload" class="h-4 w-4"></i>
+                    <span>Subir Sílabo</span>
+                </button>
+                <button
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="download" class="h-4 w-4"></i>
+                    <span>Descargar PDF</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del Curso -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Información Básica -->
+            <div class="lg:col-span-2">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Información del Curso</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Curso</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.name|default:"MATEMATICA
+                            APLICADA A LA COMPUTACION" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.code|default:"MAT101" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Créditos</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.credits|default:"4" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Horas Semanales</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.weekly_hours|default:"4" }}
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Modalidad</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.modality|default:"Presencial
+                            (85%) + Virtual (15%)" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Período</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.period|default:"2024-II" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas del Sílabo -->
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Progreso del Sílabo</h3>
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-blue-900">Unidades Completadas</span>
+                            <span class="text-sm font-bold text-blue-900">{{ syllabus_stats.completed_units|default:"2"
+                                }}/{{ syllabus_stats.total_units|default:"4" }}</span>
+                        </div>
+                        <div class="w-full bg-blue-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full"
+                                style="width: {{ syllabus_stats.completion_percentage|default:50 }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-green-900">Clases Dictadas</span>
+                            <span class="text-sm font-bold text-green-900">{{ syllabus_stats.classes_taught|default:"8"
+                                }}/{{ syllabus_stats.total_classes|default:"16" }}</span>
+                        </div>
+                        <div class="w-full bg-green-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full"
+                                style="width: {{ syllabus_stats.classes_percentage|default:50 }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-purple-900">Evaluaciones</span>
+                            <span class="text-sm font-bold text-purple-900">{{
+                                syllabus_stats.evaluations_done|default:"1" }}/{{
+                                syllabus_stats.total_evaluations|default:"3" }}</span>
+                        </div>
+                        <div class="w-full bg-purple-200 rounded-full h-2">
+                            <div class="bg-purple-600 h-2 rounded-full"
+                                style="width: {{ syllabus_stats.evaluations_percentage|default:33 }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido del Sílabo -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Unidades del Sílabo -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Unidades del Sílabo</h3>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                            <i data-lucide="plus" class="h-4 w-4 inline mr-1"></i>
+                            Agregar Unidad
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-6">
+                        {% for unit in syllabus_units %}
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <h4 class="text-lg font-medium text-gray-900">{{ unit.title }}</h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                 {% if unit.status == 'completed' %}bg-green-100 text-green-800
+                                                 {% elif unit.status == 'in_progress' %}bg-blue-100 text-blue-800
+                                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ unit.get_status_display }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button class="text-blue-600 hover:text-blue-900">
+                                        <i data-lucide="edit" class="h-4 w-4"></i>
+                                    </button>
+                                    <button class="text-red-600 hover:text-red-900">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-500">Duración:</span>
+                                    <span class="text-sm text-gray-900 ml-1">{{ unit.duration }} semanas</span>
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-500">Horas:</span>
+                                    <span class="text-sm text-gray-900 ml-1">{{ unit.hours }} horas</span>
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-500">Progreso:</span>
+                                    <span class="text-sm text-gray-900 ml-1">{{ unit.progress }}%</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5 class="text-sm font-medium text-gray-700 mb-2">Objetivos:</h5>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    {% for objective in unit.objectives %}
+                                    <li class="flex items-start">
+                                        <i data-lucide="check-circle"
+                                            class="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0"></i>
+                                        {{ objective }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
+                            <div class="mb-4">
+                                <h5 class="text-sm font-medium text-gray-700 mb-2">Contenidos:</h5>
+                                <div class="space-y-2">
+                                    {% for content in unit.contents %}
+                                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                        <div class="flex items-center">
+                                            <input type="checkbox"
+                                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3"
+                                                {% if content.completed %}checked{% endif %}>
+                                            <span class="text-sm text-gray-900">{{ content.title }}</span>
+                                        </div>
+                                        <span class="text-xs text-gray-500">{{ content.hours }}h</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h5 class="text-sm font-medium text-gray-700 mb-2">Evaluaciones:</h5>
+                                <div class="flex flex-wrap gap-2">
+                                    {% for evaluation in unit.evaluations %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                 {% if evaluation.type == 'examen' %}bg-red-100 text-red-800
+                                                 {% elif evaluation.type == 'practica' %}bg-blue-100 text-blue-800
+                                                 {% elif evaluation.type == 'proyecto' %}bg-purple-100 text-purple-800
+                                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ evaluation.name }} ({{ evaluation.weight }}%)
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-center py-8">
+                            <i data-lucide="book-open" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-500 mb-4">No hay unidades del sílabo registradas</p>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                                Crear Primera Unidad
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="space-y-6">
+            <!-- Cronograma -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Cronograma</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        {% for week in schedule %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Semana {{ week.number }}</p>
+                                <p class="text-xs text-gray-500">{{ week.dates }}</p>
+                            </div>
+                            <div class="flex items-center">
+                                {% if week.completed %}
+                                <i data-lucide="check-circle" class="h-5 w-5 text-green-500"></i>
+                                {% elif week.current %}
+                                <i data-lucide="play-circle" class="h-5 w-5 text-blue-500"></i>
+                                {% else %}
+                                <i data-lucide="circle" class="h-5 w-5 text-gray-400"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recursos -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Recursos</h3>
+                        <button class="text-blue-600 hover:text-blue-700">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% for resource in resources %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center">
+                                <i data-lucide="{{ resource.icon }}" class="h-4 w-4 text-gray-500 mr-3"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{ resource.name }}</p>
+                                    <p class="text-xs text-gray-500">{{ resource.type }}</p>
+                                </div>
+                            </div>
+                            <button class="text-blue-600 hover:text-blue-700">
+                                <i data-lucide="download" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                        {% empty %}
+                        <p class="text-sm text-gray-500 text-center">No hay recursos disponibles</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bibliografía -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Bibliografía</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Básica</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Stewart, J. (2020). Cálculo de una variable. Cengage Learning.</li>
+                                <li>• Larson, R. (2019). Matemáticas aplicadas. McGraw-Hill.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Complementaria</h4>
+                            <ul class="text-sm text-gray-600 space-y-1">
+                                <li>• Anton, H. (2018). Introducción al álgebra lineal. Limusa.</li>
+                                <li>• Grossman, S. (2019). Matemáticas discretas. Pearson.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Nueva Unidad -->
+<div id="newUnitModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Nueva Unidad del Sílabo</h3>
+                <form class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Título de la Unidad</label>
+                        <input type="text"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Ej: Fundamentos de Cálculo Diferencial">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Duración (semanas)</label>
+                            <input type="number" min="1" max="8"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Horas totales</label>
+                            <input type="number" min="1"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Objetivos</label>
+                        <textarea
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            rows="3" placeholder="Objetivos de aprendizaje de la unidad..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Contenidos</label>
+                        <textarea
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            rows="4" placeholder="Contenidos temáticos de la unidad..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Evaluaciones</label>
+                        <div class="space-y-2">
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox"
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <span class="text-sm text-gray-700">Examen parcial</span>
+                                <input type="number" min="0" max="100" placeholder="%"
+                                    class="w-16 border border-gray-300 rounded px-2 py-1 text-sm">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox"
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <span class="text-sm text-gray-700">Prácticas</span>
+                                <input type="number" min="0" max="100" placeholder="%"
+                                    class="w-16 border border-gray-300 rounded px-2 py-1 text-sm">
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox"
+                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <span class="text-sm text-gray-700">Proyecto</span>
+                                <input type="number" min="0" max="100" placeholder="%"
+                                    class="w-16 border border-gray-300 rounded px-2 py-1 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                        Crear Unidad
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
