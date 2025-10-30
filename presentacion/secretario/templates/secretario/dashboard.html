@@ -1,0 +1,288 @@
+{% extends 'base_secretario.html' %}
+
+{% block title %}Dashboard - Portal Secretaría{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido, {{ user.first_name }}!</h1>
+                <p class="text-gray-600 mt-1">Panel de control académico y administrativo</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Último acceso</p>
+                <p class="text-sm font-medium text-gray-900">{{ user.last_login|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Inscripciones Pendientes -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-yellow-50 rounded-full">
+                    <i data-lucide="clock" class="h-6 w-6 text-yellow-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Inscripciones Pendientes</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ resumen_inscripciones.pendientes|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Laboratorios -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-50 rounded-full">
+                    <i data-lucide="flask-conical" class="h-6 w-6 text-purple-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Laboratorios</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ laboratorios_ocupacion.total|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ocupación Promedio -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-50 rounded-full">
+                    <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Ocupación Promedio</p>
+                    <p class="text-2xl font-bold text-gray-900">{{
+                        laboratorios_ocupacion.promedio|floatformat:1|default:"0.0" }}%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas del Sistema -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-red-50 rounded-full">
+                    <i data-lucide="alert-triangle" class="h-6 w-6 text-red-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Alertas Activas</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ alertas_sistema|length|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Inscripciones Recientes -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900">Inscripciones Recientes</h2>
+                        <a href="{% url 'secretario:laboratorios' %}"
+                            class="text-sm text-purple-600 hover:text-purple-700">Ver todas</a>
+                    </div>
+                </div>
+                <div class="p-6">
+                    {% if inscripciones_recientes %}
+                    <div class="space-y-4">
+                        {% for inscripcion in inscripciones_recientes %}
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="user" class="h-5 w-5 text-purple-600"></i>
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <h3 class="text-sm font-medium text-gray-900">{{ inscripcion.estudiante_nombre }}
+                                    </h3>
+                                    <p class="text-sm text-gray-600">{{ inscripcion.curso_nombre }} - {{
+                                        inscripcion.laboratorio_codigo }}</p>
+                                    <p class="text-xs text-gray-500">{{ inscripcion.fecha_inscripcion|date:"d/m/Y H:i"
+                                        }}</p>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                {% if inscripcion.estado == 'pending' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <i data-lucide="clock" class="h-3 w-3 mr-1"></i>
+                                    Pendiente
+                                </span>
+                                {% elif inscripcion.estado == 'approved' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <i data-lucide="check" class="h-3 w-3 mr-1"></i>
+                                    Aprobada
+                                </span>
+                                {% elif inscripcion.estado == 'rejected' %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <i data-lucide="x" class="h-3 w-3 mr-1"></i>
+                                    Rechazada
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i data-lucide="inbox" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                        <p class="text-gray-500">No hay inscripciones recientes</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Acciones Rápidas -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Acciones Rápidas</h2>
+                </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'secretario:laboratorios' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="flask-conical" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Gestionar Laboratorios
+                    </a>
+                    <a href="{% url 'secretario:reportes' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="file-text" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Generar Reportes
+                    </a>
+                    <a href="{% url 'secretario:estadisticas' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="bar-chart-3" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Ver Estadísticas
+                    </a>
+                </div>
+            </div>
+
+            <!-- Ocupación de Laboratorios -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Ocupación de Laboratorios</h2>
+                </div>
+                <div class="p-6">
+                    {% if laboratorios_ocupacion.detalle %}
+                    <div class="space-y-4">
+                        {% for lab in laboratorios_ocupacion.detalle %}
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="font-medium text-gray-900">{{ lab.nombre }}</span>
+                                <span class="text-gray-600">{{ lab.ocupados }}/{{ lab.capacidad }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="{% if lab.porcentaje >= 90 %}bg-red-600{% elif lab.porcentaje >= 70 %}bg-yellow-600{% else %}bg-green-600{% endif %} h-2 rounded-full"
+                                    style="width: {{ lab.porcentaje }}%"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">{{ lab.porcentaje|floatformat:1 }}% ocupado</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="flask-conical-off" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No hay datos de ocupación</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Alertas del Sistema -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Alertas del Sistema</h2>
+                </div>
+                <div class="p-6">
+                    {% if alertas_sistema %}
+                    <div class="space-y-3">
+                        {% for alerta in alertas_sistema %}
+                        <div
+                            class="flex items-start p-3 {% if alerta.tipo == 'error' %}bg-red-50 border border-red-200{% elif alerta.tipo == 'warning' %}bg-yellow-50 border border-yellow-200{% else %}bg-blue-50 border border-blue-200{% endif %} rounded-lg">
+                            <div class="flex-shrink-0">
+                                {% if alerta.tipo == 'error' %}
+                                <i data-lucide="alert-circle" class="h-5 w-5 text-red-600"></i>
+                                {% elif alerta.tipo == 'warning' %}
+                                <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-600"></i>
+                                {% else %}
+                                <i data-lucide="info" class="h-5 w-5 text-blue-600"></i>
+                                {% endif %}
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p
+                                    class="text-sm font-medium {% if alerta.tipo == 'error' %}text-red-800{% elif alerta.tipo == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
+                                    {{ alerta.titulo }}
+                                </p>
+                                <p
+                                    class="text-xs {% if alerta.tipo == 'error' %}text-red-700{% elif alerta.tipo == 'warning' %}text-yellow-700{% else %}text-blue-700{% endif %} mt-1">
+                                    {{ alerta.descripcion }}
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">{{ alerta.fecha|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="check-circle" class="h-8 w-8 text-green-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No hay alertas activas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Generales -->
+    <div class="bg-white rounded-lg shadow-sm">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Estadísticas Generales</h2>
+        </div>
+        <div class="p-6">
+            {% if estadisticas_generales %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-gray-900">{{ estadisticas_generales.total_estudiantes }}</div>
+                    <div class="text-sm text-gray-600">Total Estudiantes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-gray-900">{{ estadisticas_generales.total_profesores }}</div>
+                    <div class="text-sm text-gray-600">Total Profesores</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-gray-900">{{ estadisticas_generales.total_cursos }}</div>
+                    <div class="text-sm text-gray-600">Total Cursos</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-gray-900">{{
+                        estadisticas_generales.promedio_asistencia|floatformat:1 }}%</div>
+                    <div class="text-sm text-gray-600">Asistencia Promedio</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-8">
+                <i data-lucide="bar-chart-3" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                <p class="text-gray-500">No hay estadísticas disponibles</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

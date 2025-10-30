@@ -1,0 +1,26 @@
+# Ignorar archivos temporales de Python
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+
+# Archivos temporales
+*.log
+*.sqlite3
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+.env
+
+# Configuración del editor
+.vscode/
+.idea/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de pruebas
+.pytest_cache/
+htmlcov/

@@ -1,0 +1,46 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Gestión Académica{% endblock %}
+
+{% block content %}
+<div class="p-6">
+  <h2 class="text-2xl font-bold mb-4">Cursos</h2>
+
+  <!-- Botón Crear Curso -->
+  <div class="mb-4">
+    <a href="{% url 'academico:create_curso' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Crear Nuevo Curso</a>
+  </div>
+
+  <!-- Tabla de cursos -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white rounded shadow">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="py-2 px-4 text-left">Código</th>
+          <th class="py-2 px-4 text-left">Nombre del Curso</th>
+          <th class="py-2 px-4 text-left">Profesor</th>
+          <th class="py-2 px-4 text-left">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for curso in cursos %}
+        <tr class="border-b">
+          <td class="py-2 px-4">{{ curso.codigo }}</td>
+          <td class="py-2 px-4">{{ curso.nombre }}</td>
+          <td class="py-2 px-4">{{ curso.profesor.nombre }}</td>
+          <td class="py-2 px-4 space-x-2">
+            <a href="{% url 'academico:edit_curso' curso.id %}" class="text-yellow-600 hover:underline">Editar</a>
+            <a href="{% url 'academico:detalle_curso' curso.id %}" class="text-blue-600 hover:underline">Ver</a>
+            <a href="{% url 'academico:delete_curso' curso.id %}" class="text-red-600 hover:underline">Eliminar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="py-4 text-center text-gray-500">No hay cursos registrados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

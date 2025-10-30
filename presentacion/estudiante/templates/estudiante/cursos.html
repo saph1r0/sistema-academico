@@ -1,0 +1,30 @@
+{% extends 'estudiante/base_estudiante.html' %}
+{% block title %}Mis Cursos{% endblock %}
+
+{% block content %}
+<h2 class="text-2xl font-bold mb-6 text-gray-800">📚 Mis Cursos</h2>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  {% for curso in cursos %}
+  <div class="bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-200 p-6 border border-gray-200">
+    <h3 class="text-xl font-semibold text-blue-700 mb-2">
+      {{ curso.nombre }}
+    </h3>
+    <p class="text-gray-600 mb-1"><strong>Código:</strong> {{ curso.codigo }}</p>
+    <p class="text-gray-600 mb-1"><strong>Grupo:</strong> {{ curso.grupo }}</p>
+
+    {% if curso.tiene_lab %}
+      <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+        <i class="fa-solid fa-flask mr-2"></i> Laboratorio {{ curso.laboratorio_asignado }}
+      </div>
+    {% else %}
+      <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+        <i class="fa-solid fa-triangle-exclamation mr-2"></i> Pendiente Lab
+      </div>
+    {% endif %}
+  </div>
+  {% empty %}
+  <p>No estás inscrito en ningún curso.</p>
+  {% endfor %}
+</div>
+{% endblock %}

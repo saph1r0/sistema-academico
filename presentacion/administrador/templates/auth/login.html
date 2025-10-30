@@ -1,0 +1,185 @@
+{% comment %}
+Ruta: templates/auth/login.html
+Descripción: Página de inicio de sesión independiente con manejo de errores mejorado.
+{% endcomment %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión | Sistema Académico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <script>
+        // Configuración de Tailwind para usar los colores solicitados
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': {
+                            'DEFAULT': '#1E3A8A', // Azul profundo
+                            'hover': '#1C347A',
+                            'light': '#2563eb'
+                        },
+                        'secondary': '#3B82F6', // Azul claro
+                        'light-bg': '#F9FAFB', // Fondo
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-light-bg font-sans flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 md:p-10 rounded-xl shadow-lg w-full max-w-md">
+
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <div class="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-4">
+                <i data-lucide="graduation-cap" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-primary">Sistema Académico</h1>
+            <p class="text-gray-500 mt-1">Panel de Administración</p>
+        </div>
+
+        <!-- Mensajes de error -->
+        {% if messages %}
+        {% for message in messages %}
+        <div
+            class="mb-4 p-4 rounded-lg border-l-4 {% if message.tags == 'error' %}border-red-400 bg-red-50{% else %}border-blue-400 bg-blue-50{% endif %}">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    {% if message.tags == 'error' %}
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
+                    {% else %}
+                    <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                    {% endif %}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm {% if message.tags == 'error' %}text-red-700{% else %}text-blue-700{% endif %}">
+                        {{ message }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Formulario de login -->
+        <form method="POST" action="{% url 'login' %}" id="login-form">
+            {% csrf_token %}
+
+            <!-- Campo Usuario -->
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i data-lucide="user" class="w-4 h-4 inline mr-1"></i>
+                    Usuario o Email
+                </label>
+                <input type="text" name="username" id="username" value="{{ request.POST.username|default:'' }}"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-200"
+                    placeholder="Ingresa tu usuario o email" required autocomplete="username">
+            </div>
+
+            <!-- Campo Contraseña -->
+            <div class="mb-6">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i data-lucide="lock" class="w-4 h-4 inline mr-1"></i>
+                    Contraseña
+                </label>
+                <div class="relative">
+                    <input type="password" name="password" id="password"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-200 pr-12"
+                        placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+                    <button type="button" id="toggle-password"
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                        <i data-lucide="eye" class="w-5 h-5" id="eye-icon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recordar sesión -->
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                    <input id="remember-me" name="remember-me" type="checkbox"
+                        class="h-4 w-4 text-primary focus:ring-secondary border-gray-300 rounded">
+                    <label for="remember-me" class="ml-2 block text-sm text-gray-700">
+                        Recordar sesión
+                    </label>
+                </div>
+                <div class="text-sm">
+                    <a href="#" class="text-secondary hover:text-primary-light transition-colors duration-200">
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
+            </div>
+
+            <!-- Botón de login -->
+            <button type="submit" id="login-button"
+                class="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary-hover font-semibold transition-all duration-200 flex items-center justify-center space-x-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                <span id="login-text">Iniciar Sesión</span>
+                <i data-lucide="log-in" class="w-5 h-5" id="login-icon"></i>
+            </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 pt-6 border-t border-gray-200">
+            <p class="text-xs text-gray-500">
+                © 2024 Sistema Académico. Todos los derechos reservados.
+            </p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Inicializar iconos de Lucide
+            lucide.createIcons();
+
+            // Toggle password visibility
+            const togglePassword = document.getElementById('toggle-password');
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+
+            togglePassword.addEventListener('click', function () {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+
+                // Cambiar icono
+                eyeIcon.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+                lucide.createIcons();
+            });
+
+            // Manejar envío del formulario
+            const loginForm = document.getElementById('login-form');
+            const loginButton = document.getElementById('login-button');
+            const loginText = document.getElementById('login-text');
+            const loginIcon = document.getElementById('login-icon');
+
+            loginForm.addEventListener('submit', function () {
+                // Mostrar estado de carga
+                loginButton.disabled = true;
+                loginText.textContent = 'Iniciando sesión...';
+                loginIcon.setAttribute('data-lucide', 'loader-2');
+                loginIcon.classList.add('animate-spin');
+                lucide.createIcons();
+            });
+
+            // Auto-focus en el campo de usuario
+            document.getElementById('username').focus();
+        });
+    </script>
+
+</body>
+
+</html>
