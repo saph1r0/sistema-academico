@@ -22,6 +22,61 @@ class SubirNotasForm(forms.Form):
         return archivo
 
 
+class SubirNotasFaseForm(forms.Form):
+    """Formulario para subir archivo de notas por fases académicas"""
+    PHASE_CHOICES = [
+        ('primera', 'Primera Fase'),
+        ('segunda', 'Segunda Fase'),
+        ('tercera', 'Tercera Fase'),
+    ]
+    
+    course_group_id = forms.UUIDField(widget=forms.HiddenInput())
+    phase = forms.ChoiceField(
+        choices=PHASE_CHOICES,
+        label='Fase Académica',
+        widget=forms.Select(attrs={
+            'class': 'w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+        })
+    )
+    archivo_excel = forms.FileField(
+        label='Archivo Excel de Notas',
+        validators=[FileExtensionValidator(allowed_extensions=['xlsx', 'xls'])],
+        help_text='Plantilla "Excel notas P1" con columnas: código estudiante, nota parcial, nota continua',
+        widget=forms.FileInput(attrs={
+            'class': 'hidden',
+            'accept': '.xlsx,.xls'
+        })
+    )
+    allow_duplicates = forms.BooleanField(
+        required=False,
+        initial=False,
+        label='Permitir actualizar notas existentes',
+        help_text='Marcar si desea actualizar notas ya registradas para esta fase',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+        })
+    )
+
+    def clean_archivo_excel(self):
+        archivo = self.cleaned_data.get('archivo_excel')
+        if archivo:
+            # Validar tamaño (máximo 10MB para archivos Excel)
+            if archivo.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('El archivo no puede ser mayor a 10MB.')
+            
+            # Validar extensión
+            if not archivo.name.lower().endswith(('.xlsx', '.xls')):
+                raise forms.ValidationError('Solo se permiten archivos Excel (.xlsx, .xls).')
+        
+        return archivo
+
+    def clean_phase(self):
+        phase = self.cleaned_data.get('phase')
+        if phase not in ['primera', 'segunda', 'tercera']:
+            raise forms.ValidationError('Fase académica inválida.')
+        return phase
+
+
 class RegistrarAsistenciaForm(forms.Form):
     """Formulario para registrar asistencia"""
     curso_id = forms.UUIDField(widget=forms.HiddenInput())

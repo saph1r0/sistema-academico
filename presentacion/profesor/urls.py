@@ -4,23 +4,37 @@ URLs para el módulo de profesores
 from django.urls import path
 from . import views
 from . import views_simple
+from . import views_silabo
 from . import api_views
+from . import views_grade_upload
 
 app_name = 'profesor'
 
 urlpatterns = [
-    # Vistas principales (usando vistas simplificadas temporalmente)
-    path('dashboard/', views.ProfesorDashboardView.as_view(), name='dashboard'),
-    path('notas/', views_simple.ProfesorNotasViewSimple.as_view(), name='notas'),
-    path('asistencia/', views.ProfesorAsistenciaView.as_view(), name='asistencia'),
-    path('reservas/', views.ProfesorReservasView.as_view(), name='reservas'),
-    path('silabo/', views.ProfesorSilaboView.as_view(), name='silabo'),
+    # Vista principal simplificada
+    path('dashboard/', views_simple.ProfesorDashboardView.as_view(), name='dashboard'),
     
-    # APIs para gráficos
-    path('api/grade-statistics/', api_views.GradeStatisticsAPI.as_view(), name='api_grade_statistics'),
-    path('api/attendance-statistics/', api_views.AttendanceStatisticsAPI.as_view(), name='api_attendance_statistics'),
+    # Vista de detalle de curso
+    path('curso/<uuid:course_group_id>/', views_simple.ProfesorCourseDetailView.as_view(), name='course_detail'),
     
-    # Utilidades de debug (usando vistas simplificadas)
-    path('debug/check-data/', views_simple.DebugDataViewSimple.as_view(), name='debug_data'),
-    path('debug/process-excel/', views_simple.DebugProcessExcelViewSimple.as_view(), name='debug_process_excel'),
+    # Gestión de notas por fases
+    path('notas/', views_grade_upload.TeacherGradeUploadView.as_view(), name='notas'),
+    path('notas/subir/', views_grade_upload.TeacherGradeUploadView.as_view(), name='grade_upload'),
+    path('notas/estadisticas/', views_grade_upload.TeacherStatisticsDashboardView.as_view(), name='grade_statistics'),
+    path('notas/ajax/upload/', views_grade_upload.GradeUploadAjaxView.as_view(), name='grade_upload_ajax'),
+    path('notas/ajax/statistics/', views_grade_upload.GradeStatisticsAjaxView.as_view(), name='grade_statistics_ajax'),
+    path('notas/plantilla/descargar/', views_grade_upload.DownloadExcelTemplateView.as_view(), name='download_excel_template'),
+    
+    # Otras funcionalidades del profesor
+    path('asistencia/', views_simple.ProfesorAsistenciaView.as_view(), name='asistencia'),
+    path('reservas/', views_simple.ProfesorReservasView.as_view(), name='reservas'),
+    path('silabo/', views_silabo.ProfesorSilaboView.as_view(), name='silabo'),
+    
+    # Debug y herramientas
+    path('debug/data/', views_simple.ProfesorDebugDataView.as_view(), name='debug_data'),
+    path('debug/process-excel/', views_simple.ProfesorDebugProcessExcelView.as_view(), name='debug_process_excel'),
+    
+    # API endpoints (temporalmente comentadas)
+    # path('api/cursos/', api_views.ProfesorCursosAPIView.as_view(), name='api_cursos'),
+    # path('api/estadisticas/', api_views.ProfesorEstadisticasAPIView.as_view(), name='api_estadisticas'),
 ]

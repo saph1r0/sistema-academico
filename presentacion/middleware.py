@@ -8,6 +8,7 @@ from django.contrib.auth import logout
 from django.conf import settings
 from django.utils import timezone
 from presentacion.permisos import get_user_role
+from servicios.servicioAsistenciaDocente import ServicioAsistenciaDocente
 
 
 class RoleBasedSessionMiddleware:
@@ -198,3 +199,146 @@ class RoleAccessControlMiddleware:
                         return redirect(dashboard_url)
         
         return None
+
+
+class TeacherAttendanceMiddleware:
+    """Middleware para registro automático de asistencia docente"""
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.servicio_asistencia = ServicioAsistenciaDocente()
+        # Importar el calculador de progreso
+        from servicios.servicioCalculadorProgreso import ProgressCalculator
+        self.progress_calculator = ProgressCalculator()
+
+    def __call__(self, request):
+        # Procesar antes de la vista
+        if request.user.is_authenticated and hasattr(request.user, 'teacher'):
+            self._handle_teacher_login(request)
+        
+        response = self.get_response(request)
+        
+        # Procesar después de la vista si es logout
+        if self._is_logout_request(request) and request.user.is_authenticated and hasattr(request.user, 'teacher'):
+            self._handle_teacher_logout(request)
+        
+        return response
+
+    def _handle_teacher_login(self, request):
+        """Maneja el login automático del docente"""
+        try:
+            teacher = request.user.teacher
+            
+            # Verificar si ya se registró el login hoy
+            login_registered_today = request.session.get('teacher_login_registered_today')
+            current_date = timezone.now().date().isoformat()
+            
+            if login_registered_today != current_date:
+                # Obtener información de la request
+                ip_address = self._get_client_ip(request)
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                
+                # Registrar login automático
+                attendance = self.servicio_asistencia.registrar_login_automatico(
+                    teacher_id=str(teacher.id),
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                
+                if attendance:
+                    # Marcar que ya se registró hoy
+                    request.session['teacher_login_registered_today'] = current_date
+                    request.session['teacher_attendance_id'] = str(attendance.id)
+                    
+                    # Actualizar progreso de cursos inmediatamente después del login
+                    self._update_course_progress_on_login(teacher)
+                    
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('admin_panel')
+            logger.error(f"Error en registro automático de login docente: {str(e)}")
+
+    def _handle_teacher_logout(self, request):
+        """Maneja el logout automático del docente"""
+        try:
+            teacher = request.user.teacher
+            
+            # Registrar logout automático
+            logout_success = self.servicio_asistencia.registrar_logout_automatico(str(teacher.id))
+            
+            # Si el logout fue exitoso y se registró una sesión válida, actualizar progreso
+            if logout_success:
+                self._update_course_progress_on_logout(teacher)
+            
+            # Limpiar variables de sesión
+            request.session.pop('teacher_login_registered_today', None)
+            request.session.pop('teacher_attendance_id', None)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('admin_panel')
+            logger.error(f"Error en registro automático de logout docente: {str(e)}")
+
+    def _update_course_progress_on_login(self, teacher):
+        """Actualiza el progreso de los cursos cuando el docente hace login"""
+        try:
+            # Obtener todos los cursos del docente
+            from repositorio.postgres_repository.models import CourseGroup
+            course_groups = CourseGroup.objects.filter(teacher=teacher)
+            
+            for course_group in course_groups:
+                # Calcular progreso para cada curso
+                result = self.progress_calculator.calculate_course_progress(str(course_group.id))
+                
+                if result.get('success'):
+                    import logging
+                    logger = logging.getLogger('admin_panel')
+                    logger.info(
+                        f"Progreso actualizado por login - {course_group.course.name}: "
+                        f"{result.get('progress_percentage', 0):.1f}%"
+                    )
+                    
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('admin_panel')
+            logger.error(f"Error actualizando progreso en login: {str(e)}")
+
+    def _update_course_progress_on_logout(self, teacher):
+        """Actualiza el progreso de los cursos cuando el docente hace logout"""
+        try:
+            # Recalcular progreso usando el método específico del calculador
+            results = self.progress_calculator.recalculate_progress_for_teacher_attendance(
+                str(teacher.id), 
+                timezone.now()
+            )
+            
+            if results:
+                import logging
+                logger = logging.getLogger('admin_panel')
+                successful_updates = sum(1 for r in results if r.get('success', False))
+                logger.info(
+                    f"Progreso recalculado por logout - {teacher.user.get_full_name()}: "
+                    f"{successful_updates}/{len(results)} cursos actualizados"
+                )
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('admin_panel')
+            logger.error(f"Error actualizando progreso en logout: {str(e)}")
+
+    def _is_logout_request(self, request):
+        """Verifica si la request es de logout"""
+        return (
+            request.path.endswith('/logout/') or 
+            request.path.endswith('/login/logout/') or
+            'logout' in request.path
+        )
+
+    def _get_client_ip(self, request):
+        """Obtiene la IP del cliente"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+        return ip

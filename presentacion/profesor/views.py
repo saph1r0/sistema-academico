@@ -96,8 +96,23 @@ class ProfesorDashboardView(ProfesorRequiredMixin, TemplateView):
         from django.db import connection
         
         try:
+            # Obtener el teacher_id del usuario logueado
+            teacher_id = None
             with connection.cursor() as cursor:
-                # Obtener información del curso y estudiantes
+                cursor.execute("""
+                    SELECT t.id FROM teachers t 
+                    WHERE t.user_id = %s;
+                """, [str(self.request.user.id)])
+                
+                teacher_result = cursor.fetchone()
+                if teacher_result:
+                    teacher_id = teacher_result[0]
+                else:
+                    # Si no tiene registro en teachers, retornar datos vacíos
+                    return self._get_empty_dashboard_data()
+            
+            with connection.cursor() as cursor:
+                # Obtener información de los cursos asignados al profesor
                 cursor.execute("""
                     SELECT 
                         c.id, c.code, c.name, c.credits,
@@ -106,9 +121,11 @@ class ProfesorDashboardView(ProfesorRequiredMixin, TemplateView):
                     FROM courses c
                     JOIN course_groups cg ON c.id = cg.course_id
                     LEFT JOIN enrollments e ON cg.id = e.course_group_id
+                    WHERE cg.teacher_id = %s
                     GROUP BY c.id, c.code, c.name, c.credits, cg.group_code
+                    ORDER BY c.code
                     LIMIT 1;
-                """)
+                """, [teacher_id])
                 
                 course_data = cursor.fetchone()
                 
@@ -206,34 +223,32 @@ class ProfesorDashboardView(ProfesorRequiredMixin, TemplateView):
                         ]
                     }
                 else:
-                    # No hay cursos asignados
-                    return {
-                        'total_courses': 0,
-                        'total_students': 0,
-                        'average_progress': 0,
-                        'assigned_course': None,
-                        'course_stats': [],
-                        'grade_statistics': {
-                            'average': 0,
-                            'total_grades': 0,
-                            'passed_count': 0,
-                            'pass_rate': 0,
-                            'evaluations': []
-                        },
-                        'upcoming_evaluations': []
-                    }
+                    # No hay cursos asignados a este profesor
+                    return self._get_empty_dashboard_data()
                     
         except Exception as e:
             print(f"Error obteniendo datos del dashboard: {str(e)}")
-            return {
-                'total_courses': 0,
-                'total_students': 0,
-                'average_progress': 0,
-                'assigned_course': None,
-                'course_stats': [],
-                'grade_statistics': {'average': 0, 'total_grades': 0, 'passed_count': 0, 'pass_rate': 0, 'evaluations': []},
-                'upcoming_evaluations': []
-            }
+            return self._get_empty_dashboard_data()
+
+    def _get_empty_dashboard_data(self):
+        """Retorna estructura de datos vacía para el dashboard"""
+        return {
+            'total_courses': 0,
+            'total_students': 0,
+            'average_progress': 0,
+            'assigned_course': None,
+            'course_stats': [],
+            'grade_statistics': {
+                'average': 0,
+                'min_score': 0,
+                'max_score': 0,
+                'total_grades': 0,
+                'passed_count': 0,
+                'pass_rate': 0,
+                'evaluations': []
+            },
+            'upcoming_evaluations': []
+        }
 
 
 class ProfesorNotasView(ProfesorRequiredMixin, TemplateView):
@@ -246,7 +261,29 @@ class ProfesorNotasView(ProfesorRequiredMixin, TemplateView):
         try:
             from django.db import connection
             
-            # Obtener notas reales de la base de datos
+            # Obtener el teacher_id del usuario logueado
+            teacher_id = None
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT t.id FROM teachers t 
+                    WHERE t.user_id = %s;
+                """, [str(self.request.user.id)])
+                
+                teacher_result = cursor.fetchone()
+                if teacher_result:
+                    teacher_id = teacher_result[0]
+            
+            if not teacher_id:
+                context.update({
+                    'page_title': 'Gestión de Notas',
+                    'error': 'No tienes cursos asignados',
+                    'courses': [],
+                    'students': [],
+                    'grade_stats': {'average': 0, 'approved': 0, 'total': 0, 'at_risk': 0}
+                })
+                return context
+            
+            # Obtener notas reales de los estudiantes matriculados en cursos del profesor
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT 
@@ -255,21 +292,26 @@ class ProfesorNotasView(ProfesorRequiredMixin, TemplateView):
                         u.first_name,
                         u.last_name,
                         et.name as evaluation_type,
-                        g.score
+                        g.score,
+                        c.code as course_code,
+                        c.name as course_name
                     FROM students s
                     JOIN users u ON s.user_id = u.id
-                    LEFT JOIN enrollments e ON s.id = e.student_id
-                    LEFT JOIN grades g ON s.id = g.student_id
-                    LEFT JOIN evaluation_types et ON g.evaluation_type_id = et.id
+                    JOIN enrollments e ON s.id = e.student_id
+                    JOIN course_groups cg ON e.course_group_id = cg.id
+                    JOIN courses c ON cg.course_id = c.id
+                    LEFT JOIN evaluation_types et ON cg.id = et.course_group_id
+                    LEFT JOIN grades g ON s.id = g.student_id AND et.id = g.evaluation_type_id
+                    WHERE cg.teacher_id = %s
                     ORDER BY s.student_code, et.name;
-                """)
+                """, [teacher_id])
                 
                 rows = cursor.fetchall()
                 
                 # Organizar datos por estudiante
                 students_dict = {}
                 for row in rows:
-                    student_id, student_code, first_name, last_name, eval_type, score = row
+                    student_id, student_code, first_name, last_name, eval_type, score, course_code, course_name = row
                     
                     if student_id not in students_dict:
                         students_dict[student_id] = {
@@ -328,14 +370,29 @@ class ProfesorNotasView(ProfesorRequiredMixin, TemplateView):
                 parcial2_notas = [s['grades']['parcial2'] for s in students_with_grades if s['grades']['parcial2'] is not None]
                 parcial3_notas = [s['grades']['parcial3'] for s in students_with_grades if s['grades']['parcial3'] is not None]
                 
+                # Obtener información del curso del profesor
+                cursor.execute("""
+                    SELECT c.id, c.code, c.name
+                    FROM courses c
+                    JOIN course_groups cg ON c.id = cg.course_id
+                    WHERE cg.teacher_id = %s
+                    LIMIT 1;
+                """, [teacher_id])
+                
+                course_info = cursor.fetchone()
+                
+                courses_list = []
+                if course_info:
+                    courses_list = [{
+                        'id': course_info[0],
+                        'name': course_info[2],
+                        'code': course_info[1]
+                    }]
+                
                 context.update({
                     'page_title': 'Gestión de Notas',
-                    'courses': [{
-                        'id': 1,
-                        'name': 'MATEMATICA APLICADA A LA COMPUTACION',
-                        'code': '1703241'
-                    }],
-                    'selected_course': 1,
+                    'courses': courses_list,
+                    'selected_course': course_info[0] if course_info else None,
                     'students': students_with_grades,
                     'grade_stats': {
                         'average': round(sum(promedios_validos) / len(promedios_validos), 1) if promedios_validos else 0,
@@ -491,16 +548,69 @@ class ProfesorAsistenciaView(ProfesorRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         
         try:
-            from repositorio.postgres_repository.models import Student
+            from django.db import connection
             import random
             from datetime import datetime, timedelta
             
-            # Obtener estudiantes del curso del profesor
-            students = Student.objects.select_related('user').all()
+            # Obtener el teacher_id del usuario logueado
+            teacher_id = None
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT t.id FROM teachers t 
+                    WHERE t.user_id = %s;
+                """, [str(self.request.user.id)])
+                
+                teacher_result = cursor.fetchone()
+                if teacher_result:
+                    teacher_id = teacher_result[0]
             
-            # Simular datos de asistencia para cada estudiante (solo presente/falta)
+            if not teacher_id:
+                context.update({
+                    'page_title': 'Registro de Asistencia',
+                    'error': 'No tienes cursos asignados',
+                    'courses': [],
+                    'students': [],
+                    'attendance_stats': {'average': 0, 'present_today': 0, 'total': 0}
+                })
+                return context
+            
+            # Obtener estudiantes matriculados en los cursos del profesor
             students_with_attendance = []
-            for student in students:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT DISTINCT
+                        s.id,
+                        s.student_code,
+                        u.first_name,
+                        u.last_name,
+                        c.name as course_name,
+                        c.code as course_code
+                    FROM students s
+                    JOIN users u ON s.user_id = u.id
+                    JOIN enrollments e ON s.id = e.student_id
+                    JOIN course_groups cg ON e.course_group_id = cg.id
+                    JOIN courses c ON cg.course_id = c.id
+                    WHERE cg.teacher_id = %s
+                    ORDER BY s.student_code;
+                """, [teacher_id])
+                
+                students_data = cursor.fetchall()
+                
+                # Obtener información del curso del profesor
+                cursor.execute("""
+                    SELECT c.id, c.code, c.name
+                    FROM courses c
+                    JOIN course_groups cg ON c.id = cg.course_id
+                    WHERE cg.teacher_id = %s
+                    LIMIT 1;
+                """, [teacher_id])
+                
+                course_info = cursor.fetchone()
+            
+            # Procesar datos de asistencia para cada estudiante
+            for student_data in students_data:
+                student_id, student_code, first_name, last_name, course_name, course_code = student_data
+                
                 # Generar asistencia simulada (solo presente o ausente)
                 attendance_today = random.choice(['present', 'absent'])
                 attendance_percentage = round(random.uniform(70.0, 95.0), 1)
@@ -510,10 +620,17 @@ class ProfesorAsistenciaView(ProfesorRequiredMixin, TemplateView):
                 present_classes = int(total_classes * attendance_percentage / 100)
                 absent_classes = total_classes - present_classes
                 
-                student_data = {
-                    'id': student.id,
-                    'user': student.user,
-                    'student_code': student.student_code,
+                # Crear objeto simulado de usuario
+                class MockUser:
+                    def __init__(self, first_name, last_name):
+                        self.first_name = first_name
+                        self.last_name = last_name
+                        self.get_full_name = lambda: f"{first_name} {last_name}"
+                
+                student_info = {
+                    'id': student_id,
+                    'user': MockUser(first_name, last_name),
+                    'student_code': student_code,
                     'attendance_today': attendance_today,
                     'attendance_summary': {
                         'total_classes': total_classes,
@@ -522,7 +639,7 @@ class ProfesorAsistenciaView(ProfesorRequiredMixin, TemplateView):
                         'percentage': attendance_percentage
                     }
                 }
-                students_with_attendance.append(student_data)
+                students_with_attendance.append(student_info)
             
             # Estadísticas de asistencia (solo presente/falta)
             present_today = len([s for s in students_with_attendance if s['attendance_today'] == 'present'])
@@ -531,14 +648,19 @@ class ProfesorAsistenciaView(ProfesorRequiredMixin, TemplateView):
             percentages = [s['attendance_summary']['percentage'] for s in students_with_attendance]
             average_attendance = round(sum(percentages) / len(percentages), 1) if percentages else 0
             
+            # Preparar información del curso
+            courses_list = []
+            if course_info:
+                courses_list = [{
+                    'id': course_info[0],
+                    'name': course_info[2],
+                    'code': course_info[1]
+                }]
+            
             context.update({
                 'page_title': 'Registro de Asistencia',
-                'courses': [{
-                    'id': 1,
-                    'name': 'MATEMATICA APLICADA A LA COMPUTACION',
-                    'code': '1703241'
-                }],
-                'selected_course': 1,
+                'courses': courses_list,
+                'selected_course': course_info[0] if course_info else None,
                 'students': students_with_attendance,
                 'today': datetime.now().date(),
                 'attendance_stats': {
@@ -798,15 +920,21 @@ class ProfesorSilaboView(ProfesorRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         
         try:
-            # Información del curso
-            course = {
-                'name': 'MATEMATICA APLICADA A LA COMPUTACION',
-                'code': '1703241',
-                'credits': 4,
-                'weekly_hours': 4,
-                'modality': 'Presencial',
-                'period': '2024-II'
-            }
+            from django.db import connection
+            
+            # Obtener información del curso asignado al profesor
+            course_info = self._get_assigned_course()
+            if not course_info:
+                context.update({
+                    'page_title': 'Gestión de Sílabo',
+                    'error': 'No tienes un curso asignado',
+                    'course': {},
+                    'syllabus_units': [],
+                    'syllabus_stats': {},
+                    'schedule': [],
+                    'resources': []
+                })
+                return context
             
             # Sistema automático de avance del sílabo (basado en semanas)
             from datetime import datetime, timedelta

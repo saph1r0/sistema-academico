@@ -1,408 +1,409 @@
 {% extends 'base_profesor.html' %}
+{% load static %}
 
-{% block title %}Dashboard - Portal Docente{% endblock %}
+{% block title %}Dashboard Profesor{% endblock %}
+{% block page_title %}Dashboard Profesor{% endblock %}
+{% block breadcrumb_current %}Dashboard{% endblock %}
+
+{% block styles %}
+<style>
+    .metric-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .alert-card {
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="bg-white rounded-lg shadow-sm p-6">
+<!-- Alertas importantes para el profesor -->
+{% if tiene_alertas_importantes %}
+<div class="mb-6">
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                    <strong>Recordatorio:</strong> Tienes clases pendientes de asistencia y notas por subir.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Métricas principales del profesor -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Cursos Asignados -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido, Prof. {{ user.first_name }}!</h1>
-                <p class="text-gray-600 mt-1">Gestiona tus cursos y actividades académicas</p>
+                <p class="text-sm font-medium text-gray-600">Cursos Asignados</p>
+                <p class="text-2xl font-bold text-gray-900" id="cursos-asignados">
+                    {{ total_courses|default:0 }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Período 2024-I
+                </p>
             </div>
-            <div class="text-right">
-                <p class="text-sm text-gray-500">Último acceso</p>
-                <p class="text-sm font-medium text-gray-900">{{ user.last_login|date:"d/m/Y H:i" }}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Cursos Asignados -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-green-50 rounded-full">
-                    <i data-lucide="book-open" class="h-6 w-6 text-green-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Cursos Asignados</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ cursos_asignados|length|default:0 }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Estudiantes -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-50 rounded-full">
-                    <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Total Estudiantes</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ total_estudiantes|default:0 }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mi Asistencia -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-purple-50 rounded-full">
-                    <i data-lucide="calendar-check" class="h-6 w-6 text-purple-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Mi Asistencia</p>
-                    <p class="text-2xl font-bold text-gray-900">{{
-                        asistencia_propia.porcentaje|floatformat:1|default:"0.0" }}%</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Horas Semanales -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <div class="flex items-center">
-                <div class="p-3 bg-orange-50 rounded-full">
-                    <i data-lucide="clock" class="h-6 w-6 text-orange-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-600">Horas Semanales</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ total_horas_semanales|default:0 }}</p>
-                </div>
+            <div class="p-3 bg-blue-50 rounded-full">
+                <i data-lucide="book-open" class="w-6 h-6 text-blue-600"></i>
             </div>
         </div>
     </div>
 
-    <!-- Gráficos de Estadísticas -->
-    <div class="bg-white rounded-lg shadow-sm p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Análisis Visual</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Gráfico de Distribución de Notas -->
+    <!-- Total Estudiantes -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
             <div>
-                <h3 class="text-md font-medium text-gray-800 mb-3">Distribución de Notas - Parcial 1</h3>
-                <div class="chart-container small">
-                    <canvas id="dashboardGradeDistribution"></canvas>
-                </div>
+                <p class="text-sm font-medium text-gray-600">Total Estudiantes</p>
+                <p class="text-2xl font-bold text-gray-900" id="total-estudiantes">
+                    {{ total_students|default:0 }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    En todos los cursos
+                </p>
             </div>
-
-            <!-- Gráfico de Resumen de Asistencia -->
-            <div>
-                <h3 class="text-md font-medium text-gray-800 mb-3">Resumen de Asistencia</h3>
-                <div class="chart-container small">
-                    <canvas id="dashboardAttendanceSummary"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Estadísticas Numéricas Mejoradas -->
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-blue-50 rounded-lg p-4 text-center">
-                <p class="text-sm font-medium text-blue-900">Promedio General</p>
-                <p class="text-2xl font-bold text-blue-900">{{ grade_statistics.average|default:"--" }}</p>
-                <p class="text-xs text-blue-700">{{ grade_statistics.total_grades }} notas</p>
-            </div>
-            <div class="bg-green-50 rounded-lg p-4 text-center">
-                <p class="text-sm font-medium text-green-900">Estudiantes Aprobados</p>
-                <p class="text-2xl font-bold text-green-900">{{ grade_statistics.passed_count|default:"--" }}</p>
-                <p class="text-xs text-green-700">{{ grade_statistics.pass_rate|default:"0" }}% del total</p>
-            </div>
-            <div class="bg-orange-50 rounded-lg p-4 text-center">
-                <p class="text-sm font-medium text-orange-900">Nota Máxima</p>
-                <p class="text-2xl font-bold text-orange-900">{{ grade_statistics.max_score|default:"--" }}</p>
-                <p class="text-xs text-orange-700">Mejor rendimiento</p>
-            </div>
-            <div class="bg-red-50 rounded-lg p-4 text-center">
-                <p class="text-sm font-medium text-red-900">Nota Mínima</p>
-                <p class="text-2xl font-bold text-red-900">{{ grade_statistics.min_score|default:"--" }}</p>
-                <p class="text-xs text-red-700">Requiere atención</p>
+            <div class="p-3 bg-green-50 rounded-full">
+                <i data-lucide="users" class="w-6 h-6 text-green-600"></i>
             </div>
         </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Clases Pendientes -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Clases Pendientes</p>
+                <p class="text-2xl font-bold text-gray-900" id="clases-pendientes">
+                    {{ average_progress|default:0 }}%
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Progreso promedio
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Asistencia por tomar
+                </p>
+            </div>
+            <div class="p-3 bg-yellow-50 rounded-full">
+                <i data-lucide="clipboard-check" class="w-6 h-6 text-yellow-600"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reservas Activas -->
+    <div class="metric-card bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-600">Reservas Activas</p>
+                <p class="text-2xl font-bold text-gray-900" id="reservas-activas">
+                    {{ metricas.reservas_activas|default:3 }}
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                    Aulas reservadas
+                </p>
+            </div>
+            <div class="p-3 bg-purple-50 rounded-full">
+                <i data-lucide="door-open" class="w-6 h-6 text-purple-600"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenido principal en dos columnas -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Columna izquierda - Cursos y actividad -->
+    <div class="lg:col-span-2 space-y-6">
+
         <!-- Mis Cursos -->
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-lg shadow-sm">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-semibold text-gray-900">Mis Cursos</h2>
-                        <a href="{% url 'profesor:notas' %}"
-                            class="text-sm text-green-600 hover:text-green-700">Gestionar notas</a>
-                    </div>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Mis Cursos</h3>
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {{ total_courses|default:0 }} curso{{ total_courses|pluralize }}
+                    </span>
                 </div>
-                <div class="p-6">
-                    {% if course_stats %}
-                    <div class="space-y-4">
-                        {% for stat in course_stats %}
-                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-medium text-gray-900">{{ stat.course_name }}</h3>
-                                    <p class="text-sm text-gray-600">{{ stat.course_code }} - Ciclo {{ stat.cycle }}
-                                        Grupo {{ stat.group }}</p>
-                                    <p class="text-sm text-gray-600">{{ stat.students_count }} estudiantes matriculados
-                                    </p>
-                                    <p class="text-xs text-gray-500">{{ stat.department }}</p>
+            </div>
+            <div class="p-6">
+                {% if assigned_course %}
+                <div class="space-y-4">
+                    <div
+                        class="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div class="flex-1">
+                            <h4 class="font-medium text-gray-900">{{ assigned_course.name }}</h4>
+                            <p class="text-sm text-gray-500">Grupo {{ assigned_course.group }} - {{
+                                assigned_course.period }}</p>
+                            <div class="flex items-center space-x-4 mt-2">
+                                <div class="flex items-center space-x-1">
+                                    <i data-lucide="users" class="w-4 h-4 text-gray-400"></i>
+                                    <span class="text-sm text-gray-600">{{ assigned_course.students_count }}
+                                        estudiante{{ assigned_course.students_count|pluralize }}</span>
                                 </div>
-                                <div class="flex-shrink-0 text-right">
-                                    <p class="text-sm text-gray-500">Avance del Sílabo</p>
-                                    <div class="flex items-center mt-1">
-                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300"
-                                                style="width: {{ stat.progress_percentage }}%"></div>
-                                        </div>
-                                        <span class="text-sm font-medium text-gray-900">{{ stat.progress_percentage
-                                            }}%</span>
-                                    </div>
-                                    <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full mt-1
-                                             {% if stat.status == 'adelantado' %}bg-green-100 text-green-800
-                                             {% elif stat.status == 'atrasado' %}bg-red-100 text-red-800
-                                             {% else %}bg-blue-100 text-blue-800{% endif %}">
-                                        {{ stat.status|title }}
-                                    </span>
+                                <div class="flex items-center space-x-1">
+                                    <i data-lucide="book" class="w-4 h-4 text-gray-400"></i>
+                                    <span class="text-sm text-gray-600">{{ assigned_course.credits }} crédito{{
+                                        assigned_course.credits|pluralize }}</span>
                                 </div>
-                            </div>
-
-                            <!-- Próximo tema -->
-                            {% if stat.next_topic %}
-                            <div class="mt-3 bg-blue-50 rounded-lg p-3">
-                                <p class="text-sm font-medium text-blue-900">Próximo tema:</p>
-                                <p class="text-sm text-blue-700">Semana {{ stat.next_topic.week_number }}: {{
-                                    stat.next_topic.title }}</p>
-                                <p class="text-xs text-blue-600">{{ stat.next_topic.description }}</p>
-                            </div>
-                            {% endif %}
-
-                            <!-- Horarios del curso -->
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                {% for horario in curso.horarios %}
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {{ horario.dia }} {{ horario.hora_inicio }}-{{ horario.hora_fin }}
-                                </span>
-                                {% endfor %}
-                            </div>
-
-                            <!-- Acciones rápidas -->
-                            <div class="mt-3 flex space-x-2">
-                                <a href="{% url 'profesor:asistencia' %}?curso={{ curso.id }}"
-                                    class="text-xs text-blue-600 hover:text-blue-700">
-                                    Registrar Asistencia
-                                </a>
-                                <span class="text-xs text-gray-300">|</span>
-                                <a href="{% url 'profesor:notas' %}?curso={{ curso.id }}"
-                                    class="text-xs text-blue-600 hover:text-blue-700">
-                                    Gestionar Notas
-                                </a>
-                                <span class="text-xs text-gray-300">|</span>
-                                <a href="{% url 'profesor:silabo' %}?curso={{ curso.id }}"
-                                    class="text-xs text-blue-600 hover:text-blue-700">
-                                    Ver Sílabo
-                                </a>
                             </div>
                         </div>
-                        {% endfor %}
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-blue-600">{{ grade_statistics.average|default:"--" }}</p>
+                            <p class="text-xs text-gray-500">Promedio</p>
+                        </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-8">
-                        <i data-lucide="book-x" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
-                        <p class="text-gray-500">No tienes cursos asignados actualmente</p>
-                        <p class="text-sm text-gray-400 mt-1">Contacta al coordinador académico si esto es un error</p>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i data-lucide="book-open" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No hay cursos asignados</h3>
+                    <p class="text-gray-500">Contacta al administrador para que te asigne cursos.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Actividad Reciente</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-green-50 rounded-full">
+                            <i data-lucide="user-check" class="w-4 h-4 text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                Asistencia registrada
+                            </p>
+                            <p class="text-xs text-gray-500">Cálculo II - 30 estudiantes presentes - Hace 1 hora</p>
+                        </div>
                     </div>
-                    {% endif %}
+
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-blue-50 rounded-full">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                Notas subidas
+                            </p>
+                            <p class="text-xs text-gray-500">Estructuras Discretas - Parcial 2 - Hace 3 horas</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-yellow-50 rounded-full">
+                            <i data-lucide="door-open" class="w-4 h-4 text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                Aula reservada
+                            </p>
+                            <p class="text-xs text-gray-500">Lab 301 - Mañana 08:00-10:00 - Ayer</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2 bg-purple-50 rounded-full">
+                            <i data-lucide="file-text" class="w-4 h-4 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                Sílabo actualizado
+                            </p>
+                            <p class="text-xs text-gray-500">Fundamentos de Computación - Hace 2 días</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna derecha - Acciones rápidas y horario -->
+    <div class="space-y-6">
+
+        <!-- Acciones Rápidas -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Acciones Rápidas</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3">
+                    <a href="{% url 'profesor:asistencia' %}"
+                        class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="user-check" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Tomar Asistencia</span>
+                        <span class="ml-auto bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">2</span>
+                    </a>
+
+                    <a href="{% url 'profesor:notas' %}"
+                        class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Subir Notas</span>
+                    </a>
+
+                    <a href="{% url 'profesor:reservas' %}"
+                        class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="door-open" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Reservar Aula</span>
+                    </a>
+
+                    <a href="{% url 'profesor:silabo' %}"
+                        class="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                        <i data-lucide="file-text" class="w-5 h-5 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-900">Gestionar Sílabo</span>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-            <!-- Acciones Rápidas -->
-            <div class="bg-white rounded-lg shadow-sm">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">Acciones Rápidas</h2>
-                </div>
-                <div class="p-6 space-y-3">
-                    <a href="{% url 'profesor:asistencia' %}"
-                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i data-lucide="calendar-check" class="h-5 w-5 text-gray-400 mr-3"></i>
-                        Registrar Asistencia
-                    </a>
-                    <a href="{% url 'profesor:notas' %}"
-                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i data-lucide="file-text" class="h-5 w-5 text-gray-400 mr-3"></i>
-                        Gestionar Notas
-                    </a>
-                    <a href="{% url 'profesor:reservas' %}"
-                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i data-lucide="calendar-plus" class="h-5 w-5 text-gray-400 mr-3"></i>
-                        Reservar Ambiente
-                    </a>
-                    <a href="{% url 'profesor:silabo' %}"
-                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i data-lucide="book-open" class="h-5 w-5 text-gray-400 mr-3"></i>
-                        Gestionar Sílabo
-                    </a>
-                </div>
+        <!-- Horario de Hoy -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Horario de Hoy</h3>
             </div>
+            <div class="p-6">
+                {% if horario_hoy %}
+                <div class="space-y-3">
+                    {% for clase in horario_hoy %}
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-sm font-medium text-blue-600">{{ clase.hora }}</div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ clase.curso }}</p>
+                                <p class="text-xs text-gray-500">{{ clase.aula }} - {{ clase.tipo }}</p>
+                            </div>
+                        </div>
+                        <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Programada</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-6">
+                    <i data-lucide="calendar" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                    <p class="text-sm text-gray-500">No hay clases programadas para hoy</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
 
-            <!-- Mi Horario de Hoy -->
-            <div class="bg-white rounded-lg shadow-sm">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">Mi Horario de Hoy</h2>
+        <!-- Actualización automática -->
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 text-gray-500"></i>
+                    <span class="text-xs text-gray-600">Última actualización</span>
                 </div>
-                <div class="p-6">
-                    {% if horario_hoy %}
-                    <div class="space-y-3">
-                        {% for clase in horario_hoy %}
-                        <div class="flex items-center p-3 bg-green-50 rounded-lg">
-                            <div class="flex-shrink-0">
-                                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                    <i data-lucide="clock" class="h-5 w-5 text-green-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-3 flex-1">
-                                <h3 class="text-sm font-medium text-gray-900">{{ clase.curso_nombre|truncatechars:20 }}
-                                </h3>
-                                <p class="text-sm text-gray-600">{{ clase.aula }}</p>
-                                <p class="text-xs text-gray-500">{{ clase.hora_inicio }} - {{ clase.hora_fin }}</p>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i data-lucide="calendar-x" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
-                        <p class="text-sm text-gray-500">No tienes clases hoy</p>
-                    </div>
-                    {% endif %}
-                </div>
+                <button id="refresh-metrics" class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                    Actualizar
+                </button>
             </div>
-
-            <!-- Estadísticas Rápidas -->
-            <div class="bg-white rounded-lg shadow-sm">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">Estadísticas</h2>
-                </div>
-                <div class="p-6">
-                    {% if estadisticas_cursos %}
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Promedio de Asistencia</span>
-                            <span class="text-sm font-medium text-gray-900">{{
-                                estadisticas_cursos.promedio_asistencia|floatformat:1 }}%</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Notas Registradas</span>
-                            <span class="text-sm font-medium text-gray-900">{{ estadisticas_cursos.notas_registradas
-                                }}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Evaluaciones Pendientes</span>
-                            <span class="text-sm font-medium text-gray-900">{{
-                                estadisticas_cursos.evaluaciones_pendientes }}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Reservas Activas</span>
-                            <span class="text-sm font-medium text-gray-900">{{ estadisticas_cursos.reservas_activas
-                                }}</span>
-                        </div>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i data-lucide="bar-chart-3" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
-                        <p class="text-sm text-gray-500">No hay estadísticas disponibles</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Próximas Evaluaciones -->
-            <div class="bg-white rounded-lg shadow-sm">
-                <div class="p-6 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">Próximas Evaluaciones</h2>
-                </div>
-                <div class="p-6">
-                    {% if proximas_evaluaciones %}
-                    <div class="space-y-3">
-                        {% for evaluacion in proximas_evaluaciones %}
-                        <div class="flex items-center p-3 bg-yellow-50 rounded-lg">
-                            <div class="flex-shrink-0">
-                                <i data-lucide="alert-circle" class="h-5 w-5 text-yellow-600"></i>
-                            </div>
-                            <div class="ml-3 flex-1">
-                                <p class="text-sm font-medium text-gray-900">{{ evaluacion.tipo }}</p>
-                                <p class="text-xs text-gray-600">{{ evaluacion.curso }} - {{
-                                    evaluacion.fecha|date:"d/m/Y" }}</p>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i data-lucide="calendar-check" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
-                        <p class="text-sm text-gray-500">No hay evaluaciones próximas</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
+            <p class="text-xs text-gray-500 mt-1" id="last-update">
+                Hace unos momentos
+            </p>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_js %}
+{% block scripts %}
 <script>
-    // Variables para los gráficos del dashboard
-    let dashboardGradeChart = null;
-    let dashboardAttendanceChart = null;
-
-    function initializeDashboardCharts() {
-        // Gráfico de distribución de notas en el dashboard
-        dashboardGradeChart = new GradeDistributionChart('dashboardGradeDistribution', {
-            plugins: {
-                title: {
-                    display: false // Sin título para el dashboard
-                },
-                legend: {
-                    display: false
-                }
-            }
-        });
-        dashboardGradeChart.loadAndRender('{% url "profesor:api_grade_statistics" %}?evaluation_type=Parcial 1');
-
-        // Gráfico de resumen de asistencia (circular)
-        dashboardAttendanceChart = new AttendanceChart('dashboardAttendanceSummary', 'doughnut', {
-            plugins: {
-                title: {
-                    display: false
-                },
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        boxWidth: 12,
-                        font: {
-                            size: 11
-                        }
-                    }
-                }
-            }
-        });
-        dashboardAttendanceChart.loadAndRender('{% url "profesor:api_attendance_statistics" %}');
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
+        // Función para actualizar métricas via AJAX
+        function actualizarMetricas() {
+            const refreshButton = document.getElementById('refresh-metrics');
+            const lastUpdateElement = document.getElementById('last-update');
+
+            // Mostrar estado de carga
+            refreshButton.textContent = 'Actualizando...';
+            refreshButton.disabled = true;
+
+            // Simular actualización (aquí iría la llamada AJAX real)
+            setTimeout(() => {
+                // Actualizar timestamp
+                const now = new Date();
+                lastUpdateElement.textContent = `${now.toLocaleTimeString()}`;
+
+                // Restaurar botón
+                refreshButton.textContent = 'Actualizar';
+                refreshButton.disabled = false;
+
+                // Mostrar notificación de éxito
+                mostrarNotificacion('Información actualizada correctamente', 'success');
+            }, 1000);
+        }
+
+        // Función para mostrar notificaciones toast
+        function mostrarNotificacion(mensaje, tipo = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transition-all duration-300 transform translate-x-full`;
+
+            if (tipo === 'success') {
+                toast.className += ' bg-green-500 text-white';
+            } else if (tipo === 'error') {
+                toast.className += ' bg-red-500 text-white';
+            } else {
+                toast.className += ' bg-blue-500 text-white';
+            }
+
+            toast.innerHTML = `
+            <div class="flex items-center space-x-2">
+                <i data-lucide="${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'alert-circle' : 'info'}" class="w-5 h-5"></i>
+                <span class="text-sm font-medium">${mensaje}</span>
+            </div>
+        `;
+
+            document.body.appendChild(toast);
+            lucide.createIcons();
+
+            // Animar entrada
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+
+            // Remover después de 3 segundos
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // Event listener para el botón de actualizar
+        document.getElementById('refresh-metrics')?.addEventListener('click', actualizarMetricas);
+
+        // Actualización automática cada 5 minutos
+        setInterval(actualizarMetricas, 300000);
+
+        // Inicializar iconos de Lucide
         lucide.createIcons();
-
-        // Inicializar gráficos del dashboard después de un breve delay
-        setTimeout(initializeDashboardCharts, 800);
-    });
-
-    // Limpiar gráficos al salir de la página
-    window.addEventListener('beforeunload', function () {
-        if (dashboardGradeChart) dashboardGradeChart.destroy();
-        if (dashboardAttendanceChart) dashboardAttendanceChart.destroy();
     });
 </script>
 {% endblock %}

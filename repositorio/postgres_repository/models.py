@@ -200,6 +200,12 @@ class CourseGroup(models.Model):
     enrolled_students = models.IntegerField(default=0)
     schedule_info = models.JSONField(null=True, blank=True)
     classroom = models.CharField(max_length=50, null=True, blank=True)
+    
+    # Campos de progreso del curso
+    total_planned_classes = models.IntegerField(default=68, verbose_name='Total de clases programadas')  # 17 semanas * 4 clases
+    classes_attended_by_teacher = models.IntegerField(default=0, verbose_name='Clases asistidas por docente')
+    course_progress_percentage = models.FloatField(default=0.0, verbose_name='Porcentaje de progreso del curso')
+    
     created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
@@ -424,45 +430,11 @@ DocenteModel = Teacher
 
 # Nuevos modelos para el sistema de profesor y secretaria
 
-class CourseContent(models.Model):
-    """Modelo para el contenido/avance del curso basado en sílabo"""
-    CONTENT_TYPES = [
-        ('unit', 'Unidad'),
-        ('chapter', 'Capítulo'),
-        ('topic', 'Tema'),
-        ('subtopic', 'Subtema'),
-        ('exam', 'Examen'),
-        ('assignment', 'Tarea'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='contents', verbose_name='Curso')
-    unit_name = models.CharField(max_length=200, verbose_name='Nombre de Unidad')
-    chapter_name = models.CharField(max_length=200, blank=True, verbose_name='Nombre del Capítulo')
-    topic_number = models.CharField(max_length=20, verbose_name='Número de Tema')
-    title = models.CharField(max_length=200, verbose_name='Título')
-    description = models.TextField(blank=True, verbose_name='Descripción')
-    content_type = models.CharField(max_length=20, choices=CONTENT_TYPES, default='topic', verbose_name='Tipo')
-    week_number = models.IntegerField(verbose_name='Semana')
-    order = models.IntegerField(default=1, verbose_name='Orden')
-    is_completed = models.BooleanField(default=False, verbose_name='Completado')
-    completion_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de Completado')
-    file_upload = models.FileField(upload_to='course_content/', null=True, blank=True, verbose_name='Archivo')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'course_contents'
-        verbose_name = 'Contenido del Curso'
-        verbose_name_plural = 'Contenidos del Curso'
-        ordering = ['week_number', 'order']
-    
-    def __str__(self):
-        return f"{self.course.name} - {self.topic_number}: {self.title}"
+
 
 
 class TeacherAttendance(models.Model):
-    """Modelo para registro automático de asistencia docente"""
+    """Modelo mejorado para registro automático de asistencia docente"""
     ACCESS_TYPES = [
         ('presential', 'Presencial'),
         ('remote', 'Remoto'),
@@ -472,11 +444,14 @@ class TeacherAttendance(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='attendance_records')
+    course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Grupo de Curso')
     login_time = models.DateTimeField(verbose_name='Hora de Ingreso')
     logout_time = models.DateTimeField(null=True, blank=True, verbose_name='Hora de Salida')
     ip_address = models.GenericIPAddressField(verbose_name='Dirección IP')
-    access_type = models.CharField(max_length=20, choices=ACCESS_TYPES, verbose_name='Tipo de Acceso')
+    access_type = models.CharField(max_length=20, choices=ACCESS_TYPES, default='unknown', verbose_name='Tipo de Acceso')
     user_agent = models.TextField(blank=True, verbose_name='User Agent')
+    session_duration = models.DurationField(null=True, blank=True, verbose_name='Duración de Sesión')
+    triggered_progress_update = models.BooleanField(default=False, verbose_name='Actualizó Progreso')
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -484,9 +459,34 @@ class TeacherAttendance(models.Model):
         verbose_name = 'Asistencia Docente'
         verbose_name_plural = 'Asistencias Docentes'
         ordering = ['-login_time']
+        indexes = [
+            models.Index(fields=['teacher', 'login_time'], name='idx_teacher_att_teacher_login'),
+            models.Index(fields=['login_time'], name='idx_teacher_att_login_time'),
+            models.Index(fields=['course_group'], name='idx_teacher_att_course_group'),
+        ]
     
     def __str__(self):
         return f"{self.teacher.user.get_full_name()} - {self.login_time.strftime('%Y-%m-%d %H:%M')}"
+    
+    def save(self, *args, **kwargs):
+        """Override save to calculate session duration"""
+        if self.logout_time and self.login_time:
+            self.session_duration = self.logout_time - self.login_time
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_valid_session(self):
+        """Verifica si la sesión es válida (más de 30 minutos)"""
+        if self.session_duration:
+            return self.session_duration.total_seconds() >= 1800  # 30 minutos
+        return False
+    
+    @property
+    def duration_hours(self):
+        """Retorna la duración en horas"""
+        if self.session_duration:
+            return round(self.session_duration.total_seconds() / 3600, 2)
+        return 0
 
 
 class Grade(models.Model):
@@ -775,6 +775,50 @@ class GradeRecord(models.Model):
         return f"{self.student.student_code} - {self.evaluation_type.name}: {self.score}"
 
 
+class CourseTopicContent(models.Model):
+    """Modelo para almacenar temas del curso subidos por el profesor"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE, related_name='topic_contents', verbose_name='Grupo de Curso')
+    topic_title = models.CharField(max_length=200, verbose_name='Título del Tema')
+    topic_description = models.TextField(blank=True, verbose_name='Descripción del Tema')
+    topic_order = models.IntegerField(verbose_name='Orden del Tema')
+    percentage_weight = models.FloatField(verbose_name='Peso Porcentual')
+    is_completed = models.BooleanField(default=False, verbose_name='Completado')
+    completion_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de Completado')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Fecha de Actualización')
+    
+    class Meta:
+        db_table = 'course_topic_contents'
+        verbose_name = 'Contenido del Curso'
+        verbose_name_plural = 'Contenidos del Curso'
+        ordering = ['course_group', 'topic_order']
+        unique_together = ['course_group', 'topic_order']
+        indexes = [
+            models.Index(fields=['course_group'], name='idx_ctc_group'),
+            models.Index(fields=['topic_order'], name='idx_ctc_order'),
+            models.Index(fields=['is_completed'], name='idx_ctc_completed'),
+        ]
+    
+    def __str__(self):
+        return f"{self.course_group} - {self.topic_order}: {self.topic_title}"
+    
+    def mark_as_completed(self):
+        """Marca el tema como completado"""
+        if not self.is_completed:
+            self.is_completed = True
+            self.completion_date = timezone.now()
+            self.save()
+    
+    def mark_as_incomplete(self):
+        """Marca el tema como no completado"""
+        if self.is_completed:
+            self.is_completed = False
+            self.completion_date = None
+            self.save()
+
+
 class CourseAssignment(models.Model):
     """Modelo para asignaciones de profesores a cursos"""
     
@@ -793,3 +837,145 @@ class CourseAssignment(models.Model):
     
     def __str__(self):
         return f"{self.teacher.user.get_full_name()} - {self.course_group}"
+
+
+class PhaseGrade(models.Model):
+    """Modelo para notas por fases académicas (Primera, Segunda, Tercera)"""
+    
+    PHASE_CHOICES = [
+        ('primera', 'Primera Fase'),
+        ('segunda', 'Segunda Fase'),
+        ('tercera', 'Tercera Fase'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='phase_grades', verbose_name='Estudiante')
+    course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE, related_name='phase_grades', verbose_name='Grupo de Curso')
+    phase = models.CharField(max_length=20, choices=PHASE_CHOICES, verbose_name='Fase Académica')
+    partial_grade = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Nota Parcial')
+    continuous_grade = models.DecimalField(max_digits=4, decimal_places=2, verbose_name='Nota Continua')
+    final_phase_grade = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, verbose_name='Nota Final de Fase')
+    uploaded_by = models.ForeignKey(Teacher, on_delete=models.CASCADE, verbose_name='Subido por')
+    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Subida')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Fecha de Actualización')
+    
+    class Meta:
+        db_table = 'phase_grades'
+        verbose_name = 'Nota por Fase'
+        verbose_name_plural = 'Notas por Fase'
+        unique_together = ['student', 'course_group', 'phase']
+        indexes = [
+            models.Index(fields=['student', 'phase'], name='idx_phase_grade_student_phase'),
+            models.Index(fields=['course_group', 'phase'], name='idx_phase_grade_course_phase'),
+            models.Index(fields=['phase'], name='idx_phase_grade_phase'),
+        ]
+    
+    def __str__(self):
+        return f"{self.student.student_code} - {self.course_group} - {self.get_phase_display()}: {self.final_phase_grade}"
+    
+    def save(self, *args, **kwargs):
+        """Override save to automatically calculate final phase grade"""
+        if self.partial_grade is not None and self.continuous_grade is not None:
+            # Calculate final phase grade as average of partial and continuous grades
+            self.final_phase_grade = (self.partial_grade + self.continuous_grade) / 2
+        super().save(*args, **kwargs)
+    
+    def calculate_final_grade(self):
+        """Calculate and return the final phase grade"""
+        if self.partial_grade is not None and self.continuous_grade is not None:
+            return (self.partial_grade + self.continuous_grade) / 2
+        return None
+
+
+class SimpleAttendanceRecord(models.Model):
+    """Modelo simplificado para registro de asistencia con opciones PRESENTE/FALTA"""
+    
+    STATUS_CHOICES = [
+        ('PRESENTE', 'Presente'),
+        ('FALTA', 'Falta'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='simple_attendance_records', verbose_name='Estudiante')
+    course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE, related_name='simple_attendance_records', verbose_name='Grupo de Curso')
+    class_date = models.DateField(verbose_name='Fecha de Clase')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, verbose_name='Estado de Asistencia')
+    recorded_by = models.ForeignKey(Teacher, on_delete=models.CASCADE, verbose_name='Registrado por')
+    recorded_at = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')
+    session_info = models.JSONField(null=True, blank=True, verbose_name='Información de Sesión')
+    bulk_session_id = models.UUIDField(null=True, blank=True, verbose_name='ID de Sesión Masiva')
+    notes = models.TextField(blank=True, verbose_name='Observaciones')
+    
+    class Meta:
+        db_table = 'simple_attendance_records'
+        verbose_name = 'Registro de Asistencia Simple'
+        verbose_name_plural = 'Registros de Asistencia Simple'
+        unique_together = ['student', 'course_group', 'class_date']
+        indexes = [
+            models.Index(fields=['class_date'], name='idx_simple_att_date'),
+            models.Index(fields=['course_group', 'class_date'], name='idx_simple_att_course_date'),
+            models.Index(fields=['status'], name='idx_simple_att_status'),
+            models.Index(fields=['bulk_session_id'], name='idx_simple_att_bulk_session'),
+        ]
+    
+    def __str__(self):
+        return f"{self.student.student_code} - {self.course_group} - {self.class_date}: {self.get_status_display()}"
+    
+    @classmethod
+    def record_bulk_attendance(cls, teacher, course_group, class_date, attendance_data):
+        """
+        Record attendance for multiple students at once
+        
+        Args:
+            teacher: Teacher instance recording attendance
+            course_group: CourseGroup instance
+            class_date: Date of the class
+            attendance_data: List of dicts with 'student_id' and 'status'
+        
+        Returns:
+            tuple: (created_count, updated_count, errors)
+        """
+        import uuid
+        bulk_session_id = uuid.uuid4()
+        created_count = 0
+        updated_count = 0
+        errors = []
+        
+        for data in attendance_data:
+            try:
+                student_id = data.get('student_id')
+                status = data.get('status')
+                
+                if not student_id or status not in ['PRESENTE', 'FALTA']:
+                    errors.append(f"Invalid data for student {student_id}")
+                    continue
+                
+                student = Student.objects.get(id=student_id)
+                
+                # Update or create attendance record
+                attendance, created = cls.objects.update_or_create(
+                    student=student,
+                    course_group=course_group,
+                    class_date=class_date,
+                    defaults={
+                        'status': status,
+                        'recorded_by': teacher,
+                        'bulk_session_id': bulk_session_id,
+                        'session_info': {
+                            'bulk_recording': True,
+                            'total_students': len(attendance_data)
+                        }
+                    }
+                )
+                
+                if created:
+                    created_count += 1
+                else:
+                    updated_count += 1
+                    
+            except Student.DoesNotExist:
+                errors.append(f"Student with ID {student_id} not found")
+            except Exception as e:
+                errors.append(f"Error processing student {student_id}: {str(e)}")
+        
+        return created_count, updated_count, errors

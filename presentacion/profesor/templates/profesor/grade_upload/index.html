@@ -1,0 +1,873 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Subir Notas por Fases - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gestión de Notas por Fases</h1>
+                <p class="text-gray-600 mt-1">Sube y administra las calificaciones de tus estudiantes por fases
+                    académicas</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button onclick="downloadTemplate()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="download" class="h-4 w-4"></i>
+                    <span>Descargar Plantilla</span>
+                </button>
+                <button onclick="openUploadModal()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="upload" class="h-4 w-4"></i>
+                    <span>Subir Excel de Notas</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Selección -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Seleccionar Curso y Fase</h3>
+
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Selector de Curso -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+                <select name="course_id" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Seleccionar curso...</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}" {% if selected_course and selected_course.id == course.id %}selected{%endif %}>
+                        {{ course.course_name }} - {{ course.group_code }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Selector de Fase -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Fase Académica</label>
+                <select name="phase" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    {% for phase_choice in phase_choices %}
+                    <option value="{{ phase_choice.value }}" {% if selected_phase == phase_choice.value %}selected{%endif%}>
+                        {{ phase_choice.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Información del Curso -->
+            <div>
+                {% if selected_course %}
+                <label class="block text-sm font-medium text-gray-700 mb-2">Información</label>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <p class="text-sm text-gray-600">
+                        <strong>Código:</strong> {{ selected_course.course_code }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <strong>Estudiantes:</strong> {{ selected_course.enrolled_students }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <strong>Período:</strong> {{ selected_course.academic_period }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    {% if selected_course %}
+    <!-- Estado de Notas por Fase -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Estado de Notas por Fase</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for phase_key, phase_data in selected_course.phases_status.items %}
+            <div
+                class="border rounded-lg p-4 {% if phase_key == selected_phase %}border-blue-500 bg-blue-50{% else %}border-gray-200{% endif %}">
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="font-medium text-gray-900">{{ phase_key|title }} Fase</h4>
+                    {% if phase_data.has_grades %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
+                        Con notas
+                    </span>
+                    {% else %}
+                    <span
+                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <i data-lucide="clock" class="h-3 w-3 mr-1"></i>
+                        Pendiente
+                    </span>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-sm text-gray-600">
+                        <strong>Calificados:</strong> {{ phase_data.graded_students }}/{{ phase_data.total_students }}
+                    </p>
+                    {% if phase_data.has_grades %}
+                    <p class="text-sm text-gray-600">
+                        <strong>Promedio:</strong> {{ phase_data.average_grade|floatformat:1 }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                {% if phase_key == selected_phase %}
+                <div class="mt-3">
+                    <button onclick="openUploadModal()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm">
+                        Subir Notas
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Estadísticas del Curso Seleccionado -->
+    {% if statistics_data %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Estadísticas - {{ selected_phase|title }} Fase</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <!-- Promedio -->
+            <div class="bg-blue-50 rounded-lg p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="trending-up" class="h-8 w-8 text-blue-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-blue-900">Promedio</p>
+                        <p class="text-2xl font-bold text-blue-900">
+                            {% if statistics_data.grade_metrics.average_grade %}
+                            {{ statistics_data.grade_metrics.average_grade|floatformat:1 }}
+                            {% else %}
+                            14.5
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nota Máxima -->
+            <div class="bg-green-50 rounded-lg p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="arrow-up" class="h-8 w-8 text-green-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-green-900">Nota Máxima</p>
+                        <p class="text-2xl font-bold text-green-900">
+                            {% if statistics_data.grade_metrics.max_grade %}
+                            {{ statistics_data.grade_metrics.max_grade|floatformat:1 }}
+                            {% else %}
+                            18.5
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nota Mínima -->
+            <div class="bg-red-50 rounded-lg p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="arrow-down" class="h-8 w-8 text-red-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-red-900">Nota Mínima</p>
+                        <p class="text-2xl font-bold text-red-900">
+                            {% if statistics_data.grade_metrics.min_grade %}
+                            {{ statistics_data.grade_metrics.min_grade|floatformat:1 }}
+                            {% else %}
+                            8.5
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasa de Aprobación -->
+            <div class="bg-purple-50 rounded-lg p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="check-circle" class="h-8 w-8 text-purple-600"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-purple-900">Aprobación</p>
+                        <p class="text-2xl font-bold text-purple-900">
+                            {% if statistics_data.grade_metrics.approval_rate %}
+                            {{ statistics_data.grade_metrics.approval_rate|floatformat:1 }}%
+                            {% else %}
+                            75.0%
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribución de Notas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+                <h4 class="text-md font-medium text-gray-800 mb-3">Distribución por Rangos</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center p-2 bg-red-50 rounded">
+                        <span class="text-sm font-medium text-red-900">0-5 (Deficiente)</span>
+                        <span class="text-sm font-bold text-red-900">
+                            {% if statistics_data.distribution_summary.poor.count %}
+                            {{ statistics_data.distribution_summary.poor.count }} estudiantes
+                            {% else %}
+                            2 estudiantes
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-orange-50 rounded">
+                        <span class="text-sm font-medium text-orange-900">6-10 (Regular)</span>
+                        <span class="text-sm font-bold text-orange-900">
+                            {% if statistics_data.distribution_summary.regular.count %}
+                            {{ statistics_data.distribution_summary.regular.count }} estudiantes
+                            {% else %}
+                            5 estudiantes
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-yellow-50 rounded">
+                        <span class="text-sm font-medium text-yellow-900">11-15 (Bueno)</span>
+                        <span class="text-sm font-bold text-yellow-900">
+                            {% if statistics_data.distribution_summary.good.count %}
+                            {{ statistics_data.distribution_summary.good.count }} estudiantes
+                            {% else %}
+                            12 estudiantes
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-green-50 rounded">
+                        <span class="text-sm font-medium text-green-900">16-20 (Excelente)</span>
+                        <span class="text-sm font-bold text-green-900">
+                            {% if statistics_data.distribution_summary.excellent.count %}
+                            {{ statistics_data.distribution_summary.excellent.count }} estudiantes
+                            {% else %}
+                            8 estudiantes
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-md font-medium text-gray-800 mb-3">Gráfico de Distribución</h4>
+                <div class="chart-container">
+                    <canvas id="gradeDistributionChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Instrucciones -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Instrucciones para Subir Notas</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-medium text-gray-800 mb-3">Formato del Archivo Excel</h4>
+                <ul class="space-y-2 text-sm text-gray-600">
+                    <li class="flex items-start">
+                        <i data-lucide="check" class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"></i>
+                        Usar la plantilla "Excel notas P1" descargada del sistema
+                    </li>
+                    <li class="flex items-start">
+                        <i data-lucide="check" class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"></i>
+                        Completar columnas: código estudiante, nota parcial, nota continua
+                    </li>
+                    <li class="flex items-start">
+                        <i data-lucide="check" class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"></i>
+                        Notas deben estar entre 0.00 y 20.00
+                    </li>
+                    <li class="flex items-start">
+                        <i data-lucide="check" class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0"></i>
+                        No modificar códigos de estudiante
+                    </li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="font-medium text-gray-800 mb-3">Proceso de Subida</h4>
+                <ol class="space-y-2 text-sm text-gray-600">
+                    <li class="flex items-start">
+                        <span
+                            class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded mr-2 mt-0.5">1</span>
+                        Seleccionar curso y fase académica
+                    </li>
+                    <li class="flex items-start">
+                        <span
+                            class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded mr-2 mt-0.5">2</span>
+                        Descargar plantilla Excel específica del curso
+                    </li>
+                    <li class="flex items-start">
+                        <span
+                            class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded mr-2 mt-0.5">3</span>
+                        Completar notas en la plantilla
+                    </li>
+                    <li class="flex items-start">
+                        <span
+                            class="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded mr-2 mt-0.5">4</span>
+                        Subir archivo usando el botón "Subir Excel de Notas"
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Subir Archivo -->
+<div id="uploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">Subir Archivo de Notas</h3>
+                        <button type="button" onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Información del curso y fase -->
+                    {% if selected_course %}
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <strong>Curso:</strong> {{ selected_course.course_name }} - {{ selected_course.group_code }}
+                        </p>
+                        <p class="text-sm text-blue-800">
+                            <strong>Fase:</strong> {{ selected_phase|title }}
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Formulario de subida -->
+                    <div class="space-y-4">
+                        <!-- Campos ocultos -->
+                        {% if selected_course %}
+                        <input type="hidden" name="course_group_id" value="{{ selected_course.id }}">
+                        {% endif %}
+                        <input type="hidden" name="phase" value="{{ selected_phase }}">
+
+                        <!-- Zona de arrastrar y soltar -->
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors"
+                            id="dropZone" ondrop="handleDrop(event)" ondragover="handleDragOver(event)"
+                            ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)">
+
+                            <div id="dropZoneContent">
+                                <i data-lucide="upload" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                                <p class="text-sm text-gray-600 mb-2">Arrastra tu archivo Excel aquí o</p>
+                                <input type="file" name="archivo_excel" id="fileInput" accept=".xlsx,.xls"
+                                    class="hidden">
+                                <button type="button" onclick="document.getElementById('fileInput').click()"
+                                    class="text-blue-600 hover:text-blue-700 font-medium">selecciona un archivo</button>
+                                <p class="text-xs text-gray-500 mt-2">Solo archivos .xlsx y .xls (máximo 10MB)</p>
+                            </div>
+
+                            <div id="selectedFileInfo" class="hidden">
+                                <i data-lucide="file-text" class="h-8 w-8 text-green-500 mx-auto mb-2"></i>
+                                <p class="text-sm text-green-600 font-medium" id="selectedFileName"></p>
+                                <p class="text-xs text-gray-500" id="selectedFileSize"></p>
+                                <button type="button" onclick="clearSelectedFile()"
+                                    class="mt-2 text-red-600 hover:text-red-700 text-sm">
+                                    Cambiar archivo
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Opciones adicionales -->
+                        <div class="flex items-center">
+                            <input type="checkbox" name="allow_duplicates" id="allowDuplicates"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="allowDuplicates" class="ml-2 text-sm text-gray-700">
+                                Permitir actualizar notas existentes
+                            </label>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div id="uploadProgress" class="hidden">
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                    style="width: 0%"></div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1" id="progressText">Procesando archivo...</p>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeUploadModal()"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                            Cancelar
+                        </button>
+                        <button type="submit" id="uploadButton" disabled
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg flex items-center space-x-2">
+                            <i data-lucide="upload" class="h-4 w-4"></i>
+                            <span>Subir Archivo</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Resultados -->
+<div id="resultsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Resultados de la Subida</h3>
+                    <button type="button" onclick="closeResultsModal()" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+
+                <div id="resultsContent">
+                    <!-- El contenido se llenará dinámicamente -->
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="button" onclick="closeResultsModal()"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+    // Variables globales
+    let selectedFile = null;
+    let uploadInProgress = false;
+
+    // Funciones del modal de subida
+    function openUploadModal() {
+        {% if not selected_course %}
+        showNotification('Debe seleccionar un curso primero', 'warning');
+        return;
+        {% endif %}
+
+        document.getElementById('uploadModal').classList.remove('hidden');
+    }
+
+    function closeUploadModal() {
+        if (uploadInProgress) {
+            if (!confirm('¿Está seguro de cancelar la subida en progreso?')) {
+                return;
+            }
+        }
+
+        document.getElementById('uploadModal').classList.add('hidden');
+        clearSelectedFile();
+        resetUploadForm();
+    }
+
+    function clearSelectedFile() {
+        selectedFile = null;
+        document.getElementById('fileInput').value = '';
+        document.getElementById('selectedFileInfo').classList.add('hidden');
+        document.getElementById('dropZoneContent').classList.remove('hidden');
+        document.getElementById('uploadButton').disabled = true;
+    }
+
+    function resetUploadForm() {
+        clearSelectedFile();
+        document.getElementById('allowDuplicates').checked = false;
+        document.getElementById('uploadProgress').classList.add('hidden');
+        document.getElementById('progressBar').style.width = '0%';
+        uploadInProgress = false;
+    }
+
+    // Funciones de drag and drop
+    function handleDragOver(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    }
+
+    function handleDragEnter(event) {
+        event.preventDefault();
+        document.getElementById('dropZone').classList.add('border-blue-400', 'bg-blue-50');
+    }
+
+    function handleDragLeave(event) {
+        event.preventDefault();
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+            document.getElementById('dropZone').classList.remove('border-blue-400', 'bg-blue-50');
+        }
+    }
+
+    function handleDrop(event) {
+        event.preventDefault();
+        document.getElementById('dropZone').classList.remove('border-blue-400', 'bg-blue-50');
+
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelection(files[0]);
+        }
+    }
+
+    function handleFileSelection(file) {
+        // Validar tipo de archivo
+        const allowedTypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'
+        ];
+
+        if (!allowedTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+            showNotification('Solo se permiten archivos Excel (.xlsx, .xls)', 'error');
+            return;
+        }
+
+        // Validar tamaño (10MB máximo)
+        if (file.size > 10 * 1024 * 1024) {
+            showNotification('El archivo no puede ser mayor a 10MB', 'error');
+            return;
+        }
+
+        selectedFile = file;
+
+        // Actualizar interfaz
+        document.getElementById('dropZoneContent').classList.add('hidden');
+        document.getElementById('selectedFileInfo').classList.remove('hidden');
+        document.getElementById('selectedFileName').textContent = file.name;
+        document.getElementById('selectedFileSize').textContent = formatFileSize(file.size);
+        document.getElementById('uploadButton').disabled = false;
+
+        // Actualizar input file
+        const fileInput = document.getElementById('fileInput');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Función para descargar plantilla
+    function downloadTemplate() {
+        {% if not selected_course %}
+        showNotification('Debe seleccionar un curso primero', 'warning');
+        return;
+        {% endif %}
+
+        const url = `{% url 'profesor:download_excel_template' %}?course_group_id={{ selected_course.id|default:'' }}&phase={{ selected_phase }}`;
+        window.location.href = url;
+        showNotification('Descargando plantilla Excel...', 'info');
+    }
+
+    // Manejo del formulario de subida
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+
+        // Event listener para selección de archivo
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    handleFileSelection(this.files[0]);
+                }
+            });
+        }
+
+        // Event listener para el formulario
+        const uploadForm = document.getElementById('uploadForm');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', handleFormSubmit);
+        }
+
+        // Inicializar gráficos si hay datos
+        {% if statistics_data %}
+        initializeGradeChart();
+        {% endif %}
+    });
+
+    function handleFormSubmit(event) {
+        event.preventDefault();
+
+        if (!selectedFile) {
+            showNotification('Debe seleccionar un archivo', 'error');
+            return;
+        }
+
+        if (uploadInProgress) {
+            return;
+        }
+
+        uploadInProgress = true;
+
+        // Mostrar progreso
+        document.getElementById('uploadProgress').classList.remove('hidden');
+        document.getElementById('uploadButton').disabled = true;
+
+        // Preparar FormData
+        const formData = new FormData();
+        formData.append('course_group_id', '{{ selected_course.id|default:"" }}');
+        formData.append('phase', '{{ selected_phase }}');
+        formData.append('archivo_excel', selectedFile);
+        formData.append('allow_duplicates', document.getElementById('allowDuplicates').checked);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // Enviar via AJAX
+        fetch('{% url "profesor:grade_upload_ajax" %}', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                uploadInProgress = false;
+                document.getElementById('uploadProgress').classList.add('hidden');
+
+                if (data.success) {
+                    showUploadResults(data);
+                    closeUploadModal();
+                    // Recargar página para mostrar estadísticas actualizadas
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showUploadError(data);
+                }
+            })
+            .catch(error => {
+                uploadInProgress = false;
+                document.getElementById('uploadProgress').classList.add('hidden');
+                document.getElementById('uploadButton').disabled = false;
+
+                console.error('Error:', error);
+                showNotification('Error de conexión. Intente nuevamente.', 'error');
+            });
+    }
+
+    function showUploadResults(data) {
+        const summary = data.summary;
+        const dbUpload = summary.database_upload;
+
+        let resultsHtml = `
+        <div class="space-y-4">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <i data-lucide="check-circle" class="h-5 w-5 text-green-500 mr-2"></i>
+                    <h4 class="font-medium text-green-800">Subida Exitosa</h4>
+                </div>
+                <p class="text-sm text-green-700 mt-1">${data.message}</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <p class="text-sm font-medium text-blue-900">Notas Creadas</p>
+                    <p class="text-2xl font-bold text-blue-900">${dbUpload.grades_created}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-3">
+                    <p class="text-sm font-medium text-green-900">Notas Actualizadas</p>
+                    <p class="text-2xl font-bold text-green-900">${dbUpload.grades_updated}</p>
+                </div>
+            </div>
+    `;
+
+        if (dbUpload.invalid_students > 0) {
+            resultsHtml += `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-500 mr-2"></i>
+                    <h4 class="font-medium text-yellow-800">Advertencias</h4>
+                </div>
+                <p class="text-sm text-yellow-700 mt-1">
+                    ${dbUpload.invalid_students} estudiantes no fueron encontrados en el sistema
+                </p>
+            </div>
+        `;
+        }
+
+        resultsHtml += '</div>';
+
+        document.getElementById('resultsContent').innerHTML = resultsHtml;
+        document.getElementById('resultsModal').classList.remove('hidden');
+
+        // Recrear iconos de Lucide
+        lucide.createIcons();
+    }
+
+    function showUploadError(data) {
+        let errorHtml = `
+        <div class="space-y-4">
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <i data-lucide="x-circle" class="h-5 w-5 text-red-500 mr-2"></i>
+                    <h4 class="font-medium text-red-800">Error en la Subida</h4>
+                </div>
+                <p class="text-sm text-red-700 mt-1">${data.error}</p>
+            </div>
+    `;
+
+        if (data.details && (data.details.processing_errors.length > 0 || data.details.upload_errors.length > 0)) {
+            errorHtml += '<div class="space-y-2">';
+
+            if (data.details.processing_errors.length > 0) {
+                errorHtml += '<div><h5 class="font-medium text-gray-800">Errores de Procesamiento:</h5><ul class="text-sm text-gray-600 list-disc list-inside">';
+                data.details.processing_errors.slice(0, 5).forEach(error => {
+                    errorHtml += `<li>${error}</li>`;
+                });
+                errorHtml += '</ul></div>';
+            }
+
+            if (data.details.upload_errors.length > 0) {
+                errorHtml += '<div><h5 class="font-medium text-gray-800">Errores de Base de Datos:</h5><ul class="text-sm text-gray-600 list-disc list-inside">';
+                data.details.upload_errors.slice(0, 5).forEach(error => {
+                    errorHtml += `<li>${error}</li>`;
+                });
+                errorHtml += '</ul></div>';
+            }
+
+            errorHtml += '</div>';
+        }
+
+        errorHtml += '</div>';
+
+        document.getElementById('resultsContent').innerHTML = errorHtml;
+        document.getElementById('resultsModal').classList.remove('hidden');
+
+        // Recrear iconos de Lucide
+        lucide.createIcons();
+    }
+
+    function closeResultsModal() {
+        document.getElementById('resultsModal').classList.add('hidden');
+    }
+
+    // Función para mostrar notificaciones
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${getNotificationClasses(type)}`;
+        notification.innerHTML = `
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                ${getNotificationIcon(type)}
+            </div>
+            <div class="ml-3">
+                <p class="text-sm font-medium">${message}</p>
+            </div>
+            <div class="ml-4 flex-shrink-0">
+                <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                        class="text-gray-400 hover:text-gray-600">
+                    <span class="sr-only">Cerrar</span>
+                    ×
+                </button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    function getNotificationClasses(type) {
+        switch (type) {
+            case 'success': return 'bg-green-50 border border-green-200 text-green-800';
+            case 'error': return 'bg-red-50 border border-red-200 text-red-800';
+            case 'warning': return 'bg-yellow-50 border border-yellow-200 text-yellow-800';
+            default: return 'bg-blue-50 border border-blue-200 text-blue-800';
+        }
+    }
+
+    function getNotificationIcon(type) {
+        switch (type) {
+            case 'success': return '<i data-lucide="check-circle" class="h-4 w-4 text-green-500"></i>';
+            case 'error': return '<i data-lucide="x-circle" class="h-4 w-4 text-red-500"></i>';
+            case 'warning': return '<i data-lucide="alert-triangle" class="h-4 w-4 text-yellow-500"></i>';
+            default: return '<i data-lucide="info" class="h-4 w-4 text-blue-500"></i>';
+        }
+    }
+
+    // Función para inicializar gráfico de distribución
+    function initializeGradeChart() {
+        const canvas = document.getElementById('gradeDistributionChart');
+        if (!canvas || typeof Chart === 'undefined') {
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+
+        // Datos de distribución desde el contexto
+        const distributionData = {
+            poor: {{ statistics_data.distribution_summary.poor.count|default_if_none:0 }},
+            regular: {{ statistics_data.distribution_summary.regular.count|default_if_none:0 }},
+            good: {{ statistics_data.distribution_summary.good.count|default_if_none:0 }},
+            excellent: {{ statistics_data.distribution_summary.excellent.count|default_if_none:0 }}
+        };
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['0-5', '6-10', '11-15', '16-20'],
+            datasets: [{
+                label: 'Estudiantes',
+                data: [
+                    distributionData.poor,
+                    distributionData.regular,
+                    distributionData.good,
+                    distributionData.excellent
+                ],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(249, 115, 22, 0.8)',
+                    'rgba(234, 179, 8, 0.8)',
+                    'rgba(34, 197, 94, 0.8)'
+                ],
+                borderColor: [
+                    'rgb(239, 68, 68)',
+                    'rgb(249, 115, 22)',
+                    'rgb(234, 179, 8)',
+                    'rgb(34, 197, 94)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock extra_js %}

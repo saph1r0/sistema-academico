@@ -1,353 +1,524 @@
 """
-Vistas simplificadas para el módulo de profesores
+Vistas simples para el módulo de profesores
 """
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 from django.contrib import messages
-from django.db import connection
-from .mixins import ProfesorRequiredMixin
+from django.db.models import Count, Sum
+from django.utils import timezone
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import json
 
+from repositorio.postgres_repository.models import (
+    CourseGroup, Teacher, TeacherAttendance, CourseTopicContent, Enrollment
+)
+from servicios.servicioAsistenciaDocente import ServicioAsistenciaDocente
+from servicios.servicioCalculadorProgreso import ProgressCalculator
+from servicios.servicioContenidoCurso import CourseContentManager
 
-class ProfesorNotasViewSimple(ProfesorRequiredMixin, TemplateView):
-    """Vista simplificada de gestión de notas"""
-    template_name = 'profesor/notas/index.html'
+class ProfesorDashboardView(LoginRequiredMixin, TemplateView):
+    """Dashboard del profesor con clases reales, estadísticas de asistencia y progreso"""
+    template_name = 'profesor/dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
+        # Verificar que el usuario sea profesor
+        if not self.request.user.is_teacher():
+            messages.error(self.request, 'No tienes permisos de profesor.')
+            return context
+        
         try:
-            # Datos básicos para la página
+            # Obtener el profesor
+            teacher = self.request.user.teacher
+            
+            # Obtener cursos asignados al profesor con información detallada
+            cursos_asignados = CourseGroup.objects.filter(
+                teacher=teacher
+            ).select_related('course', 'academic_period')
+            
+            # Procesar cada curso para obtener estadísticas básicas
+            cursos_con_estadisticas = []
+            total_estudiantes = 0
+            
+            for curso in cursos_asignados:
+                # Calcular número real de estudiantes matriculados
+                try:
+                    estudiantes_matriculados = Enrollment.objects.filter(
+                        course_group=curso,
+                        status='active'
+                    ).count()
+                except:
+                    estudiantes_matriculados = curso.enrolled_students or 0
+                
+                # Obtener temas del curso
+                try:
+                    total_temas = CourseTopicContent.objects.filter(course_group=curso).count()
+                    temas_completados = CourseTopicContent.objects.filter(
+                        course_group=curso, is_completed=True
+                    ).count()
+                except:
+                    total_temas = 0
+                    temas_completados = 0
+                
+                # Determinar estado del curso basado en progreso
+                progreso = curso.course_progress_percentage or 0
+                if progreso >= 75:
+                    estado = 'adelantado'
+                    estado_color = 'green'
+                elif progreso >= 50:
+                    estado = 'normal'
+                    estado_color = 'blue'
+                elif progreso >= 25:
+                    estado = 'atrasado'
+                    estado_color = 'yellow'
+                else:
+                    estado = 'muy_atrasado'
+                    estado_color = 'red'
+                
+                # Calcular porcentaje de asistencia docente
+                try:
+                    porcentaje_asistencia = (curso.classes_attended_by_teacher / curso.total_planned_classes * 100) if curso.total_planned_classes > 0 else 0
+                except:
+                    porcentaje_asistencia = 85.0
+                
+                curso_info = {
+                    'curso': curso,
+                    'total_estudiantes': estudiantes_matriculados,
+                    'progreso_porcentaje': progreso,
+                    'clases_asistidas': curso.classes_attended_by_teacher or 0,
+                    'total_clases_programadas': curso.total_planned_classes or 68,
+                    'porcentaje_asistencia_docente': round(porcentaje_asistencia, 1),
+                    'total_temas': total_temas,
+                    'temas_completados': temas_completados,
+                    'estado': estado,
+                    'estado_color': estado_color,
+                    'progress_stats': {'success': True}
+                }
+                
+                cursos_con_estadisticas.append(curso_info)
+                total_estudiantes += estudiantes_matriculados
+            
+            # Calcular promedio de progreso de todos los cursos
+            if cursos_con_estadisticas:
+                promedio_progreso = sum(c['progreso_porcentaje'] for c in cursos_con_estadisticas) / len(cursos_con_estadisticas)
+                promedio_asistencia = sum(c['porcentaje_asistencia_docente'] for c in cursos_con_estadisticas) / len(cursos_con_estadisticas)
+            else:
+                promedio_progreso = 0
+                promedio_asistencia = 0
+            
+            # Obtener última sesión del profesor (si la tabla existe)
+            ultima_sesion = None
+            try:
+                from django.db import connection
+                # Verificar si la tabla existe antes de hacer la consulta
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT to_regclass('teacher_attendance')")
+                    table_exists = cursor.fetchone()[0] is not None
+                
+                if table_exists:
+                    # Forzar la ejecución de la query para capturar errores aquí
+                    query_result = TeacherAttendance.objects.filter(
+                        teacher=teacher
+                    ).order_by('-login_time')[:1]
+                    ultima_sesion = list(query_result)[0] if query_result else None
+            except Exception as e:
+                # Si hay cualquier error, usar None
+                ultima_sesion = None
+            
             context.update({
-                'page_title': 'Gestión de Notas',
-                'courses': [{
-                    'id': 1,
-                    'name': 'MATEMATICA APLICADA A LA COMPUTACION',
-                    'code': '1703241'
-                }],
-                'selected_course': 1,
-                'students': [],
-                'grade_stats': {
-                    'average': 0,
-                    'approved': 0,
-                    'total': 0,
-                    'at_risk': 0,
-                    'parcial1_count': 0,
-                    'parcial2_count': 0,
-                    'parcial3_count': 0,
-                    'parcial1_avg': 0,
-                    'parcial2_avg': 0,
-                    'parcial3_avg': 0
-                },
-                'best_student': {'name': 'N/A', 'grade': 0},
-                'worst_student': {'name': 'N/A', 'grade': 0}
+                'cursos_asignados': cursos_con_estadisticas,
+                'total_cursos': len(cursos_con_estadisticas),
+                'total_estudiantes': total_estudiantes,
+                'teacher': teacher,
+                'estadisticas_generales': {'porcentaje_asistencia': round(promedio_asistencia, 1)},
+                'promedio_progreso': round(promedio_progreso, 1),
+                'impacto_progreso': [],
+                'ultima_sesion': ultima_sesion,
+                'fecha_actual': timezone.now().date(),
+                # Estadísticas adicionales para las cards
+                'total_horas_semanales': teacher.hours_per_week or 20,
+                'porcentaje_asistencia_general': round(promedio_asistencia, 1),
+                'total_clases_dictadas': sum(c['clases_asistidas'] for c in cursos_con_estadisticas),
+                'total_clases_programadas': sum(c['total_clases_programadas'] for c in cursos_con_estadisticas)
             })
             
-            # Obtener datos reales de estudiantes y notas
-            with connection.cursor() as cursor:
-                # Obtener estudiantes con sus notas
-                cursor.execute("""
-                    SELECT 
-                        s.id,
-                        s.student_code,
-                        u.first_name,
-                        u.last_name,
-                        et.name as evaluation_type,
-                        g.score
-                    FROM students s
-                    JOIN users u ON s.user_id = u.id
-                    LEFT JOIN grades g ON s.id = g.student_id
-                    LEFT JOIN evaluation_types et ON g.evaluation_type_id = et.id
-                    ORDER BY s.student_code, et.name;
-                """)
-                
-                rows = cursor.fetchall()
-                
-                # Organizar datos por estudiante
-                students_dict = {}
-                for row in rows:
-                    student_id, student_code, first_name, last_name, eval_type, score = row
-                    
-                    if student_id not in students_dict:
-                        students_dict[student_id] = {
-                            'id': student_id,
-                            'student_code': student_code,
-                            'first_name': first_name,
-                            'last_name': last_name,
-                            'full_name': f"{first_name} {last_name}",
-                            'grades': {
-                                'parcial1': None,
-                                'parcial2': None,
-                                'parcial3': None,
-                                'promedio': None
-                            }
-                        }
-                    
-                    # Asignar nota según el tipo de evaluación
-                    if eval_type == 'Parcial 1':
-                        students_dict[student_id]['grades']['parcial1'] = float(score) if score else None
-                    elif eval_type == 'Parcial 2':
-                        students_dict[student_id]['grades']['parcial2'] = float(score) if score else None
-                    elif eval_type == 'Parcial 3':
-                        students_dict[student_id]['grades']['parcial3'] = float(score) if score else None
-                
-                # Calcular promedios y convertir a lista
-                students_with_grades = []
-                all_averages = []
-                best_student = {'name': 'N/A', 'grade': 0}
-                worst_student = {'name': 'N/A', 'grade': 20}
-                
-                for student_data in students_dict.values():
-                    grades = student_data['grades']
-                    
-                    # Calcular promedio solo con notas disponibles
-                    notas_disponibles = [
-                        grades['parcial1'], 
-                        grades['parcial2'], 
-                        grades['parcial3']
-                    ]
-                    notas_validas = [n for n in notas_disponibles if n is not None]
-                    
-                    if notas_validas:
-                        promedio = round(sum(notas_validas) / len(notas_validas), 1)
-                        grades['promedio'] = promedio
-                        all_averages.append(promedio)
-                        
-                        # Determinar mejor y peor estudiante
-                        if promedio > best_student['grade']:
-                            best_student = {
-                                'name': student_data['full_name'],
-                                'grade': promedio
-                            }
-                        if promedio < worst_student['grade']:
-                            worst_student = {
-                                'name': student_data['full_name'],
-                                'grade': promedio
-                            }
-                    else:
-                        grades['promedio'] = None
-                    
-                    students_with_grades.append(student_data)
-                
-                # Ordenar por código de estudiante
-                students_with_grades.sort(key=lambda x: x['student_code'])
-                
-                # Calcular estadísticas
-                promedios_validos = [avg for avg in all_averages if avg is not None]
-                aprobados = len([p for p in promedios_validos if p >= 10.5])
-                en_riesgo = len([p for p in promedios_validos if p < 10.5])
-                
-                # Estadísticas por evaluación
-                parcial1_notas = [s['grades']['parcial1'] for s in students_with_grades if s['grades']['parcial1'] is not None]
-                parcial2_notas = [s['grades']['parcial2'] for s in students_with_grades if s['grades']['parcial2'] is not None]
-                parcial3_notas = [s['grades']['parcial3'] for s in students_with_grades if s['grades']['parcial3'] is not None]
-                
-                # Actualizar contexto con datos reales
-                context.update({
-                    'students': students_with_grades,
-                    'grade_stats': {
-                        'average': round(sum(promedios_validos) / len(promedios_validos), 1) if promedios_validos else 0,
-                        'approved': aprobados,
-                        'total': len(students_with_grades),
-                        'at_risk': en_riesgo,
-                        'parcial1_count': len(parcial1_notas),
-                        'parcial2_count': len(parcial2_notas),
-                        'parcial3_count': len(parcial3_notas),
-                        'parcial1_avg': round(sum(parcial1_notas) / len(parcial1_notas), 1) if parcial1_notas else 0,
-                        'parcial2_avg': round(sum(parcial2_notas) / len(parcial2_notas), 1) if parcial2_notas else 0,
-                        'parcial3_avg': round(sum(parcial3_notas) / len(parcial3_notas), 1) if parcial3_notas else 0
-                    },
-                    'best_student': best_student,
-                    'worst_student': worst_student,
-                    'debug_info': {
-                        'students_count': len(students_with_grades),
-                        'grades_count': len(parcial1_notas) + len(parcial2_notas) + len(parcial3_notas)
-                    }
-                })
-            
         except Exception as e:
-            context['error'] = f'Error al cargar datos: {str(e)}'
+            messages.error(self.request, f'Error cargando datos del dashboard: {str(e)}')
+            context.update({
+                'cursos_asignados': [],
+                'total_cursos': 0,
+                'total_estudiantes': 0,
+                'teacher': self.request.user.teacher if hasattr(self.request.user, 'teacher') else None,
+                'estadisticas_generales': {'porcentaje_asistencia': 0},
+                'promedio_progreso': 0,
+                'impacto_progreso': [],
+                'ultima_sesion': None,
+                'fecha_actual': timezone.now().date(),
+                'total_horas_semanales': 20,
+                'porcentaje_asistencia_general': 0,
+                'total_clases_dictadas': 0,
+                'total_clases_programadas': 0
+            })
         
         return context
 
+
+class ProfesorCourseDetailView(LoginRequiredMixin, TemplateView):
+    """Vista de detalle de un curso específico del profesor"""
+    template_name = 'profesor/course_detail.html'
+
     def post(self, request, *args, **kwargs):
-        """Procesar subida de archivos Excel y guardado de notas manuales"""
+        """Manejar acciones de gestión de temas del curso"""
+        if not request.user.is_teacher():
+            messages.error(request, 'No tienes permisos de profesor.')
+            return redirect('profesor:dashboard')
+        
         try:
-            action = request.POST.get('action', '')
+            teacher = request.user.teacher
+            course_group_id = kwargs.get('course_group_id')
             
-            if action == 'save_manual_grades':
-                # Guardar notas manuales
-                saved_count = 0
+            # Verificar que el curso pertenezca al profesor
+            course_group = get_object_or_404(CourseGroup, id=course_group_id, teacher=teacher)
+            
+            # Inicializar servicio de contenido
+            content_manager = CourseContentManager()
+            
+            action = request.POST.get('action')
+            
+            if action == 'upload_topics':
+                # Subir múltiples temas del curso
+                topics_data = []
                 
-                with connection.cursor() as cursor:
-                    # Obtener IDs necesarios
-                    cursor.execute("SELECT id FROM course_groups LIMIT 1;")
-                    course_group_result = cursor.fetchone()
+                # Obtener temas desde el formulario
+                topic_count = 0
+                while f'topic_title_{topic_count}' in request.POST:
+                    title = request.POST.get(f'topic_title_{topic_count}', '').strip()
+                    description = request.POST.get(f'topic_description_{topic_count}', '').strip()
                     
-                    if not course_group_result:
-                        messages.error(request, 'No se encontró un curso asignado.')
-                        return redirect('profesor:notas')
+                    if title:  # Solo agregar si tiene título
+                        topics_data.append({
+                            'title': title,
+                            'description': description
+                        })
                     
-                    course_group_id = course_group_result[0]
-                    
-                    # Obtener tipos de evaluación
-                    cursor.execute("""
-                        SELECT id, name FROM evaluation_types 
-                        WHERE course_group_id = %s
-                        ORDER BY name;
-                    """, [course_group_id])
-                    
-                    eval_types = {row[1]: row[0] for row in cursor.fetchall()}
-                    
-                    # Procesar cada nota
-                    for key, value in request.POST.items():
-                        if key.startswith(('parcial1_', 'parcial2_', 'parcial3_')):
-                            if value and value.strip():
-                                try:
-                                    parts = key.split('_')
-                                    eval_name = f"Parcial {parts[0][-1]}"  # parcial1 -> Parcial 1
-                                    student_id = parts[1]
-                                    score = float(value)
-                                    
-                                    if eval_name in eval_types and 0 <= score <= 20:
-                                        eval_type_id = eval_types[eval_name]
-                                        
-                                        # Insertar o actualizar nota
-                                        cursor.execute("""
-                                            INSERT INTO grades (student_id, evaluation_type_id, score, recorded_by)
-                                            VALUES (%s, %s, %s, %s)
-                                            ON CONFLICT (student_id, evaluation_type_id)
-                                            DO UPDATE SET score = EXCLUDED.score, recorded_by = EXCLUDED.recorded_by;
-                                        """, [student_id, eval_type_id, score, request.user.id])
-                                        
-                                        saved_count += 1
-                                        
-                                except (ValueError, IndexError) as e:
-                                    continue
+                    topic_count += 1
                 
-                messages.success(request, f'Se guardaron {saved_count} notas exitosamente.')
-                
-            elif 'archivo_notas' in request.FILES:
-                # Procesar archivo Excel subido
-                archivo = request.FILES['archivo_notas']
-                
-                try:
-                    from servicios.servicioExcel import ExcelGradeProcessor
-                    import tempfile
-                    import os
+                if topics_data:
+                    result = content_manager.upload_course_topics(
+                        str(course_group_id), 
+                        topics_data, 
+                        str(teacher.id)
+                    )
                     
-                    # Guardar archivo temporalmente
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
-                        for chunk in archivo.chunks():
-                            temp_file.write(chunk)
-                        temp_file_path = temp_file.name
-                    
-                    # Procesar archivo
-                    processor = ExcelGradeProcessor(request.user.id)
-                    results = processor.process_grades_file(temp_file_path)
-                    
-                    # Limpiar archivo temporal
-                    os.unlink(temp_file_path)
-                    
-                    # Mostrar resultados
-                    if results['success']:
-                        messages.success(request, 
-                            f'Archivo {archivo.name} procesado exitosamente. '
-                            f'Se procesaron {results["processed_count"]} notas.')
-                        
-                        # Mostrar estadísticas si están disponibles
-                        if results['statistics']:
-                            stats_msg = "Estadísticas: "
-                            for eval_name, stats in results['statistics'].items():
-                                stats_msg += f"{eval_name}: {stats['total']} notas, promedio {stats['average']}. "
-                            messages.info(request, stats_msg)
+                    if result['success']:
+                        messages.success(request, result['message'])
                     else:
-                        messages.error(request, f'Error procesando {archivo.name}')
+                        messages.error(request, result['error'])
+                else:
+                    messages.warning(request, 'No se proporcionaron temas válidos.')
+            
+            elif action == 'add_single_topic':
+                # Agregar un solo tema
+                title = request.POST.get('new_topic_title', '').strip()
+                description = request.POST.get('new_topic_description', '').strip()
+                
+                if title:
+                    result = content_manager.add_single_topic(
+                        str(course_group_id),
+                        {'title': title, 'description': description},
+                        str(teacher.id)
+                    )
                     
-                    # Mostrar advertencias si las hay
-                    for warning in results['warnings'][:5]:  # Mostrar solo las primeras 5
-                        messages.warning(request, warning)
+                    if result['success']:
+                        messages.success(request, result['message'])
+                    else:
+                        messages.error(request, result['error'])
+                else:
+                    messages.warning(request, 'Debe proporcionar un título para el tema.')
+            
+            elif action == 'remove_topic':
+                # Eliminar un tema
+                topic_id = request.POST.get('topic_id')
+                
+                if topic_id:
+                    result = content_manager.remove_topic(
+                        str(course_group_id),
+                        topic_id,
+                        str(teacher.id)
+                    )
                     
-                    # Mostrar errores si los hay
-                    for error in results['errors'][:3]:  # Mostrar solo los primeros 3
-                        messages.error(request, error)
+                    if result['success']:
+                        messages.success(request, result['message'])
+                    else:
+                        messages.error(request, result['error'])
+                else:
+                    messages.warning(request, 'No se especificó el tema a eliminar.')
+            
+            elif action == 'bulk_upload':
+                # Subida masiva de temas desde textarea
+                bulk_topics = request.POST.get('bulk_topics', '').strip()
+                
+                if bulk_topics:
+                    # Dividir por líneas y crear temas
+                    lines = [line.strip() for line in bulk_topics.split('\n') if line.strip()]
+                    topics_data = []
+                    
+                    for i, line in enumerate(lines):
+                        # Permitir formato "Título - Descripción" o solo "Título"
+                        if ' - ' in line:
+                            title, description = line.split(' - ', 1)
+                        else:
+                            title = line
+                            description = ''
                         
-                except Exception as e:
-                    messages.error(request, f'Error procesando archivo {archivo.name}: {str(e)}')
+                        topics_data.append({
+                            'title': title.strip(),
+                            'description': description.strip()
+                        })
+                    
+                    if topics_data:
+                        result = content_manager.upload_course_topics(
+                            str(course_group_id),
+                            topics_data,
+                            str(teacher.id)
+                        )
+                        
+                        if result['success']:
+                            messages.success(request, f'Se cargaron {len(topics_data)} temas exitosamente.')
+                        else:
+                            messages.error(request, result['error'])
+                    else:
+                        messages.warning(request, 'No se encontraron temas válidos en el texto.')
+                else:
+                    messages.warning(request, 'Debe proporcionar temas para cargar.')
+            
             else:
-                messages.info(request, 'No se especificó una acción válida.')
-                
-        except Exception as e:
-            messages.error(request, f'Error: {str(e)}')
+                messages.warning(request, 'Acción no válida.')
         
-        return redirect('profesor:notas')
+        except Exception as e:
+            messages.error(request, f'Error procesando la solicitud: {str(e)}')
+        
+        return redirect('profesor:course_detail', course_group_id=course_group_id)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Verificar que el usuario sea profesor
+        if not self.request.user.is_teacher():
+            messages.error(self.request, 'No tienes permisos de profesor.')
+            return context
+        
+        try:
+            # Obtener el profesor y el curso
+            teacher = self.request.user.teacher
+            course_group_id = kwargs.get('course_group_id')
+            
+            # Verificar que el curso pertenezca al profesor
+            course_group = CourseGroup.objects.select_related(
+                'course', 'academic_period'
+            ).get(id=course_group_id, teacher=teacher)
+            
+            # Inicializar servicios
+            servicio_asistencia = ServicioAsistenciaDocente()
+            calculador_progreso = ProgressCalculator()
+            
+            # Obtener estadísticas detalladas del curso
+            progress_stats = calculador_progreso.get_progress_statistics(str(course_group.id))
+            
+            # Obtener temas del curso
+            temas = CourseTopicContent.objects.filter(
+                course_group=course_group
+            ).order_by('topic_order')
+            
+            # Obtener estudiantes matriculados
+            estudiantes = Enrollment.objects.filter(
+                course_group=course_group,
+                status='active'
+            ).select_related('student__user').count()
+            
+            # Obtener historial de asistencia del profesor para este curso
+            # Usar lista vacía si la tabla no existe
+            attendance_history = []
+            try:
+                from django.db import connection
+                # Verificar si la tabla existe antes de hacer la consulta
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT to_regclass('teacher_attendance')")
+                    table_exists = cursor.fetchone()[0] is not None
+                
+                if table_exists:
+                    # Forzar la ejecución de la query con list() para capturar errores aquí
+                    attendance_history = list(TeacherAttendance.objects.filter(
+                        teacher=teacher
+                    ).order_by('-login_time')[:10])  # Últimas 10 sesiones
+            except Exception as e:
+                # Si hay cualquier error, usar lista vacía
+                attendance_history = []
+            
+            # Calcular estadísticas específicas del curso
+            total_temas = temas.count()
+            temas_completados = temas.filter(is_completed=True).count()
+            
+            # Determinar próximo tema a enseñar
+            proximo_tema = temas.filter(is_completed=False).first()
+            
+            # Calcular porcentaje de asistencia docente
+            attendance_percentage = 0
+            if course_group.total_planned_classes and course_group.total_planned_classes > 0:
+                attendance_percentage = (course_group.classes_attended_by_teacher or 0) * 100 / course_group.total_planned_classes
+            
+            context.update({
+                'course_group': course_group,
+                'teacher': teacher,
+                'progress_stats': progress_stats,
+                'temas': temas,
+                'total_temas': total_temas,
+                'temas_completados': temas_completados,
+                'estudiantes_count': estudiantes,
+                'attendance_history': attendance_history,
+                'proximo_tema': proximo_tema,
+                'porcentaje_temas_completados': (temas_completados / total_temas * 100) if total_temas > 0 else 0,
+                'attendance_percentage': round(attendance_percentage, 1),
+                'fecha_actual': timezone.now().date()
+            })
+            
+        except CourseGroup.DoesNotExist:
+            messages.error(self.request, 'Curso no encontrado o no tienes permisos para verlo.')
+            context.update({
+                'course_group': None,
+                'error': True
+            })
+        except Exception as e:
+            messages.error(self.request, f'Error cargando detalle del curso: {str(e)}')
+            context.update({
+                'course_group': None,
+                'error': True
+            })
+        
+        return context
 
 
-class DebugDataViewSimple(ProfesorRequiredMixin, TemplateView):
-    """Vista simple para debug de datos"""
+class ProfesorAsistenciaView(LoginRequiredMixin, TemplateView):
+    """Vista para gestión de asistencia del profesor"""
+    template_name = 'profesor/asistencia/index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        if not self.request.user.is_teacher():
+            messages.error(self.request, 'No tienes permisos de profesor.')
+            return context
+        
+        try:
+            teacher = self.request.user.teacher
+            
+            # Obtener cursos del profesor
+            cursos = CourseGroup.objects.filter(teacher=teacher).select_related('course')
+            
+            context.update({
+                'teacher': teacher,
+                'cursos': cursos,
+                'fecha_actual': timezone.now().date()
+            })
+            
+        except Exception as e:
+            messages.error(self.request, f'Error cargando asistencia: {str(e)}')
+        
+        return context
+
+
+class ProfesorReservasView(LoginRequiredMixin, TemplateView):
+    """Vista para gestión de reservas del profesor"""
+    template_name = 'profesor/reservas/index.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        if not self.request.user.is_teacher():
+            messages.error(self.request, 'No tienes permisos de profesor.')
+            return context
+        
+        try:
+            teacher = self.request.user.teacher
+            
+            # Obtener cursos del profesor
+            cursos = CourseGroup.objects.filter(teacher=teacher).select_related('course')
+            
+            context.update({
+                'teacher': teacher,
+                'cursos': cursos,
+                'fecha_actual': timezone.now().date()
+            })
+            
+        except Exception as e:
+            messages.error(self.request, f'Error cargando reservas: {str(e)}')
+        
+        return context
+
+
+class ProfesorDebugDataView(LoginRequiredMixin, TemplateView):
+    """Vista de debug para verificar datos del profesor"""
     template_name = 'profesor/debug/data.html'
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
+        if not self.request.user.is_teacher():
+            messages.error(self.request, 'No tienes permisos de profesor.')
+            return context
+        
         try:
-            debug_info = {}
+            teacher = self.request.user.teacher
             
-            with connection.cursor() as cursor:
-                # Verificar estudiantes
-                cursor.execute("SELECT COUNT(*) FROM students;")
-                debug_info['students_count'] = cursor.fetchone()[0]
-                
-                # Verificar tipos de evaluación
-                cursor.execute("SELECT id, name FROM evaluation_types ORDER BY name;")
-                debug_info['evaluation_types'] = cursor.fetchall()
-                
-                # Verificar notas
-                cursor.execute("SELECT COUNT(*) FROM grades;")
-                debug_info['grades_count'] = cursor.fetchone()[0]
-                
-                # Test de API real
-                try:
-                    cursor.execute("""
-                        SELECT g.score
-                        FROM grades g
-                        JOIN evaluation_types et ON g.evaluation_type_id = et.id
-                        WHERE 1=1
-                    """)
-                    api_scores = [row[0] for row in cursor.fetchall()]
-                    debug_info['api_test'] = {
-                        'success': True,
-                        'scores_count': len(api_scores),
-                        'sample_scores': api_scores[:10] if api_scores else []
-                    }
-                except Exception as e:
-                    debug_info['api_test'] = {
-                        'success': False,
-                        'error': str(e),
-                        'scores_count': 0
-                    }
+            # Información de debug
+            debug_info = {
+                'teacher_id': str(teacher.id),
+                'teacher_code': teacher.teacher_code,
+                'user_email': teacher.user.institutional_email,
+                'cursos_count': CourseGroup.objects.filter(teacher=teacher).count(),
+                'fecha_creacion': teacher.created_at,
+            }
             
-            context['debug_info'] = debug_info
+            # Obtener cursos con detalles
+            cursos = CourseGroup.objects.filter(teacher=teacher).select_related('course', 'academic_period')
+            
+            context.update({
+                'teacher': teacher,
+                'debug_info': debug_info,
+                'cursos': cursos,
+                'fecha_actual': timezone.now()
+            })
             
         except Exception as e:
-            context['error'] = f'Error: {str(e)}'
+            messages.error(self.request, f'Error en debug: {str(e)}')
         
         return context
 
 
-class DebugProcessExcelViewSimple(ProfesorRequiredMixin, TemplateView):
-    """Vista simple para procesar Excel"""
+class ProfesorDebugProcessExcelView(LoginRequiredMixin, TemplateView):
+    """Vista de debug para procesar Excel"""
     template_name = 'profesor/debug/process_excel.html'
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['excel_file'] = "Notas p1 MATEMÁTICA APLICADA A LA COMPUTACIÓN.xlsx"
-        return context
-    
-    def post(self, request, *args, **kwargs):
-        """Procesar Excel manualmente"""
-        try:
-            messages.info(request, 'Procesamiento de Excel en desarrollo.')
-        except Exception as e:
-            messages.error(request, f'Error: {str(e)}')
         
-        return redirect('profesor:debug_process_excel')
+        if not self.request.user.is_teacher():
+            messages.error(self.request, 'No tienes permisos de profesor.')
+            return context
+        
+        try:
+            teacher = self.request.user.teacher
+            
+            context.update({
+                'teacher': teacher,
+                'fecha_actual': timezone.now()
+            })
+            
+        except Exception as e:
+            messages.error(self.request, f'Error en debug Excel: {str(e)}')
+        
+        return context

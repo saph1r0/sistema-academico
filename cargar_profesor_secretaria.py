@@ -23,7 +23,7 @@ def verificar_sistema_completo():
                 SELECT u.id, u.first_name, u.last_name, u.role, t.teacher_code
                 FROM users u
                 LEFT JOIN teachers t ON u.id = t.user_id
-                WHERE u.role = 'profesor'
+                WHERE u.role = 'teacher'
                 LIMIT 5;
             """)
             

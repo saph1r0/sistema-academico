@@ -183,12 +183,33 @@
                                         <div class="flex items-center">
                                             <input type="checkbox"
                                                 class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3"
-                                                {% if content.completed %}checked{% endif %}>
+                                                {% if content.completed %}checked{% endif %} disabled>
                                             <span class="text-sm text-gray-900">{{ content.title }}</span>
                                         </div>
                                         <span class="text-xs text-gray-500">{{ content.hours }}h</span>
                                     </div>
                                     {% endfor %}
+
+                                    <!-- Botón para marcar unidad como completada -->
+                                    <div class="mt-4 pt-3 border-t border-gray-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="unit_{{ unit.id }}"
+                                                    class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mr-3 unit-checkbox"
+                                                    data-topic-id="{{ unit.id }}" {% if unit.is_completed %}checked{%
+                                                    endif %}>
+                                                <label for="unit_{{ unit.id }}"
+                                                    class="text-sm font-medium text-gray-900">
+                                                    Marcar unidad como completada
+                                                </label>
+                                            </div>
+                                            {% if unit.completed_date %}
+                                            <span class="text-xs text-green-600">
+                                                Completada: {{ unit.completed_date|date:"d/m/Y" }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -207,7 +228,7 @@
                                 </div>
                             </div>
                         </div>
-                        {% empty %}
+                        {% endif %}
                         <div class="text-center py-8">
                             <i data-lucide="book-open" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
                             <p class="text-gray-500 mb-4">No hay unidades del sílabo registradas</p>
@@ -393,4 +414,123 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Manejar cambios en los checkboxes de unidades
+        const unitCheckboxes = document.querySelectorAll('.unit-checkbox');
+
+        unitCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const topicId = this.dataset.topicId;
+                const isCompleted = this.checked;
+
+                // Mostrar indicador de carga
+                this.disabled = true;
+
+                // Enviar actualización al servidor
+                updateTopicProgress(topicId, isCompleted)
+                    .then(response => {
+                        if (response.success) {
+                            // Mostrar mensaje de éxito
+                            showNotification('Progreso actualizado exitosamente', 'success');
+
+                            // Recargar la página para actualizar estadísticas
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            // Revertir checkbox si hay error
+                            this.checked = !isCompleted;
+                            showNotification('Error al actualizar progreso', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        this.checked = !isCompleted;
+                        showNotification('Error de conexión', 'error');
+                    })
+                    .finally(() => {
+                        this.disabled = false;
+                    });
+            });
+        });
+    });
+
+    async function updateTopicProgress(topicId, isCompleted) {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'update_topic_progress');
+            formData.append('topic_id', topicId);
+            formData.append('is_completed', isCompleted);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                return { success: true };
+            } else {
+                return { success: false };
+            }
+        } catch (error) {
+            console.error('Error updating topic progress:', error);
+            return { success: false };
+        }
+    }
+
+    function showNotification(message, type = 'info') {
+        // Crear elemento de notificación
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm ${type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                    'bg-blue-500 text-white'
+            }`;
+
+        notification.innerHTML = `
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                ${type === 'success' ?
+                '<i data-lucide="check-circle" class="h-5 w-5"></i>' :
+                type === 'error' ?
+                    '<i data-lucide="x-circle" class="h-5 w-5"></i>' :
+                    '<i data-lucide="info" class="h-5 w-5"></i>'
+            }
+            </div>
+            <div class="ml-3">
+                <p class="text-sm font-medium">${message}</p>
+            </div>
+            <div class="ml-4 flex-shrink-0">
+                <button class="inline-flex text-white hover:text-gray-200 focus:outline-none" onclick="this.parentElement.parentElement.parentElement.remove()">
+                    <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(notification);
+
+        // Inicializar iconos de Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+</script>
+
+<!-- Agregar token CSRF para las peticiones AJAX -->
+{% csrf_token %}
 {% endblock %}

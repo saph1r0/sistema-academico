@@ -44,24 +44,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'repositorio.postgres_repository',
-    'rest_framework',
+    # 'rest_framework',  # Temporalmente comentado
 ]
-REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
-    ),
-
-    'DEFAULT_PERMISSION_CLASSES': (
-    'rest_framework.permissions.AllowAny',
-    ),
-    'DEFAULT_RENDERER_CLASSES': (
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
-    ),
-}
+# REST_FRAMEWORK = {
+#     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework.authentication.SessionAuthentication',
+#         'rest_framework.authentication.BasicAuthentication',
+#     ),
+#     'DEFAULT_PERMISSION_CLASSES': (
+#         'rest_framework.permissions.AllowAny',
+#     ),
+#     'DEFAULT_RENDERER_CLASSES': (
+#         'rest_framework.renderers.JSONRenderer',
+#         'rest_framework.renderers.BrowsableAPIRenderer',
+#     ),
+# }
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -75,6 +73,8 @@ MIDDLEWARE = [
     'presentacion.middleware.RoleBasedSessionMiddleware',
     'presentacion.middleware.RoleAccessControlMiddleware',
     'presentacion.middleware.AuditMiddleware',
+    # Middleware para asistencia automática de docentes
+    'presentacion.middleware.TeacherAttendanceMiddleware',
     # Middleware específico del admin (mantener compatibilidad)
     'presentacion.administrador.middleware.AdminPanelMiddleware',
     'presentacion.administrador.middleware.AdminSessionSecurityMiddleware',
@@ -175,7 +175,7 @@ ADMIN_VALIDATE_IP = False  # Cambiar a True para validación de IP más estricta
 SESSION_COOKIE_SECURE = False  # Cambiar a True en producción con HTTPS
 SESSION_COOKIE_HTTPONLY = True  # Previene acceso via JavaScript
 SESSION_COOKIE_SAMESITE = 'Lax'  # Protección CSRF
-SESSION_COOKIE_AGE = 3600  # 1 hora por defecto
+SESSION_COOKIE_AGE = 900  # 1 hora por defecto
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_SAVE_EVERY_REQUEST = True  # Actualiza la sesión en cada request
 
@@ -199,10 +199,10 @@ PASSWORD_HASHERS = [
 
 # Role-based Session Timeouts (en segundos)
 ROLE_SESSION_TIMEOUTS = {
-    'admin': 3600,      # 1 hora para administradores
-    'teacher': 7200,    # 2 horas para profesores
-    'student': 3600,    # 1 hora para estudiantes
-    'secretary': 7200,  # 2 horas para secretarios
+    'admin': 900,      
+    'teacher': 900,    
+    'student': 900,    
+    'secretary': 900, 
 }
 
 # Security Headers

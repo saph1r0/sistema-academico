@@ -1,296 +1,481 @@
 {% extends 'base_estudiante.html' %}
 
-{% block title %}Gestión de Laboratorios - Portal Estudiante{% endblock %}
+{% block title %}Matrícula de Laboratorios - Sistema Académico{% endblock %}
+
+{% block page_title %}Matrícula de Laboratorios{% endblock %}
+
+{% block extra_css %}
+<style>
+    .header-card {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .lab-option {
+        border: 2px solid var(--gray-200);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        background: white;
+        overflow: hidden;
+    }
+
+    .lab-option:hover {
+        border-color: var(--primary-blue);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    }
+
+    .lab-option.selected {
+        border-color: var(--success-green);
+        background: #f0fdf4;
+    }
+
+    .lab-option.full {
+        border-color: var(--danger-red);
+        background: #fef2f2;
+        opacity: 0.8;
+    }
+
+    .lab-header {
+        padding: 1.5rem;
+        color: white;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .lab-header.option-a {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
+    }
+
+    .lab-header.option-b {
+        background: linear-gradient(135deg, var(--success-green) 0%, #34d399 100%);
+    }
+
+    .lab-body {
+        padding: 1.5rem;
+    }
+
+    .capacity-bar {
+        height: 6px;
+        background: var(--gray-200);
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 0.5rem 0;
+    }
+
+    .capacity-fill {
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 3px;
+    }
+
+    .capacity-fill.low {
+        background: var(--success-green);
+    }
+
+    .capacity-fill.medium {
+        background: var(--warning-orange);
+    }
+
+    .capacity-fill.high {
+        background: #f97316;
+    }
+
+    .capacity-fill.full {
+        background: var(--danger-red);
+    }
+
+    .status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-available {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-current {
+        background: var(--light-blue);
+        color: var(--dark-blue);
+    }
+
+    .status-full {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .current-enrollment {
+        background: linear-gradient(135deg, var(--success-green) 0%, #34d399 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .info-item:last-child {
+        border-bottom: none;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--gray-500);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.3;
+    }
+
+    .deadline-alert {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: none;
+        color: #92400e;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .course-section {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .course-header {
+        background: var(--gray-100);
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .btn-action {
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="bg-white rounded-lg shadow-sm p-6">
-        <div class="flex items-center justify-between">
+<div class="container-fluid">
+    <!-- Header Principal -->
+    <div class="header-card">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-flask me-3"></i>
+                    Matrícula de Laboratorios
+                </h2>
+                <p class="mb-0 opacity-90">
+                    Selecciona los laboratorios para tus cursos. Cada curso ofrece opciones A y B con horarios
+                    diferenciados.
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if plazo_matricula_activo %}
+                <span class="badge bg-light text-success fs-6 px-3 py-2">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Matrícula Activa
+                </span>
+                {% else %}
+                <span class="badge bg-light text-danger fs-6 px-3 py-2">
+                    <i class="fas fa-times-circle me-1"></i>
+                    Matrícula Cerrada
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerta de fechas límite -->
+    {% if plazo_matricula_activo %}
+    <div class="deadline-alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-clock fa-2x me-3"></i>
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Gestión de Laboratorios</h1>
-                <p class="text-gray-600 mt-1">Matricúlate o desmatrículate de laboratorios disponibles</p>
-            </div>
-            {% if plazo_matricula_activo %}
-            <div class="text-right">
-                <span
-                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                    <i data-lucide="clock" class="h-4 w-4 mr-1"></i>
-                    Plazo Activo
-                </span>
-                <p class="text-xs text-gray-500 mt-1">Puedes realizar cambios</p>
-            </div>
-            {% else %}
-            <div class="text-right">
-                <span
-                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                    <i data-lucide="clock-off" class="h-4 w-4 mr-1"></i>
-                    Plazo Cerrado
-                </span>
-                <p class="text-xs text-gray-500 mt-1">Solo consulta</p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-
-    <!-- Información del Plazo -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
-            </div>
-            <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-800">Información Importante</h3>
-                <div class="mt-2 text-sm text-blue-700">
-                    <ul class="list-disc list-inside space-y-1">
-                        <li>Puedes matricularte en laboratorios durante el plazo establecido</li>
-                        <li>Puedes desmatricularte hasta 3 días antes del cierre del plazo</li>
-                        <li>Los cambios se reflejan automáticamente en tu horario</li>
-                        <li>Verifica la disponibilidad de cupos antes de matricularte</li>
-                    </ul>
-                </div>
+                <h6 class="mb-1 fw-bold">Fechas Importantes</h6>
+                <p class="mb-0">
+                    <strong>Matrícula:</strong> Hasta el 15 de Marzo 2024 &nbsp;•&nbsp;
+                    <strong>Cambios:</strong> Hasta el 22 de Marzo 2024
+                </p>
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- Mis Laboratorios Actuales -->
-    <div class="bg-white rounded-lg shadow-sm">
-        <div class="p-6 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Mis Laboratorios Actuales</h2>
-        </div>
-
-        {% if matriculas_actuales %}
-        <div class="divide-y divide-gray-200">
+    <!-- Matrículas actuales -->
+    {% if matriculas_actuales %}
+    <div class="current-enrollment">
+        <h5 class="mb-3">
+            <i class="fas fa-check-circle me-2"></i>
+            Mis Laboratorios Matriculados
+        </h5>
+        <div class="row">
             {% for matricula in matriculas_actuales %}
-            <div class="p-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                                    <i data-lucide="flask-conical" class="h-6 w-6 text-orange-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-lg font-medium text-gray-900">{{ matricula.curso_nombre }}</h3>
-                                <p class="text-sm text-gray-600">{{ matricula.laboratorio_codigo }} - {{ matricula.aula
-                                    }}</p>
-                                <p class="text-sm text-gray-600">Profesor: {{ matricula.profesor_nombre }}</p>
+            <div class="col-md-6 mb-3">
+                <div class="card bg-white border-0">
+                    <div class="card-body">
+                        <h6 class="fw-bold text-primary">{{ matricula.course_name }}</h6>
+                        <div class="info-item">
+                            <span>Laboratorio:</span>
+                            <strong>{{ matricula.laboratory_code }}</strong>
+                        </div>
+                        <div class="info-item">
+                            <span>Aula:</span>
+                            <strong>{{ matricula.lab_room }}</strong>
+                        </div>
+                        <div class="info-item">
+                            <span>Profesor:</span>
+                            <strong>{{ matricula.teacher_name }}</strong>
+                        </div>
+                        <div class="info-item">
+                            <span>Horario:</span>
+                            <div>
+                                {% for horario in matricula.schedule_info %}
+                                <small class="badge bg-primary me-1">{{ horario.day }} {{ horario.start_time }}-{{
+                                    horario.end_time }}</small>
+                                {% endfor %}
                             </div>
                         </div>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <div class="text-right mb-4">
-                            <p class="text-sm text-gray-500">Horario</p>
-                            <p class="text-sm font-medium text-gray-900">{{ matricula.horario }}</p>
-                            <p class="text-sm text-gray-500">Cupos: {{ matricula.estudiantes_matriculados }}/{{
-                                matricula.capacidad }}</p>
-                        </div>
-
                         {% if plazo_matricula_activo %}
-                        <form method="post" class="inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="accion" value="desmatricular">
-                            <input type="hidden" name="laboratorio_id" value="{{ matricula.laboratorio_id }}">
-                            <button type="submit"
-                                class="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                onclick="return confirm('¿Estás seguro de que quieres desmatricularte de este laboratorio?')">
-                                <i data-lucide="user-minus" class="h-4 w-4 mr-2"></i>
-                                Desmatricular
-                            </button>
-                        </form>
-                        {% else %}
-                        <span
-                            class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-gray-100 rounded-md">
-                            <i data-lucide="lock" class="h-4 w-4 mr-2"></i>
-                            Matriculado
-                        </span>
+                        <div class="mt-3">
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="accion" value="desmatricular">
+                                <input type="hidden" name="laboratorio_id" value="{{ matricula.laboratory_id }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm"
+                                    onclick="return confirm('¿Estás seguro de desmatricularte de este laboratorio?')">
+                                    <i class="fas fa-times me-1"></i>
+                                    Desmatricular
+                                </button>
+                            </form>
+                        </div>
                         {% endif %}
-                    </div>
-                </div>
-
-                <!-- Estado de la matrícula -->
-                <div class="mt-4 pl-16">
-                    <div class="flex items-center">
-                        <span
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
-                            Matriculado desde {{ matricula.fecha_matricula|date:"d/m/Y" }}
-                        </span>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="p-12 text-center">
-            <i data-lucide="flask-conical-off" class="h-16 w-16 text-gray-400 mx-auto mb-4"></i>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No tienes laboratorios matriculados</h3>
-            <p class="text-gray-600">Explora los laboratorios disponibles abajo para matricularte.</p>
-        </div>
-        {% endif %}
     </div>
+    {% endif %}
 
-    <!-- Laboratorios Disponibles -->
-    <div class="bg-white rounded-lg shadow-sm">
-        <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-900">Laboratorios Disponibles</h2>
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm text-gray-500">Filtrar por curso:</span>
-                    <select id="curso-filter"
-                        class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Todos los cursos</option>
-                        {% for curso in cursos_con_laboratorio %}
-                        <option value="{{ curso.id }}">{{ curso.nombre }}</option>
-                        {% endfor %}
-                    </select>
+    <!-- Laboratorios disponibles por curso -->
+    {% if laboratorios_disponibles %}
+    {% for curso_name, curso_data in laboratorios_disponibles.items %}
+    <div class="course-section">
+        <div class="course-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-1 fw-bold">{{ curso_name }}</h5>
+                    <small class="text-muted">{{ curso_data.course_code }} - Grupo {{ curso_data.group_code }}</small>
                 </div>
-            </div>
-        </div>
-
-        {% if laboratorios_disponibles %}
-        <div class="divide-y divide-gray-200" id="laboratorios-list">
-            {% for laboratorio in laboratorios_disponibles %}
-            <div class="p-6 laboratorio-item" data-curso-id="{{ laboratorio.curso_id }}">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <i data-lucide="flask-conical" class="h-6 w-6 text-blue-600"></i>
-                                </div>
-                            </div>
-                            <div class="ml-4">
-                                <h3 class="text-lg font-medium text-gray-900">{{ laboratorio.curso_nombre }}</h3>
-                                <p class="text-sm text-gray-600">{{ laboratorio.laboratorio_codigo }} - {{
-                                    laboratorio.aula }}</p>
-                                <p class="text-sm text-gray-600">Profesor: {{ laboratorio.profesor_nombre }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex-shrink-0">
-                        <div class="text-right mb-4">
-                            <p class="text-sm text-gray-500">Horario</p>
-                            <p class="text-sm font-medium text-gray-900">{{ laboratorio.horario }}</p>
-                            <div class="flex items-center mt-1">
-                                <div class="flex-1">
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div class="bg-blue-600 h-2 rounded-full"
-                                            style="width: {{ laboratorio.porcentaje_ocupacion }}%"></div>
-                                    </div>
-                                </div>
-                                <span class="ml-2 text-xs text-gray-500">{{ laboratorio.estudiantes_matriculados }}/{{
-                                    laboratorio.capacidad }}</span>
-                            </div>
-                        </div>
-
-                        {% if plazo_matricula_activo %}
-                        {% if laboratorio.tiene_cupos %}
-                        {% if not laboratorio.ya_matriculado %}
-                        <form method="post" class="inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="accion" value="matricular">
-                            <input type="hidden" name="laboratorio_id" value="{{ laboratorio.id }}">
-                            <button type="submit"
-                                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                onclick="return confirm('¿Estás seguro de que quieres matricularte en este laboratorio?')">
-                                <i data-lucide="user-plus" class="h-4 w-4 mr-2"></i>
-                                Matricular
-                            </button>
-                        </form>
-                        {% else %}
-                        <span
-                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-green-700 bg-green-100 rounded-md">
-                            <i data-lucide="check" class="h-4 w-4 mr-2"></i>
-                            Ya Matriculado
-                        </span>
-                        {% endif %}
-                        {% else %}
-                        <span
-                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md">
-                            <i data-lucide="users" class="h-4 w-4 mr-2"></i>
-                            Sin Cupos
-                        </span>
-                        {% endif %}
-                        {% else %}
-                        <span
-                            class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 rounded-md">
-                            <i data-lucide="lock" class="h-4 w-4 mr-2"></i>
-                            Plazo Cerrado
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Información adicional -->
-                <div class="mt-4 pl-16">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                            <span class="text-gray-500">Duración:</span>
-                            <span class="font-medium text-gray-900">{{ laboratorio.duracion_horas }} horas</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">Equipos:</span>
-                            <span class="font-medium text-gray-900">{{ laboratorio.equipos_disponibles|default:"No
-                                especificado" }}</span>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">Requisitos:</span>
-                            <span class="font-medium text-gray-900">{{ laboratorio.requisitos|default:"Ninguno"
-                                }}</span>
-                        </div>
-                    </div>
-
-                    {% if laboratorio.conflicto_horario %}
-                    <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <i data-lucide="alert-triangle" class="h-5 w-5 text-yellow-400"></i>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm text-yellow-800">
-                                    <strong>Conflicto de horario:</strong> Este laboratorio se superpone con {{
-                                    laboratorio.conflicto_con }}.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="col-md-4 text-end">
+                    {% if curso_data.current_enrollment %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-check me-1"></i>
+                        Matriculado en {{ curso_data.current_enrollment.lab_code }}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Sin matrícula
+                    </span>
                     {% endif %}
                 </div>
             </div>
-            {% endfor %}
         </div>
-        {% else %}
-        <div class="p-12 text-center">
-            <i data-lucide="search-x" class="h-16 w-16 text-gray-400 mx-auto mb-4"></i>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No hay laboratorios disponibles</h3>
-            <p class="text-gray-600">No se encontraron laboratorios disponibles para tus cursos matriculados.</p>
-        </div>
-        {% endif %}
-    </div>
 
-    <!-- Información de Ayuda -->
-    <div class="bg-gray-50 rounded-lg p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">¿Necesitas ayuda?</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <h4 class="text-sm font-medium text-gray-900 mb-2">¿Cómo matricularme?</h4>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• Verifica que el plazo de matrícula esté activo</li>
-                    <li>• Selecciona el laboratorio que deseas</li>
-                    <li>• Haz clic en "Matricular" y confirma</li>
-                    <li>• El horario se agregará automáticamente</li>
-                </ul>
+        <div class="card-body p-4">
+            <div class="row">
+                {% for lab in curso_data.laboratories %}
+                <div class="col-md-6 mb-4">
+                    <div class="lab-option position-relative
+                            {% if lab.is_current %}selected{% endif %}
+                            {% if not lab.is_available %}full{% endif %}">
+
+                        <!-- Status badge -->
+                        <div class="status-badge 
+                                {% if lab.is_current %}status-current
+                                {% elif lab.is_available %}status-available
+                                {% else %}status-full{% endif %}">
+                            {% if lab.is_current %}
+                            Actual
+                            {% elif lab.is_available %}
+                            Disponible
+                            {% else %}
+                            Lleno
+                            {% endif %}
+                        </div>
+
+                        <!-- Lab header -->
+                        <div
+                            class="lab-header {% if lab.lab_code == 'A' %}option-a{% elif lab.lab_code == 'B' %}option-b{% endif %}">
+                            <h6 class="mb-1">
+                                <i class="fas fa-flask me-2"></i>
+                                Laboratorio {{ lab.lab_code }}
+                            </h6>
+                            <small>{{ lab.lab_room }}</small>
+                        </div>
+
+                        <div class="lab-body">
+                            <!-- Información del profesor -->
+                            <div class="info-item">
+                                <span>Profesor:</span>
+                                <strong>{{ lab.teacher_name }}</strong>
+                            </div>
+
+                            <!-- Horario -->
+                            {% if lab.schedule_info %}
+                            <div class="info-item">
+                                <span>Horario:</span>
+                                <div>
+                                    {% for horario in lab.schedule_info %}
+                                    <small class="badge bg-light text-dark">{{ horario.day }} {{ horario.start_time
+                                        }}-{{ horario.end_time }}</small>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Capacidad -->
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="fw-bold">Capacidad:</small>
+                                    <small>{{ lab.enrolled_count }}/{{ lab.capacity }}</small>
+                                </div>
+                                <div class="capacity-bar">
+                                    {% widthratio lab.enrolled_count lab.capacity 100 as percentage %}
+                                    <div class="capacity-fill 
+                                            {% if percentage < 50 %}low
+                                            {% elif percentage < 75 %}medium
+                                            {% elif percentage < 100 %}high
+                                            {% else %}full{% endif %}" style="width: {{ percentage }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ lab.available_spots }} cupos libres</small>
+                            </div>
+
+                            <!-- Botón de acción -->
+                            {% if plazo_matricula_activo %}
+                            <div class="mt-3">
+                                {% if lab.is_current %}
+                                <button class="btn btn-success btn-action" disabled>
+                                    <i class="fas fa-check me-2"></i>
+                                    Matriculado Actualmente
+                                </button>
+                                {% elif lab.is_available %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="matricular">
+                                    <input type="hidden" name="laboratorio_id" value="{{ lab.lab_id }}">
+                                    <button type="submit" class="btn btn-primary btn-action"
+                                        onclick="return confirm('¿Confirmas la matrícula en Laboratorio {{ lab.lab_code }}?')">
+                                        <i class="fas fa-plus me-2"></i>
+                                        Matricularme
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button class="btn btn-secondary btn-action" disabled>
+                                    <i class="fas fa-times me-2"></i>
+                                    No Disponible
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="mt-3">
+                                <button class="btn btn-outline-secondary btn-action" disabled>
+                                    <i class="fas fa-lock me-2"></i>
+                                    Matrícula Cerrada
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-            <div>
-                <h4 class="text-sm font-medium text-gray-900 mb-2">¿Puedo cambiar de laboratorio?</h4>
-                <ul class="text-sm text-gray-600 space-y-1">
-                    <li>• Sí, durante el plazo de matrícula</li>
-                    <li>• Primero desmatrículate del actual</li>
-                    <li>• Luego matricúlate en el nuevo</li>
-                    <li>• Verifica que no haya conflictos de horario</li>
-                </ul>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <!-- Estado vacío -->
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="fas fa-flask"></i>
+                <h4>No hay laboratorios disponibles</h4>
+                <p class="mb-4">
+                    No se encontraron laboratorios para tus cursos matriculados.<br>
+                    Esto puede deberse a que tus cursos no requieren laboratorio.
+                </p>
+                <a href="{% url 'estudiante:dashboard' %}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>
+                    Volver al Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Información adicional -->
+    <div class="card">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                Información Importante
+            </h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-primary">Proceso de Matrícula:</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Revisa los horarios disponibles
+                        </li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Selecciona la opción que mejor se
+                            adapte</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Confirma tu matrícula</li>
+                        <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Puedes cambiar hasta la fecha
+                            límite</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-warning">Consideraciones:</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Cada curso permite
+                            solo un laboratorio</li>
+                        <li class="mb-2"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Los cupos son
+                            limitados</li>
+                        <li class="mb-2"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Verifica que no
+                            haya cruces de horario</li>
+                        <li class="mb-2"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Los cambios tienen
+                            fecha límite</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -299,44 +484,36 @@
 
 {% block extra_js %}
 <script>
+    // Animación de entrada para las tarjetas
     document.addEventListener('DOMContentLoaded', function () {
-        lucide.createIcons();
+        const labOptions = document.querySelectorAll('.lab-option');
 
-        // Filtro por curso
-        const cursoFilter = document.getElementById('curso-filter');
-        const laboratorioItems = document.querySelectorAll('.laboratorio-item');
+        labOptions.forEach((option, index) => {
+            option.style.opacity = '0';
+            option.style.transform = 'translateY(20px)';
 
-        cursoFilter.addEventListener('change', function () {
-            const selectedCurso = this.value;
-
-            laboratorioItems.forEach(function (item) {
-                const cursoId = item.getAttribute('data-curso-id');
-
-                if (selectedCurso === '' || cursoId === selectedCurso) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
+            setTimeout(() => {
+                option.style.transition = 'all 0.6s ease';
+                option.style.opacity = '1';
+                option.style.transform = 'translateY(0)';
+            }, index * 100);
         });
+    });
 
-        // Confirmación de acciones
-        const forms = document.querySelectorAll('form');
-        forms.forEach(function (form) {
-            form.addEventListener('submit', function (e) {
-                const accion = form.querySelector('input[name="accion"]').value;
-                let mensaje = '';
+    // Confirmación de acciones
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function (e) {
+            const button = this.querySelector('button[type="submit"]');
+            if (button && !button.disabled) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
 
-                if (accion === 'matricular') {
-                    mensaje = '¿Estás seguro de que quieres matricularte en este laboratorio?';
-                } else if (accion === 'desmatricular') {
-                    mensaje = '¿Estás seguro de que quieres desmatricularte de este laboratorio?';
-                }
-
-                if (mensaje && !confirm(mensaje)) {
-                    e.preventDefault();
-                }
-            });
+                // Re-habilitar después de 3 segundos en caso de error
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.innerHTML = button.innerHTML.replace('Procesando...', 'Matricularme');
+                }, 3000);
+            }
         });
     });
 </script>
