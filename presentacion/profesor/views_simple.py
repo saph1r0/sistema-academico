@@ -402,7 +402,7 @@ class ProfesorCourseDetailView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class ProfesorAsistenciaView(LoginRequiredMixin, TemplateView):
+class asistencia(LoginRequiredMixin, TemplateView):
     """Vista para gestión de asistencia del profesor"""
     template_name = 'profesor/asistencia/index.html'
 

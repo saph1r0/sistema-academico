@@ -7,6 +7,7 @@ from . import views_simple
 from . import views_silabo
 from . import api_views
 from . import views_grade_upload
+from . import views_asistencia
 
 app_name = 'profesor'
 
@@ -25,8 +26,13 @@ urlpatterns = [
     path('notas/ajax/statistics/', views_grade_upload.GradeStatisticsAjaxView.as_view(), name='grade_statistics_ajax'),
     path('notas/plantilla/descargar/', views_grade_upload.DownloadExcelTemplateView.as_view(), name='download_excel_template'),
     
+    # Gestión de asistencia
+    path('asistencia/', views_asistencia.asistencia.as_view(), name='asistencia'),
+    path('asistencia/historial/', views_asistencia.ProfesorAsistenciaHistorialView.as_view(), name='asistencia_historial'),
+    path('asistencia/reporte/', views_asistencia.ProfesorReporteAsistenciaView.as_view(), name='asistencia_reporte'),
+    path('asistencia/api/rapida/', views_asistencia.ProfesorAsistenciaRapidaAPIView.as_view(), name='asistencia_api_rapida'),
+    
     # Otras funcionalidades del profesor
-    path('asistencia/', views_simple.ProfesorAsistenciaView.as_view(), name='asistencia'),
     path('reservas/', views_simple.ProfesorReservasView.as_view(), name='reservas'),
     path('silabo/', views_silabo.ProfesorSilaboView.as_view(), name='silabo'),
     

@@ -540,7 +540,7 @@ class ProfesorNotasView(ProfesorRequiredMixin, TemplateView):
         return redirect('profesor:notas')
 
 
-class ProfesorAsistenciaView(ProfesorRequiredMixin, TemplateView):
+class asistencia(ProfesorRequiredMixin, TemplateView):
     """Registro y gestión de asistencia estudiantil"""
     template_name = 'profesor/asistencia/index.html'
 
