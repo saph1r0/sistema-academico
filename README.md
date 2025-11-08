@@ -2,7 +2,7 @@
 
 -----
 
-# 📚 Guía de Instalación y Arranque Rápido (`feature/erika3`)
+# 📚 Guía 
 
 ## 1\. 📂 Clonación del Proyecto
 
