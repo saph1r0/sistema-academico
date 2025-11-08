@@ -1,0 +1,56 @@
+{% extends 'estudiante/base_estudiante.html' %}
+{% block title %}Laboratorios - Portal Estudiante{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+  <h1 class="text-2xl font-bold text-blue-800 mb-6">🧪 Laboratorios Disponibles</h1>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for laboratorio in laboratorios_disponibles %}
+    <div class="bg-blue-50 border border-blue-200 rounded-2xl shadow-md hover:shadow-lg transition p-5 relative">
+      <div class="flex items-center justify-between mb-3">
+        <span class="bg-blue-600 text-white px-3 py-1 rounded-md text-xs font-semibold">
+          {{ laboratorio.laboratorio_codigo }}
+        </span>
+        {% if laboratorio.conflicto_horario %}
+        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">
+          Conflicto
+        </span>
+        {% endif %}
+      </div>
+
+      <h3 class="text-blue-900 text-lg font-bold">{{ laboratorio.curso_nombre }}</h3>
+      <p class="text-sm text-blue-700 mb-2">Profesor: {{ laboratorio.profesor_nombre }}</p>
+      <p class="text-sm text-gray-700 mb-2">
+        <strong>Horario:</strong> {{ laboratorio.horario }}
+      </p>
+      <p class="text-sm text-gray-600 mb-4">
+        <strong>Cupos:</strong> {{ laboratorio.estudiantes_matriculados }}/{{ laboratorio.capacidad }}
+      </p>
+
+      {% if laboratorio.tiene_cupos and not laboratorio.conflicto_horario %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="matricular" />
+        <input type="hidden" name="laboratorio_id" value="{{ laboratorio.id }}" />
+        <button
+          class="w-full bg-blue-600 text-white rounded-md py-2 text-sm font-medium hover:bg-blue-700 transition">
+          Matricular
+        </button>
+      </form>
+      {% elif laboratorio.conflicto_horario %}
+      <div class="text-center text-xs text-yellow-700 font-medium bg-yellow-50 rounded-md py-2">
+        Conflicto con {{ laboratorio.conflicto_con }}
+      </div>
+      {% else %}
+      <div class="text-center text-xs text-gray-600 font-medium bg-gray-100 rounded-md py-2">
+        Sin Cupos
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <p class="text-center col-span-3 text-gray-500">No hay laboratorios disponibles</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

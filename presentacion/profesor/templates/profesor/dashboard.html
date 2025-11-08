@@ -1,0 +1,297 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Dashboard - Portal Docente{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido, Prof. {{ user.first_name }}!</h1>
+                <p class="text-gray-600 mt-1">Gestiona tus cursos y actividades académicas</p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Último acceso</p>
+                <p class="text-sm font-medium text-gray-900">{{ user.last_login|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Cursos Asignados -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-50 rounded-full">
+                    <i data-lucide="book-open" class="h-6 w-6 text-green-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Cursos Asignados</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ cursos_asignados|length|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Estudiantes -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-50 rounded-full">
+                    <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Total Estudiantes</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_estudiantes|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mi Asistencia -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-50 rounded-full">
+                    <i data-lucide="calendar-check" class="h-6 w-6 text-purple-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Mi Asistencia</p>
+                    <p class="text-2xl font-bold text-gray-900">{{
+                        asistencia_propia.porcentaje|default:1|default:"0.0" }}%</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Horas Semanales -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-orange-50 rounded-full">
+                    <i data-lucide="clock" class="h-6 w-6 text-orange-600"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Horas Semanales</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_horas_semanales|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Mis Cursos -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-semibold text-gray-900">Mis Cursos</h2>
+                        <a href="{% url 'profesor:notas' %}"
+                            class="text-sm text-green-600 hover:text-green-700">Gestionar notas</a>
+                    </div>
+                </div>
+                <div class="p-6">
+                    {% if cursos_asignados %}
+                    <div class="space-y-4">
+                        {% for curso in cursos_asignados %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-medium text-gray-900">{{ curso.nombre }}</h3>
+                                    <p class="text-sm text-gray-600">{{ curso.codigo }} - Grupo {{ curso.grupo }}</p>
+                                    <p class="text-sm text-gray-600">{{ curso.estudiantes_matriculados }} estudiantes
+                                        matriculados</p>
+                                </div>
+                                <div class="flex-shrink-0 text-right">
+                                    <p class="text-sm text-gray-500">Avance</p>
+                                    <div class="flex items-center mt-1">
+                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                            <div class="bg-green-600 h-2 rounded-full"
+                                                style="width: {{ curso.avance_porcentaje }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-900">{{
+                                            curso.avance_porcentaje|default:0 }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Horarios del curso -->
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for horario in curso.horarios %}
+                                <span
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {{ horario.dia }} {{ horario.hora_inicio }}-{{ horario.hora_fin }}
+                                </span>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Acciones rápidas -->
+                            <div class="mt-3 flex space-x-2">
+                                <a href="{% url 'profesor:asistencia' %}?curso={{ curso.id }}"
+                                    class="text-xs text-blue-600 hover:text-blue-700">
+                                    Registrar Asistencia
+                                </a>
+                                <span class="text-xs text-gray-300">|</span>
+                                <a href="{% url 'profesor:notas' %}?curso={{ curso.id }}"
+                                    class="text-xs text-blue-600 hover:text-blue-700">
+                                    Gestionar Notas
+                                </a>
+                                <span class="text-xs text-gray-300">|</span>
+                                <a href="{% url 'profesor:silabo' %}?curso={{ curso.id }}"
+                                    class="text-xs text-blue-600 hover:text-blue-700">
+                                    Ver Sílabo
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i data-lucide="book-x" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                        <p class="text-gray-500">No tienes cursos asignados actualmente</p>
+                        <p class="text-sm text-gray-400 mt-1">Contacta al coordinador académico si esto es un error</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Acciones Rápidas -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Acciones Rápidas</h2>
+                </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'profesor:asistencia' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="calendar-check" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Registrar Asistencia
+                    </a>
+                    <a href="{% url 'profesor:notas' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="file-text" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Gestionar Notas
+                    </a>
+                    <a href="{% url 'profesor:reservas' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="calendar-plus" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Reservar Ambiente
+                    </a>
+                    <a href="{% url 'profesor:silabo' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="book-open" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Gestionar Sílabo
+                    </a>
+                </div>
+            </div>
+
+            <!-- Mi Horario de Hoy -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Mi Horario de Hoy</h2>
+                </div>
+                <div class="p-6">
+                    {% if horario_hoy %}
+                    <div class="space-y-3">
+                        {% for clase in horario_hoy %}
+                        <div class="flex items-center p-3 bg-green-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <i data-lucide="clock" class="h-5 w-5 text-green-600"></i>
+                                </div>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h3 class="text-sm font-medium text-gray-900">{{ clase.curso_nombre|truncatechars:20 }}
+                                </h3>
+                                <p class="text-sm text-gray-600">{{ clase.aula }}</p>
+                                <p class="text-xs text-gray-500">{{ clase.hora_inicio }} - {{ clase.hora_fin }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="calendar-x" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No tienes clases hoy</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estadísticas Rápidas -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Estadísticas</h2>
+                </div>
+                <div class="p-6">
+                    {% if estadisticas_cursos %}
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Promedio de Asistencia</span>
+                            <span class="text-sm font-medium text-gray-900">{{
+                                estadisticas_cursos.promedio_asistencia|default:0 }}%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Notas Registradas</span>
+                            <span class="text-sm font-medium text-gray-900">{{ estadisticas_cursos.notas_registradas
+                                }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Evaluaciones Pendientes</span>
+                            <span class="text-sm font-medium text-gray-900">{{
+                                estadisticas_cursos.evaluaciones_pendientes }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Reservas Activas</span>
+                            <span class="text-sm font-medium text-gray-900">{{ estadisticas_cursos.reservas_activas
+                                }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="bar-chart-3" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No hay estadísticas disponibles</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Próximas Evaluaciones -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Próximas Evaluaciones</h2>
+                </div>
+                <div class="p-6">
+                    {% if proximas_evaluaciones %}
+                    <div class="space-y-3">
+                        {% for evaluacion in proximas_evaluaciones %}
+                        <div class="flex items-center p-3 bg-yellow-50 rounded-lg">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="alert-circle" class="h-5 w-5 text-yellow-600"></i>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{ evaluacion.tipo }}</p>
+                                <p class="text-xs text-gray-600">{{ evaluacion.curso }} - {{
+                                    evaluacion.fecha|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i data-lucide="calendar-check" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-sm text-gray-500">No hay evaluaciones próximas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

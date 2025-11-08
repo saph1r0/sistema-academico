@@ -1,0 +1,70 @@
+{% extends 'base_admin.html' %}
+
+{% comment %}
+Ruta: templates/dashboard/index.html
+Descripción: Página principal del admin (Dashboard).
+{% endcomment %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    
+    <h1 class="text-3xl font-bold text-dark-text mb-6">
+        Dashboard
+    </h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        
+        <div class="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+            <div class="p-3 bg-secondary/10 rounded-full">
+                <i data-lucide="users" class="w-6 h-6 text-secondary"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Total Estudiantes</p>
+                <p class="text-2xl font-bold text-dark-text">1,438</p>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+            <div class="p-3 bg-green-500/10 rounded-full">
+                <i data-lucide="contact" class="w-6 h-6 text-green-600"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Total Profesores</p>
+                <p class="text-2xl font-bold text-dark-text">92</p>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md flex items-center space-x-4">
+            <div class="p-3 bg-indigo-500/10 rounded-full">
+                <i data-lucide="book-open" class="w-6 h-6 text-indigo-600"></i>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Cursos Activos</p>
+                <p class="text-2xl font-bold text-dark-text">150</p>
+            </div>
+        </div>
+        
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        
+        <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Nuevas Matrículas (Últimos 6 meses)</h3>
+            <div class="h-64 bg-gray-100 rounded-md flex items-center justify-center">
+                <p class="text-gray-400">Aquí va un gráfico (usando &lt;canvas&gt;)</p>
+            </div>
+        </div>
+        
+        <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold mb-4">Accesos Rápidos</h3>
+            <div class="flex flex-col space-y-3">
+                <a href="{% url 'matriculas' %}" class="w-full text-center bg-gray-200 text-dark-text px-5 py-2.5 rounded-md hover:bg-gray-300 transition duration-200 font-medium">
+                    Gestionar Matrículas
+                </a>
+            </div>
+        </div>
+        
+    </div>
+
+{% endblock %}
