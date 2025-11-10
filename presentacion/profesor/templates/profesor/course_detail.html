@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del Curso - Portal Docente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'profesor:dashboard' %}" class="text-blue-200 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                            </path>
+                        </svg>
+                    </a>
+                    <h1 class="text-xl font-bold">Detalle del Curso</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span>{{ user.first_name }} {{ user.last_name }}</span>
+                    <a href="{% url 'login:logout' %}" class="bg-blue-700 px-3 py-1 rounded">Salir</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto p-6">
+            {% if course_group %}
+            <!-- Course Header -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">{{ course_group.course.name }}</h2>
+                        <p class="text-gray-600 mb-1">{{ course_group.course.code }} - Grupo {{ course_group.group_code
+                            }}</p>
+                        <p class="text-gray-500">{{ course_group.academic_period.name }}</p>
+                        <div class="mt-3 flex items-center space-x-4">
+                            <span class="text-sm text-gray-600">
+                                <strong>Créditos:</strong> {{ course_group.course.credits }}
+                            </span>
+                            <span class="text-sm text-gray-600">
+                                <strong>Capacidad:</strong> {{ estudiantes_count }}/{{ course_group.capacity }}
+                            </span>
+                            {% if course_group.classroom %}
+                            <span class="text-sm text-gray-600">
+                                <strong>Aula:</strong> {{ course_group.classroom }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold text-blue-600">{{
+                            course_group.course_progress_percentage|floatformat:1 }}%</div>
+                        <div class="text-sm text-gray-600">Progreso del Curso</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-blue-100 rounded-full">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Estudiantes</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ estudiantes_count }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-green-100 rounded-full">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Clases Dictadas</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ course_group.classes_attended_by_teacher }}
+                            </p>
+                            <p class="text-xs text-gray-500">de {{ course_group.total_planned_classes }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-purple-100 rounded-full">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Temas</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ temas_completados }}</p>
+                            <p class="text-xs text-gray-500">de {{ total_temas }} completados</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-orange-100 rounded-full">
+                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Progreso</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ porcentaje_temas_completados|floatformat:0
+                                }}%</p>
+                            <p class="text-xs text-gray-500">temas completados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Progreso del Curso</h3>
+                <div class="w-full bg-gray-200 rounded-full h-4 mb-2">
+                    <div class="bg-blue-600 h-4 rounded-full transition-all duration-300"
+                        style="width: {{ course_group.course_progress_percentage }}%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600">
+                    <span>{{ course_group.course_progress_percentage|floatformat:1 }}% completado</span>
+                    <span>{{ course_group.classes_attended_by_teacher }} de {{ course_group.total_planned_classes }}
+                        clases</span>
+                </div>
+            </div>
+
+            <!-- Course Topics Management -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-900">Temas del Curso</h3>
+                        <button onclick="toggleTopicManager()"
+                            class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Gestionar
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        {% if temas %}
+                        <div class="space-y-3">
+                            {% for tema in temas %}
+                            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg
+                                {% if tema.is_completed %}bg-green-50 border-green-200{% else %}bg-gray-50{% endif %}">
+                                <div class="flex items-center flex-1">
+                                    <div class="flex-shrink-0">
+                                        {% if tema.is_completed %}
+                                        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                        {% else %}
+                                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd"
+                                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z"
+                                                clip-rule="evenodd"></path>
+                                        </svg>
+                                        {% endif %}
+                                    </div>
+                                    <div class="ml-3 flex-1">
+                                        <h4 class="text-sm font-medium text-gray-900">{{ tema.topic_order }}. {{
+                                            tema.topic_title }}</h4>
+                                        {% if tema.topic_description %}
+                                        <p class="text-xs text-gray-600">{{ tema.topic_description|truncatechars:60 }}
+                                        </p>
+                                        {% endif %}
+                                        <div class="flex items-center mt-1">
+                                            <span class="text-xs text-gray-500">{{ tema.percentage_weight|floatformat:1
+                                                }}%</span>
+                                            {% if tema.completion_date %}
+                                            <span class="ml-2 text-xs text-green-600">Completado: {{
+                                                tema.completion_date|date:"d/m/Y" }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex-shrink-0 ml-2">
+                                    <form method="post" class="inline"
+                                        onsubmit="return confirm('¿Está seguro de eliminar este tema?')">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="remove_topic">
+                                        <input type="hidden" name="topic_id" value="{{ tema.id }}">
+                                        <button type="submit" class="text-red-600 hover:text-red-800 p-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-8">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                                </path>
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">No hay temas registrados</h3>
+                            <p class="mt-1 text-sm text-gray-500">Agrega temas para planificar el contenido del curso.
+                            </p>
+                            <div class="mt-6">
+                                <button onclick="toggleTopicManager()"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                    Agregar Temas
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Attendance History -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Historial de Asistencia</h3>
+                    </div>
+                    <div class="p-6">
+                        {% if attendance_history %}
+                        <div class="space-y-3">
+                            {% for session in attendance_history %}
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{ session.login_time|date:"d/m/Y" }}
+                                    </p>
+                                    <p class="text-xs text-gray-600">
+                                        {{ session.login_time|date:"H:i" }}
+                                        {% if session.logout_time %}
+                                        - {{ session.logout_time|date:"H:i" }}
+                                        {% else %}
+                                        (Activa)
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    {% if session.duration_hours %}
+                                    <p class="text-sm text-gray-900">{{ session.duration_hours }}h</p>
+                                    {% endif %}
+                                    <p class="text-xs text-gray-500">{{ session.get_access_type_display }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-8">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">Sin registros de asistencia</h3>
+                            <p class="mt-1 text-sm text-gray-500">Los registros de asistencia aparecerán aquí.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Topic -->
+            {% if proximo_tema %}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-blue-900 mb-2">Próximo Tema a Enseñar</h3>
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-sm font-medium text-blue-600">{{ proximo_tema.topic_order }}</span>
+                        </div>
+                    </div>
+                    <div class="ml-3">
+                        <h4 class="text-md font-medium text-blue-900">{{ proximo_tema.topic_title }}</h4>
+                        {% if proximo_tema.topic_description %}
+                        <p class="text-sm text-blue-700 mt-1">{{ proximo_tema.topic_description }}</p>
+                        {% endif %}
+                        <p class="text-xs text-blue-600 mt-2">Peso: {{ proximo_tema.percentage_weight|floatformat:1 }}%
+                            del curso</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Teacher Attendance Statistics -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Estadísticas de Asistencia Docente</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-600">
+                            {{ course_group.classes_attended_by_teacher|default:0 }}
+                        </div>
+                        <div class="text-sm text-gray-600">Clases Dictadas</div>
+                        <div class="text-xs text-gray-500">de {{ course_group.total_planned_classes|default:68 }}
+                            programadas</div>
+                    </div>
+                    <div class="text-center">
+                        <div
+                            class="text-3xl font-bold {% if course_group.course_progress_percentage >= 75 %}text-green-600{% elif course_group.course_progress_percentage >= 50 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ course_group.course_progress_percentage|floatformat:1|default:0 }}%
+                        </div>
+                        <div class="text-sm text-gray-600">Progreso Actual</div>
+                        <div class="text-xs text-gray-500">basado en asistencia</div>
+                    </div>
+                    <div class="text-center">
+                        <div
+                            class="text-3xl font-bold {% if attendance_percentage >= 90 %}text-green-600{% elif attendance_percentage >= 75 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ attendance_percentage|floatformat:1 }}%
+                        </div>
+                        <div class="text-sm text-gray-600">Asistencia Docente</div>
+                        <div class="text-xs text-gray-500">impacto en progreso</div>
+                    </div>
+                </div>
+
+                <!-- Progress Impact Warning -->
+                {% if course_group.course_progress_percentage < 50 %} <div
+                    class="mt-4 bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                    <div class="flex">
+                        <svg class="w-5 h-5 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                <strong>Atención:</strong> El progreso del curso está por debajo del 50%.
+                                Considere aumentar la frecuencia de clases para alcanzar los objetivos del semestre.
+                            </p>
+                        </div>
+                    </div>
+            </div>
+            {% elif course_group.course_progress_percentage >= 90 %}
+            <div class="mt-4 bg-green-50 border border-green-200 rounded-md p-3">
+                <div class="flex">
+                    <svg class="w-5 h-5 text-green-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="ml-3">
+                        <p class="text-sm text-green-700">
+                            <strong>Excelente:</strong> El curso está muy avanzado.
+                            Mantiene un ritmo excelente de enseñanza.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex space-x-4">
+        <button onclick="toggleTopicManager()"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                </path>
+            </svg>
+            Gestionar Temas
+        </button>
+        <button
+            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z">
+                </path>
+            </svg>
+            Ver Estudiantes
+        </button>
+        <button
+            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Registrar Asistencia
+        </button>
+    </div>
+
+    {% else %}
+    <!-- Error State -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="text-center">
+            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+                </path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Error al cargar el curso</h3>
+            <p class="mt-1 text-sm text-gray-500">No se pudo cargar la información del curso.</p>
+            <div class="mt-6">
+                <a href="{% url 'profesor:dashboard' %}"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                    Volver al Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Topic Management Modal -->
+    <div id="topicManagerModal"
+        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Gestionar Temas del Curso</h3>
+                    <button onclick="toggleTopicManager()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="border-b border-gray-200 mb-4">
+                    <nav class="-mb-px flex space-x-8">
+                        <button onclick="showTab('single')" id="singleTab"
+                            class="tab-button border-b-2 border-blue-500 py-2 px-1 text-sm font-medium text-blue-600">
+                            Agregar Individual
+                        </button>
+                        <button onclick="showTab('bulk')" id="bulkTab"
+                            class="tab-button border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            Carga Masiva
+                        </button>
+                        <button onclick="showTab('multiple')" id="multipleTab"
+                            class="tab-button border-b-2 border-transparent py-2 px-1 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            Múltiples Temas
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Single Topic Tab -->
+                <div id="singleTopicTab" class="tab-content">
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_single_topic">
+
+                        <div>
+                            <label for="new_topic_title" class="block text-sm font-medium text-gray-700">Título
+                                del Tema</label>
+                            <input type="text" name="new_topic_title" id="new_topic_title" required
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Ej: Introducción a las matrices">
+                        </div>
+
+                        <div>
+                            <label for="new_topic_description"
+                                class="block text-sm font-medium text-gray-700">Descripción (Opcional)</label>
+                            <textarea name="new_topic_description" id="new_topic_description" rows="3"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Descripción detallada del tema..."></textarea>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="toggleTopicManager()"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                                Agregar Tema
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Bulk Upload Tab -->
+                <div id="bulkTopicTab" class="tab-content hidden">
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="bulk_upload">
+
+                        <div>
+                            <label for="bulk_topics" class="block text-sm font-medium text-gray-700">Temas del
+                                Curso</label>
+                            <p class="text-sm text-gray-500 mb-2">
+                                Ingrese un tema por línea. Puede usar el formato "Título - Descripción" o solo
+                                "Título".
+                            </p>
+                            <textarea name="bulk_topics" id="bulk_topics" rows="10" required
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Introducción a las matrices - Conceptos básicos y definiciones&#10;Operaciones con matrices&#10;Determinantes - Cálculo y propiedades&#10;Sistemas de ecuaciones lineales&#10;Espacios vectoriales"></textarea>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                            <div class="flex">
+                                <svg class="w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                        clip-rule="evenodd"></path>
+                                </svg>
+                                <div class="ml-3">
+                                    <p class="text-sm text-blue-700">
+                                        Los porcentajes se calcularán automáticamente de forma equitativa entre
+                                        todos los temas.
+                                        Esto reemplazará todos los temas existentes.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" onclick="toggleTopicManager()"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                                Cargar Temas
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Multiple Topics Tab -->
+                <div id="multipleTopicTab" class="tab-content hidden">
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="upload_topics">
+
+                        <div id="topicsContainer">
+                            <div class="topic-item border border-gray-200 rounded-md p-4 mb-4">
+                                <div class="flex justify-between items-start mb-3">
+                                    <h4 class="text-sm font-medium text-gray-900">Tema 1</h4>
+                                    <button type="button" onclick="removeTopic(this)"
+                                        class="text-red-600 hover:text-red-800 hidden">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <input type="text" name="topic_title_0" placeholder="Título del tema" required
+                                            class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    </div>
+                                    <div>
+                                        <textarea name="topic_description_0" placeholder="Descripción (opcional)"
+                                            rows="2"
+                                            class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <button type="button" onclick="addTopic()"
+                                class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Agregar Tema
+                            </button>
+                            <span class="text-sm text-gray-500">Los porcentajes se calcularán
+                                automáticamente</span>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                            <button type="button" onclick="toggleTopicManager()"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                                Guardar Temas
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mt-6">
+        {% for message in messages %}
+        <div
+            class="bg-{% if message.tags == 'error' %}red{% else %}blue{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}blue{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}blue{% endif %}-700 px-4 py-3 rounded mb-4">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        let topicCount = 1;
+
+        function toggleTopicManager() {
+            const modal = document.getElementById('topicManagerModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('border-blue-500', 'text-blue-600');
+                button.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'TopicTab').classList.remove('hidden');
+
+            // Add active class to selected tab button
+            const activeButton = document.getElementById(tabName + 'Tab');
+            activeButton.classList.remove('border-transparent', 'text-gray-500');
+            activeButton.classList.add('border-blue-500', 'text-blue-600');
+        }
+
+        function addTopic() {
+            const container = document.getElementById('topicsContainer');
+            const newTopicHtml = `
+                <div class="topic-item border border-gray-200 rounded-md p-4 mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <h4 class="text-sm font-medium text-gray-900">Tema ${topicCount + 1}</h4>
+                        <button type="button" onclick="removeTopic(this)" class="text-red-600 hover:text-red-800">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <input type="text" name="topic_title_${topicCount}" placeholder="Título del tema" required
+                                   class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <textarea name="topic_description_${topicCount}" placeholder="Descripción (opcional)" rows="2"
+                                      class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.insertAdjacentHTML('beforeend', newTopicHtml);
+            topicCount++;
+
+            // Show remove buttons if there's more than one topic
+            updateRemoveButtons();
+        }
+
+        function removeTopic(button) {
+            const topicItem = button.closest('.topic-item');
+            topicItem.remove();
+
+            // Renumber topics
+            const topics = document.querySelectorAll('.topic-item');
+            topics.forEach((topic, index) => {
+                const title = topic.querySelector('h4');
+                title.textContent = `Tema ${index + 1}`;
+
+                // Update input names
+                const titleInput = topic.querySelector('input[type="text"]');
+                const descInput = topic.querySelector('textarea');
+                titleInput.name = `topic_title_${index}`;
+                descInput.name = `topic_description_${index}`;
+            });
+
+            topicCount = topics.length;
+            updateRemoveButtons();
+        }
+
+        function updateRemoveButtons() {
+            const removeButtons = document.querySelectorAll('.topic-item button[onclick*="removeTopic"]');
+            removeButtons.forEach(button => {
+                if (topicCount > 1) {
+                    button.classList.remove('hidden');
+                } else {
+                    button.classList.add('hidden');
+                }
+            });
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('topicManagerModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                toggleTopicManager();
+            }
+        });
+
+        // Initialize
+        updateRemoveButtons();
+    </script>
+</body>
+
+</html>

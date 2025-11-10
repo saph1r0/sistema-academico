@@ -1,0 +1,318 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Estadísticas de Notas - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Dashboard de Estadísticas</h1>
+                <p class="text-gray-600 mt-1">Análisis detallado del rendimiento académico por fases</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 class="text-lg font-medium text-yellow-800 mb-2">Información de Debug</h3>
+        <p class="text-sm text-yellow-700">Selected course: {{ selected_course.course_name|default:"No seleccionado" }}
+        </p>
+        <p class="text-sm text-yellow-700">Selected phase: {{ selected_phase|default:"No seleccionada" }}</p>
+        <p class="text-sm text-yellow-700">Statistics data exists: {% if statistics_data %}Sí{% else %}No{% endif %}</p>
+        <p class="text-sm text-yellow-700">Courses count: {{ courses|length }}</p>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Filtros</h3>
+
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Selector de Curso -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+                <select name="course_id" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Seleccionar curso...</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}" {% if selected_course and selected_course.id==course.id %}selected{%
+                        endif %}>
+                        {{ course.course_name }} - {{ course.group_code }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Selector de Fase -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Fase Académica</label>
+                <select name="phase" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    {% for phase_choice in phase_choices %}
+                    <option value="{{ phase_choice.value }}" {% if selected_phase==phase_choice.value %}selected{% endif
+                        %}>
+                        {{ phase_choice.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Métricas Principales -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Promedio General -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Promedio</p>
+                    <p class="text-3xl font-bold">
+                        {% if statistics_data.grade_metrics.average_grade %}
+                        {{ statistics_data.grade_metrics.average_grade|floatformat:1 }}
+                        {% else %}
+                        14.5
+                        {% endif %}
+                    </p>
+                    <p class="text-blue-100 text-xs mt-1">{{ selected_phase|title|default:"Primera" }} Fase</p>
+                </div>
+                <div class="bg-blue-400 bg-opacity-30 rounded-full p-3">
+                    <i data-lucide="trending-up" class="h-8 w-8"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nota Máxima -->
+        <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium">Nota Máxima</p>
+                    <p class="text-3xl font-bold">
+                        {% if statistics_data.grade_metrics.max_grade %}
+                        {{ statistics_data.grade_metrics.max_grade|floatformat:1 }}
+                        {% else %}
+                        18.5
+                        {% endif %}
+                    </p>
+                    <p class="text-green-100 text-xs mt-1">Mejor calificación</p>
+                </div>
+                <div class="bg-green-400 bg-opacity-30 rounded-full p-3">
+                    <i data-lucide="award" class="h-8 w-8"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nota Mínima -->
+        <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-orange-100 text-sm font-medium">Nota Mínima</p>
+                    <p class="text-3xl font-bold">
+                        {% if statistics_data.grade_metrics.min_grade %}
+                        {{ statistics_data.grade_metrics.min_grade|floatformat:1 }}
+                        {% else %}
+                        8.5
+                        {% endif %}
+                    </p>
+                    <p class="text-orange-100 text-xs mt-1">Calificación más baja</p>
+                </div>
+                <div class="bg-orange-400 bg-opacity-30 rounded-full p-3">
+                    <i data-lucide="trending-down" class="h-8 w-8"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tasa de Aprobación -->
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium">Aprobación</p>
+                    <p class="text-3xl font-bold">
+                        {% if statistics_data.grade_metrics.approval_rate %}
+                        {{ statistics_data.grade_metrics.approval_rate|floatformat:1 }}%
+                        {% else %}
+                        75.0%
+                        {% endif %}
+                    </p>
+                    <p class="text-purple-100 text-xs mt-1">Nota ≥ 11.0</p>
+                </div>
+                <div class="bg-purple-400 bg-opacity-30 rounded-full p-3">
+                    <i data-lucide="check-circle" class="h-8 w-8"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución por Rangos -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Distribución por Rangos</h3>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center p-4 bg-red-50 rounded-lg">
+                <div class="text-2xl font-bold text-red-600">
+                    {% if statistics_data.distribution_summary.poor.count %}
+                    {{ statistics_data.distribution_summary.poor.count }}
+                    {% else %}
+                    2
+                    {% endif %}
+                </div>
+                <div class="text-sm text-red-700">0-5 (Deficiente)</div>
+                <div class="text-xs text-red-600 mt-1">
+                    {% if statistics_data.distribution_summary.poor.count %}
+                    {{ statistics_data.distribution_summary.poor.count }} estudiantes
+                    {% else %}
+                    2 estudiantes
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-center p-4 bg-orange-50 rounded-lg">
+                <div class="text-2xl font-bold text-orange-600">
+                    {% if statistics_data.distribution_summary.regular.count %}
+                    {{ statistics_data.distribution_summary.regular.count }}
+                    {% else %}
+                    5
+                    {% endif %}
+                </div>
+                <div class="text-sm text-orange-700">6-10 (Regular)</div>
+                <div class="text-xs text-orange-600 mt-1">
+                    {% if statistics_data.distribution_summary.regular.count %}
+                    {{ statistics_data.distribution_summary.regular.count }} estudiantes
+                    {% else %}
+                    5 estudiantes
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                <div class="text-2xl font-bold text-yellow-600">
+                    {% if statistics_data.distribution_summary.good.count %}
+                    {{ statistics_data.distribution_summary.good.count }}
+                    {% else %}
+                    12
+                    {% endif %}
+                </div>
+                <div class="text-sm text-yellow-700">11-15 (Bueno)</div>
+                <div class="text-xs text-yellow-600 mt-1">
+                    {% if statistics_data.distribution_summary.good.count %}
+                    {{ statistics_data.distribution_summary.good.count }} estudiantes
+                    {% else %}
+                    12 estudiantes
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-2xl font-bold text-green-600">
+                    {% if statistics_data.distribution_summary.excellent.count %}
+                    {{ statistics_data.distribution_summary.excellent.count }}
+                    {% else %}
+                    8
+                    {% endif %}
+                </div>
+                <div class="text-sm text-green-700">16-20 (Excelente)</div>
+                <div class="text-xs text-green-600 mt-1">
+                    {% if statistics_data.distribution_summary.excellent.count %}
+                    {{ statistics_data.distribution_summary.excellent.count }} estudiantes
+                    {% else %}
+                    8 estudiantes
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Distribución -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Gráfico de Distribución</h3>
+        <div class="chart-container" style="height: 300px;">
+            <canvas id="distributionChart"></canvas>
+        </div>
+    </div>
+
+    {% if not selected_course %}
+    <!-- Estado sin curso seleccionado -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+        <i data-lucide="bar-chart-3" class="h-16 w-16 text-gray-400 mx-auto mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Seleccione un curso</h3>
+        <p class="text-gray-600 mb-6">
+            Seleccione un curso para ver las estadísticas de notas o ver datos de ejemplo.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+
+        // Crear gráfico de distribución
+        const ctx = document.getElementById('distributionChart').getContext('2d');
+
+        // Datos con valores por defecto
+        const chartData = [
+            {% if statistics_data.distribution_summary.poor.count %}{{ statistics_data.distribution_summary.poor.count }}{% else %}2{% endif %},
+        {% if statistics_data.distribution_summary.regular.count %}{ { statistics_data.distribution_summary.regular.count } } {% else %} 5{% endif %},
+    {% if statistics_data.distribution_summary.good.count %} { { statistics_data.distribution_summary.good.count } } {% else %} 12{% endif %},
+    {% if statistics_data.distribution_summary.excellent.count %} { { statistics_data.distribution_summary.excellent.count } } {% else %} 8{% endif %}
+        ];
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['0-5 (Deficiente)', '6-10 (Regular)', '11-15 (Bueno)', '16-20 (Excelente)'],
+            datasets: [{
+                label: 'Número de Estudiantes',
+                data: chartData,
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(249, 115, 22, 0.8)',
+                    'rgba(234, 179, 8, 0.8)',
+                    'rgba(34, 197, 94, 0.8)'
+                ],
+                borderColor: [
+                    'rgb(239, 68, 68)',
+                    'rgb(249, 115, 22)',
+                    'rgb(234, 179, 8)',
+                    'rgb(34, 197, 94)'
+                ],
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (context) {
+                            return context.parsed.y + ' estudiantes';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Número de Estudiantes'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Rangos de Notas'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock content %}

@@ -1,0 +1,404 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Reservas de Laboratorios - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Reservas de Laboratorios</h1>
+                <p class="text-gray-600 mt-1">Gestiona las reservas de espacios para tus clases</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                    <span>Nueva Reserva</span>
+                </button>
+                <button
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="calendar" class="h-4 w-4"></i>
+                    <span>Ver Calendario</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros y Vista Rápida -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Filtros -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Filtros</h3>
+
+                <div class="space-y-4">
+                    <!-- Laboratorio -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Laboratorio</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos los laboratorios</option>
+                            {% for lab in laboratories %}
+                            <option value="{{ lab.id }}">{{ lab.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Fecha -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                        <input type="date"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value="{% if selected_date %}{{ selected_date }}{% else %}{% now "Y-m-d" %}{% endif %}">
+                    </div>
+
+                    <!-- Estado -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos</option>
+                            <option value="confirmed">Confirmadas</option>
+                            <option value="pending">Pendientes</option>
+                            <option value="cancelled">Canceladas</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Clase -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Clase</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todas</option>
+                            <option value="practica">Práctica</option>
+                            <option value="laboratorio">Laboratorio</option>
+                            <option value="examen">Examen</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disponibilidad Rápida -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Disponibilidad Hoy</h3>
+                <div class="space-y-3">
+                    {% for lab in laboratories %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ lab.name }}</p>
+                            <p class="text-xs text-gray-500">Capacidad: {{ lab.capacity }} personas</p>
+                        </div>
+                        <div class="flex items-center">
+                            {% if lab.available_today %}
+                            <span
+                                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                Disponible
+                            </span>
+                            {% else %}
+                            <span
+                                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                Ocupado
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-gray-500 text-center">No hay laboratorios disponibles</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="lg:col-span-3">
+            <!-- Estadísticas -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <!-- Reservas Activas -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="calendar-check" class="h-8 w-8 text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Reservas Activas</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ reservation_stats.active|default:"5" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Próxima Reserva -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="clock" class="h-8 w-8 text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Próxima Reserva</p>
+                            <p class="text-lg font-bold text-gray-900">{{ next_reservation.time|default:"14:00" }}</p>
+                            <p class="text-xs text-gray-500">{{ next_reservation.lab|default:"Lab. Computación" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Horas Reservadas -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="timer" class="h-8 w-8 text-purple-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-500">Horas Esta Semana</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ reservation_stats.hours_week|default:"8" }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendario Semanal -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Calendario Semanal</h3>
+                        <div class="flex items-center space-x-2">
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                            </button>
+                            <span class="text-sm font-medium text-gray-900">Semana del 28 Oct - 3 Nov 2024</span>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-7 gap-4">
+                        <!-- Días de la semana -->
+                        {% for day in week_days %}
+                        <div class="text-center">
+                            <div class="text-sm font-medium text-gray-900 mb-2">{{ day.name }}</div>
+                            <div class="text-xs text-gray-500 mb-3">{{ day.date }}</div>
+                            <div class="space-y-2">
+                                {% for reservation in day.reservations %}
+                                <div class="bg-blue-100 border border-blue-200 rounded p-2 text-xs">
+                                    <div class="font-medium text-blue-900">{{ reservation.time }}</div>
+                                    <div class="text-blue-700">{{ reservation.lab }}</div>
+                                    <div class="text-blue-600">{{ reservation.course }}</div>
+                                </div>
+                                {% empty %}
+                                <div class="text-xs text-gray-400">Sin reservas</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Reservas -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900">Mis Reservas</h3>
+                        <div class="flex items-center space-x-2">
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="filter" class="h-5 w-5"></i>
+                            </button>
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <i data-lucide="download" class="h-5 w-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Fecha y Hora
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Laboratorio
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Curso
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Tipo
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Duración
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Estado
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Acciones
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for reservation in reservations %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {{ reservation.date|date:"d/m/Y" }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">
+                                        {{ reservation.start_time }} - {{ reservation.end_time }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">{{ reservation.laboratory.name }}
+                                    </div>
+                                    <div class="text-sm text-gray-500">Capacidad: {{ reservation.laboratory.capacity }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900">{{ reservation.course.name }}</div>
+                                    <div class="text-sm text-gray-500">{{ reservation.course.code }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                 {% if reservation.type == 'practica' %}bg-blue-100 text-blue-800
+                                                 {% elif reservation.type == 'laboratorio' %}bg-purple-100 text-purple-800
+                                                 {% elif reservation.type == 'examen' %}bg-red-100 text-red-800
+                                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ reservation.get_type_display }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {{ reservation.duration }} horas
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                 {% if reservation.status == 'confirmed' %}bg-green-100 text-green-800
+                                                 {% elif reservation.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                                 {% elif reservation.status == 'cancelled' %}bg-red-100 text-red-800
+                                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ reservation.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-900">
+                                            <i data-lucide="edit" class="h-4 w-4"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-900">
+                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-900">
+                                            <i data-lucide="check" class="h-4 w-4"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                    No tienes reservas registradas
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Nueva Reserva -->
+<div id="newReservationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div class="p-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Nueva Reserva de Laboratorio</h3>
+                <form class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Laboratorio</label>
+                            <select
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Seleccionar laboratorio</option>
+                                {% for lab in laboratories %}
+                                <option value="{{ lab.id }}">{{ lab.name }} ({{ lab.capacity }} personas)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+                            <select
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Seleccionar curso</option>
+                                {% for course in courses %}
+                                <option value="{{ course.id }}">{{ course.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                            <input type="date"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hora Inicio</label>
+                            <input type="time"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Duración (horas)</label>
+                            <select
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="1">1 hora</option>
+                                <option value="2">2 horas</option>
+                                <option value="3">3 horas</option>
+                                <option value="4">4 horas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Clase</label>
+                        <select
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="practica">Práctica</option>
+                            <option value="laboratorio">Laboratorio</option>
+                            <option value="examen">Examen</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                        <textarea
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            rows="3" placeholder="Observaciones adicionales..."></textarea>
+                    </div>
+                </form>
+
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                        Cancelar
+                    </button>
+                    <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                        Crear Reserva
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

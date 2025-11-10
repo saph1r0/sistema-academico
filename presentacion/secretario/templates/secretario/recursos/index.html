@@ -1,0 +1,360 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .resource-card {
+        transition: all 0.3s ease;
+    }
+
+    .resource-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+    }
+
+    .conflict-alert {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header con métricas resumen -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ page_title }}</h1>
+                <p class="text-gray-600 mt-1">Monitoreo y gestión de laboratorios y recursos</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                {% if tiene_conflictos %}
+                <span
+                    class="conflict-alert inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 mr-1"></i>
+                    Conflictos Detectados
+                </span>
+                {% endif %}
+                <button onclick="location.reload()"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+                    Actualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Métricas resumen -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-blue-50 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-blue-600">Total Laboratorios</p>
+                        <p class="text-2xl font-bold text-blue-900">{{ metricas_resumen.total_laboratorios }}</p>
+                    </div>
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <i data-lucide="building" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-green-50 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-green-600">Reservas Aprobadas</p>
+                        <p class="text-2xl font-bold text-green-900">{{ metricas_resumen.reservas_aprobadas }}</p>
+                    </div>
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-yellow-600">Reservas Pendientes</p>
+                        <p class="text-2xl font-bold text-yellow-900">{{ metricas_resumen.reservas_pendientes }}</p>
+                    </div>
+                    <div class="p-3 bg-yellow-100 rounded-full">
+                        <i data-lucide="clock" class="w-6 h-6 text-yellow-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-purple-50 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-purple-600">Tasa Utilización</p>
+                        <p class="text-2xl font-bold text-purple-900">{{ metricas_resumen.tasa_utilizacion }}%</p>
+                    </div>
+                    <div class="p-3 bg-purple-100 rounded-full">
+                        <i data-lucide="trending-up" class="w-6 h-6 text-purple-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas de recursos -->
+    {% if alertas_recursos %}
+    <div class="space-y-3">
+        {% for alerta in alertas_recursos %}
+        <div
+            class="rounded-lg p-4 {% if alerta.tipo == 'error' %}bg-red-50 border border-red-200{% elif alerta.tipo == 'warning' %}bg-yellow-50 border border-yellow-200{% else %}bg-blue-50 border border-blue-200{% endif %}">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    {% if alerta.tipo == 'error' %}
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
+                    {% elif alerta.tipo == 'warning' %}
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-400"></i>
+                    {% else %}
+                    <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                    {% endif %}
+                </div>
+                <div class="ml-3 flex-1">
+                    <h3
+                        class="text-sm font-medium {% if alerta.tipo == 'error' %}text-red-800{% elif alerta.tipo == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
+                        {{ alerta.titulo }}
+                    </h3>
+                    <p
+                        class="mt-1 text-sm {% if alerta.tipo == 'error' %}text-red-700{% elif alerta.tipo == 'warning' %}text-yellow-700{% else %}text-blue-700{% endif %}">
+                        {{ alerta.descripcion }}
+                    </p>
+                    {% if alerta.accion %}
+                    <p
+                        class="mt-2 text-sm font-medium {% if alerta.tipo == 'error' %}text-red-800{% elif alerta.tipo == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
+                        Acción recomendada: {{ alerta.accion }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Lista de Laboratorios -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-900">Laboratorios Activos</h2>
+                <p class="text-sm text-gray-600">Estado y disponibilidad de laboratorios</p>
+            </div>
+            <div class="p-6">
+                {% if laboratorios %}
+                <div class="space-y-4">
+                    {% for laboratorio in laboratorios %}
+                    <div class="resource-card border border-gray-200 rounded-lg p-4 hover:border-blue-300">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="font-semibold text-gray-900">{{ laboratorio.nombre }}</h3>
+                                    <span class="status-badge bg-gray-100 text-gray-800">{{ laboratorio.codigo }}</span>
+                                    <span class="status-badge bg-blue-100 text-blue-800">{{ laboratorio.get_tipo_display
+                                        }}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    <i data-lucide="users" class="w-4 h-4 inline mr-1"></i>
+                                    Capacidad: {{ laboratorio.capacidad }} personas
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    <i data-lucide="map-pin" class="w-4 h-4 inline mr-1"></i>
+                                    {{ laboratorio.ubicacion }}
+                                </p>
+                                {% if laboratorio.equipamiento %}
+                                <p class="text-sm text-gray-500 mt-2">{{ laboratorio.equipamiento|truncatechars:100 }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div class="text-right ml-4">
+                                <div class="flex flex-col space-y-1">
+                                    <span class="status-badge bg-green-100 text-green-800">
+                                        {{ laboratorio.reservas_aprobadas }} aprobadas
+                                    </span>
+                                    {% if laboratorio.reservas_pendientes > 0 %}
+                                    <span class="status-badge bg-yellow-100 text-yellow-800">
+                                        {{ laboratorio.reservas_pendientes }} pendientes
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <i data-lucide="building" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                    <p class="text-gray-500">No hay laboratorios registrados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reservas Recientes y Conflictos -->
+        <div class="space-y-6">
+            <!-- Conflictos Activos -->
+            {% if conflictos_activos %}
+            <div class="bg-white rounded-lg shadow-sm border border-red-200">
+                <div class="px-6 py-4 border-b border-red-200 bg-red-50">
+                    <h2 class="text-lg font-semibold text-red-900 flex items-center">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 mr-2"></i>
+                        Conflictos Detectados
+                    </h2>
+                    <p class="text-sm text-red-700">Reservas con conflictos de horario</p>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        {% for conflicto in conflictos_activos %}
+                        <div class="border border-red-200 rounded-lg p-3 bg-red-50">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="font-medium text-red-900">{{ conflicto.laboratorio.nombre }}</p>
+                                    <p class="text-sm text-red-700">
+                                        {{ conflicto.fecha_reserva }} | {{ conflicto.hora_inicio }} - {{
+                                        conflicto.hora_fin }}
+                                    </p>
+                                    <p class="text-sm text-red-600">Docente: {{ conflicto.docente.nombre }} {{
+                                        conflicto.docente.apellido }}</p>
+                                </div>
+                                <span class="status-badge bg-red-100 text-red-800">{{ conflicto.get_estado_display
+                                    }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reservas Recientes -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="text-lg font-semibold text-gray-900">Reservas Recientes</h2>
+                    <p class="text-sm text-gray-600">Últimas reservas registradas</p>
+                </div>
+                <div class="p-6">
+                    {% if reservas_recientes %}
+                    <div class="space-y-3">
+                        {% for reserva in reservas_recientes %}
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ reserva.laboratorio.nombre }}</p>
+                                    <p class="text-sm text-gray-600">
+                                        {{ reserva.fecha_reserva }} | {{ reserva.hora_inicio }} - {{ reserva.hora_fin }}
+                                    </p>
+                                    <p class="text-sm text-gray-500">{{ reserva.docente.nombre }} {{
+                                        reserva.docente.apellido }}</p>
+                                    <p class="text-sm text-gray-500">{{ reserva.proposito|truncatechars:50 }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="status-badge 
+                                        {% if reserva.estado == 'APROBADA' or reserva.estado == 'APROBADA_MANUAL' %}bg-green-100 text-green-800
+                                        {% elif reserva.estado == 'PENDIENTE' %}bg-yellow-100 text-yellow-800
+                                        {% elif reserva.estado == 'RECHAZADA' %}bg-red-100 text-red-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ reserva.get_estado_display }}
+                                    </span>
+                                    {% if reserva.aprobada_automaticamente %}
+                                    <p class="text-xs text-green-600 mt-1">Auto-aprobada</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i data-lucide="calendar" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                        <p class="text-gray-500">No hay reservas recientes</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas de Uso -->
+    {% if estadisticas %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Estadísticas de Uso</h2>
+            <p class="text-sm text-gray-600">Análisis de utilización de laboratorios (últimos 30 días)</p>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-blue-600">{{ estadisticas.total_reservas }}</p>
+                    <p class="text-sm text-gray-600">Total Reservas</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-green-600">{{ estadisticas.promedio_duracion|floatformat:1 }}h</p>
+                    <p class="text-sm text-gray-600">Duración Promedio</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-purple-600">{{ metricas_resumen.tasa_aprobacion_automatica }}%</p>
+                    <p class="text-sm text-gray-600">Aprobación Automática</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-orange-600">{{ metricas_resumen.conflictos_detectados }}</p>
+                    <p class="text-sm text-gray-600">Conflictos Detectados</p>
+                </div>
+            </div>
+
+            {% if estadisticas.reservas_por_tipo %}
+            <div class="mt-8">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Reservas por Tipo de Laboratorio</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for tipo, cantidad in estadisticas.reservas_por_tipo.items %}
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <p class="font-medium text-gray-900">{{ tipo }}</p>
+                        <p class="text-2xl font-bold text-blue-600">{{ cantidad }}</p>
+                        <p class="text-sm text-gray-600">reservas</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Auto-refresh cada 5 minutos
+        setTimeout(function () {
+            location.reload();
+        }, 300000);
+
+        // Inicializar iconos de Lucide
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,753 @@
+{% extends 'base_estudiante.html' %}
+
+{% block title %}Mis Notas - Sistema Académico{% endblock %}
+
+{% block page_title %}Mis Notas por Fases{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --light-blue: #dbeafe;
+        --dark-blue: #1e40af;
+        --success-green: #10b981;
+        --warning-orange: #f59e0b;
+        --danger-red: #ef4444;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-500: #6b7280;
+        --gray-700: #374151;
+    }
+
+    body {
+        background-color: var(--gray-50);
+    }
+
+    .card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-2px);
+    }
+
+    .header-card {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .progress-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: conic-gradient(var(--primary-blue) 0deg, var(--primary-blue) calc(var(--percentage) * 3.6deg), var(--light-blue) calc(var(--percentage) * 3.6deg));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .progress-circle::before {
+        content: '';
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: white;
+        position: absolute;
+    }
+
+    .progress-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+    }
+
+    .progress-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--primary-blue);
+        display: block;
+    }
+
+    .progress-label {
+        font-size: 0.7rem;
+        color: var(--gray-500);
+    }
+
+    .fase-card {
+        border-radius: 12px;
+        overflow: hidden;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+
+    .fase-card:hover {
+        transform: translateY(-4px);
+    }
+
+    .fase-header {
+        padding: 1.5rem;
+        color: white;
+        text-align: center;
+    }
+
+    .fase-header.primera {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
+    }
+
+    .fase-header.segunda {
+        background: linear-gradient(135deg, var(--warning-orange) 0%, #fbbf24 100%);
+    }
+
+    .fase-header.tercera {
+        background: linear-gradient(135deg, var(--success-green) 0%, #34d399 100%);
+    }
+
+    .fase-body {
+        padding: 1.5rem;
+        background: white;
+        min-height: 200px;
+    }
+
+    .nota-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--gray-100);
+    }
+
+    .nota-item:last-child {
+        border-bottom: none;
+    }
+
+    .nota-badge {
+        background: var(--light-blue);
+        color: var(--primary-blue);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .nota-excelente {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .nota-buena {
+        background: var(--light-blue);
+        color: var(--primary-blue);
+    }
+
+    .nota-regular {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .nota-deficiente {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .promedio-final {
+        background: var(--gray-50);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        text-align: center;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--gray-500);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .stat-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        border-left: 4px solid var(--primary-blue);
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-blue);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--gray-500);
+        font-size: 0.9rem;
+    }
+
+    .curso-card {
+        background: white;
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .curso-header {
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--dark-blue) 100%);
+        color: white;
+        padding: 1.5rem;
+    }
+
+    .btn-primary {
+        background: var(--primary-blue);
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background: var(--dark-blue);
+        transform: translateY(-1px);
+    }
+
+    .pending-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        color: var(--gray-500);
+        min-height: 150px;
+    }
+
+    .pending-state i {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive Design for Mobile */
+    @media (max-width: 768px) {
+        .header-card {
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .header-card .row {
+            flex-direction: column;
+        }
+
+        .progress-circle {
+            width: 60px;
+            height: 60px;
+            margin: 1rem auto;
+        }
+
+        .progress-circle::before {
+            width: 45px;
+            height: 45px;
+        }
+
+        .progress-value {
+            font-size: 1rem;
+        }
+
+        .curso-header .row {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .curso-header .col-md-4 {
+            margin-top: 1rem;
+        }
+
+        .fase-card {
+            margin-bottom: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            padding: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+        }
+
+        .nota-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .fase-body {
+            padding: 1rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-card h2 {
+            font-size: 1.5rem;
+        }
+
+        .curso-header h5 {
+            font-size: 1.2rem;
+        }
+
+        .fase-header h6 {
+            font-size: 1rem;
+        }
+    }
+
+    /* Enhanced Statistics Display */
+    .class-stats-comparison {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        border-left: 4px solid var(--primary-blue);
+    }
+
+    .stats-comparison-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .stats-comparison-item:last-child {
+        border-bottom: none;
+    }
+
+    .student-position {
+        background: var(--light-blue);
+        color: var(--primary-blue);
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        display: inline-block;
+    }
+
+    .grade-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .trend-icon {
+        font-size: 1.2rem;
+    }
+
+    .trend-up {
+        color: var(--success-green);
+    }
+
+    .trend-down {
+        color: var(--danger-red);
+    }
+
+    .trend-stable {
+        color: var(--warning-orange);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Principal -->
+    <div class="header-card">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-chart-line me-3"></i>
+                    Mis Notas Académicas
+                </h2>
+                <p class="mb-0 opacity-90">
+                    Consulta tus calificaciones organizadas por fases de evaluación
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex justify-content-end align-items-center">
+                    <div class="me-4">
+                        <div class="text-end">
+                            <h3 class="mb-0">{{ general_average|default:"0.0" }}</h3>
+                            <small class="opacity-75">Promedio General</small>
+                        </div>
+                    </div>
+                    <div class="progress-circle" style="--percentage: {% widthratio general_average 20 100 %}">
+                        <div class="progress-content">
+                            <span class="progress-value">{{ total_courses }}</span>
+                            <small class="progress-label">cursos</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if courses_data %}
+    <!-- Notas por Curso -->
+    {% for curso_data in courses_data %}
+    <div class="curso-card">
+        <div class="curso-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-1">{{ curso_data.course.name }}</h5>
+                    <small class="opacity-75">{{ curso_data.course.code }} - Grupo {{ curso_data.course_group.group_code}}</small>
+                </div>
+                <div class="col-md-4 text-end">
+                    {% if curso_data.average %}
+                    <span class="nota-badge 
+                                {% if curso_data.average >= 16 %}nota-excelente
+                                {% elif curso_data.average >= 13 %}nota-buena
+                                {% elif curso_data.average >= 11 %}nota-regular
+                                {% else %}nota-deficiente{% endif %}">
+                        {{ curso_data.average }}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-light text-muted">Pendiente</span>
+                    {% endif %}
+                    <div class="mt-1">
+                        <small class="text-muted">{{ curso_data.teacher_name }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="row g-0">
+                <!-- Primera Fase -->
+                <div class="col-md-4">
+                    <div class="fase-card">
+                        <div class="fase-header primera">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar-check me-2"></i>
+                                Primera Fase
+                            </h6>
+                        </div>
+                        <div class="fase-body">
+                            {% if curso_data.phases.primera and curso_data.phases.primera.has_grades %}
+                            <div class="nota-item">
+                                <span>Nota Parcial</span>
+                                <strong class="text-primary">{{ curso_data.phases.primera.partial_grade }}</strong>
+                            </div>
+                            <div class="nota-item">
+                                <span>Nota Continua</span>
+                                <strong class="text-primary">{{ curso_data.phases.primera.continuous_grade }}</strong>
+                            </div>
+                            {% if curso_data.phases.primera.final_grade %}
+                            <div class="promedio-final">
+                                <strong>Promedio: {{ curso_data.phases.primera.final_grade }}</strong>
+                            </div>
+                            {% endif %}
+
+                            <!-- Contexto estadístico mejorado -->
+                           {% if curso_data.phases.primera.class_statistics and curso_data.phases.primera.class_statistics.class_average %}
+                            <div class="class-stats-comparison">
+                                <small class="text-muted d-block mb-2">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Contexto de la clase:
+                                </small>
+                                <div class="stats-comparison-item">
+                                    <span>Tu nota:</span>
+                                    <strong class="text-primary">{{ curso_data.phases.primera.final_grade }}</strong>
+                                </div>
+                                <div class="stats-comparison-item">
+                                    <span>Promedio clase:</span>
+                                    <span>{{ curso_data.phases.primera.class_statistics.class_average|floatformat:1}}</span>
+                                </div>
+                                <div class="stats-comparison-item">
+                                    <span>Rango:</span>
+                                    <span>{{ curso_data.phases.primera.class_statistics.lowest_grade|floatformat:1 }} - {{ curso_data.phases.primera.class_statistics.highest_grade|floatformat:1}}</span>
+                                </div>
+                                {% if curso_data.phases.primera.final_grade > curso_data.phases.primera.class_statistics.class_average %}
+                                <div class="student-position">
+                                    <i class="fas fa-arrow-up me-1"></i>
+                                    Por encima del promedio
+                                </div>
+                                {% elif curso_data.phases.primera.final_grade < curso_data.phases.primera.class_statistics.class_average %} 
+                                <div class="student-position" style="background: #fee2e2; color: #991b1b;">
+                                    <i class="fas fa-arrow-down me-1"></i>
+                                    Por debajo del promedio
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="student-position" style="background: #fef3c7; color: #92400e;">
+                                <i class="fas fa-equals me-1"></i>
+                                En el promedio
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% else %}
+                        <div class="pending-state">
+                            <i class="fas fa-clock"></i>
+                            <span>Pendiente</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Segunda Fase -->
+            <div class="col-md-4">
+                <div class="fase-card">
+                    <div class="fase-header segunda">
+                        <h6 class="mb-0">
+                            <i class="fas fa-calendar-check me-2"></i>
+                            Segunda Fase
+                        </h6>
+                    </div>
+                    <div class="fase-body">
+                        {% if curso_data.phases.segunda and curso_data.phases.segunda.has_grades %}
+                        <div class="nota-item">
+                            <span>Nota Parcial</span>
+                            <strong class="text-warning">{{ curso_data.phases.segunda.partial_grade }}</strong>
+                        </div>
+                        <div class="nota-item">
+                            <span>Nota Continua</span>
+                            <strong class="text-warning">{{ curso_data.phases.segunda.continuous_grade }}</strong>
+                        </div>
+                        {% if curso_data.phases.segunda.final_grade %}
+                        <div class="promedio-final">
+                            <strong>Promedio: {{ curso_data.phases.segunda.final_grade }}</strong>
+                        </div>
+                        {% endif %}
+
+                        <!-- Contexto estadístico mejorado -->
+                        {% if curso_data.phases.segunda.class_statistics %}
+                        <div class="class-stats-comparison">
+                            <small class="text-muted d-block mb-2">
+                                <i class="fas fa-chart-line me-1"></i>
+                                Contexto de la clase:
+                            </small>
+                            <div class="stats-comparison-item">
+                                <span>Tu nota:</span>
+                                <strong class="text-warning">{{ curso_data.phases.segunda.final_grade }}</strong>
+                            </div>
+                            <div class="stats-comparison-item">
+                                <span>Promedio clase:</span>
+                                <span>{{ curso_data.phases.segunda.class_statistics.class_average|floatformat:1}}</span>
+                            </div>
+                            <div class="stats-comparison-item">
+                                <span>Rango:</span>
+                                <span>{{ curso_data.phases.segunda.class_statistics.lowest_grade|floatformat:1 }} - {{curso_data.phases.segunda.class_statistics.highest_grade|floatformat:1 }}</span>
+                            </div>
+                            {% if curso_data.phases.segunda.final_grade > curso_data.phases.segunda.class_statistics.class_average %}
+                            <div class="student-position">
+                                <i class="fas fa-arrow-up me-1"></i>
+                                Por encima del promedio
+                            </div>
+                            {% elif curso_data.phases.segunda.final_grade < curso_data.phases.segunda.class_statistics.class_average %} 
+                            <div class="student-position" style="background: #fee2e2; color: #991b1b;">
+                                <i class="fas fa-arrow-down me-1"></i>
+                                Por debajo del promedio
+                            </div>
+                            {% else %}
+                            <div class="student-position" style="background: #fef3c7; color: #92400e;">
+                                <i class="fas fa-equals me-1"></i>
+                                En el promedio
+                            </div>
+                            {% endif %}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="pending-state">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span>
+                            {% if curso_data.phases.primera and curso_data.phases.primera.has_grades %}Próximamente{% else %}Esperando 1ra fase{% endif%}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tercera Fase -->
+        <div class="col-md-4">
+            <div class="fase-card">
+                <div class="fase-header tercera">
+                    <h6 class="mb-0">
+                        <i class="fas fa-calendar-check me-2"></i>
+                        Tercera Fase
+                    </h6>
+                </div>
+                <div class="fase-body">
+                    {% if curso_data.phases.tercera and curso_data.phases.tercera.has_grades %}
+                    <div class="nota-item">
+                        <span>Nota Parcial</span>
+                        <strong class="text-success">{{ curso_data.phases.tercera.partial_grade }}</strong>
+                    </div>
+                    <div class="nota-item">
+                        <span>Nota Continua</span>
+                        <strong class="text-success">{{ curso_data.phases.tercera.continuous_grade }}</strong>
+                    </div>
+                    {% if curso_data.phases.tercera.final_grade %}
+                    <div class="promedio-final">
+                        <strong>Promedio: {{ curso_data.phases.tercera.final_grade }}</strong>
+                    </div>
+                    {% endif %}
+
+                    <!-- Contexto estadístico mejorado -->
+                    {% if curso_data.phases.tercera.class_statistics %}
+                    <div class="class-stats-comparison">
+                        <small class="text-muted d-block mb-2">
+                            <i class="fas fa-chart-line me-1"></i>
+                            Contexto de la clase:
+                        </small>
+                        <div class="stats-comparison-item">
+                            <span>Tu nota:</span>
+                            <strong class="text-success">{{ curso_data.phases.tercera.final_grade }}</strong>
+                        </div>
+                        <div class="stats-comparison-item">
+                            <span>Promedio clase:</span>
+                            <span>{{ curso_data.phases.tercera.class_statistics.class_average|floatformat:1 }}</span>
+                        </div>
+                        <div class="stats-comparison-item">
+                            <span>Rango:</span>
+                            <span>{{ curso_data.phases.tercera.class_statistics.lowest_grade|floatformat:1 }} - {{curso_data.phases.tercera.class_statistics.highest_grade|floatformat:1 }}</span>
+                        </div>
+                        {% if curso_data.phases.tercera.final_grade > curso_data.phases.tercera.class_statistics.class_average %}
+                        <div class="student-position">
+                            <i class="fas fa-arrow-up me-1"></i>
+                            Por encima del promedio
+                        </div>
+                        {% elif curso_data.phases.tercera.final_grade < curso_data.phases.tercera.class_statistics.class_average %} 
+                        <div class="student-position"
+                            style="background: #fee2e2; color: #991b1b;">
+                            <i class="fas fa-arrow-down me-1"></i>
+                            Por debajo del promedio
+                        </div>
+                    {% else %}
+                    <div class="student-position" style="background: #fef3c7; color: #92400e;">
+                        <i class="fas fa-equals me-1"></i>
+                        En el promedio
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="pending-state">
+                    <i class="fas fa-trophy"></i>
+                    <span>
+                        {% if curso_data.phases.segunda and curso_data.phases.segunda.has_grades%}Evaluación final{% else %}Esperando fases anteriores{% endif %}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+{% endfor %}
+
+<!-- Estadísticas Generales -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="mb-4">
+            <i class="fas fa-chart-bar text-primary me-2"></i>
+            Resumen Académico
+        </h5>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value">{{ total_courses }}</div>
+                <div class="stat-label">Cursos Matriculados</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ general_average|default:"0.0" }}</div>
+                <div class="stat-label">Promedio General</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ courses_with_grades }}</div>
+                <div class="stat-label">Cursos con Notas</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ active_period.name|default:"2024-I" }}</div>
+                <div class="stat-label">Período Académico</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Estado Vacío -->
+<div class="card">
+    <div class="card-body">
+        <div class="empty-state">
+            <i class="fas fa-clipboard-list"></i>
+            <h4>No hay notas disponibles</h4>
+            <p class="mb-4">
+                Aún no se han registrado notas para tus cursos matriculados.<br>
+                Las notas aparecerán aquí una vez que los profesores las suban al sistema.
+            </p>
+            <a href="{% url 'estudiante:dashboard' %}" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i>
+                Volver al Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Animación suave para las tarjetas
+    document.addEventListener('DOMContentLoaded', function () {
+        const cards = document.querySelectorAll('.fase-card, .stat-item');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }, index * 100);
+                }
+            });
+        });
+
+        cards.forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'all 0.6s ease';
+            observer.observe(card);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+# Python / Dependencias
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+/venv/
+
+# Poetry
+*.lock
+
+# Logs
+/logs/
+
+# Django / DB
+db.sqlite3
+/media/
+/static/
+/static_collected/
+*.py[cod]
+
+# Archivos temporales
+*.log
+*.sqlite3
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+.env
+
+# Configuración del editor
+.vscode/
+.idea/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de pruebas
+.pytest_cache/
+htmlcov/
