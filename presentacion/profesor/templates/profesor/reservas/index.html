@@ -1,404 +1,449 @@
 {% extends 'base_profesor.html' %}
 
-{% block title %}Reservas de Laboratorios - Profesor{% endblock %}
+{% block title %}Reservas de Ambientes{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
+    <!-- CSRF oculto para que el JS lo lea -->
+    <form method="post" style="display:none">
+        {% csrf_token %}
+    </form>
+
     <!-- Header -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="bg-white rounded-lg shadow-sm p-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Reservas de Laboratorios</h1>
-                <p class="text-gray-600 mt-1">Gestiona las reservas de espacios para tus clases</p>
-            </div>
-            <div class="flex items-center space-x-4">
-                <button
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
-                    <i data-lucide="plus" class="h-4 w-4"></i>
-                    <span>Nueva Reserva</span>
-                </button>
-                <button
-                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
-                    <i data-lucide="calendar" class="h-4 w-4"></i>
-                    <span>Ver Calendario</span>
-                </button>
+                <h1 class="text-2xl font-bold text-gray-900">Reservas de Ambientes</h1>
+                <p class="text-gray-600 mt-1">Visualiza disponibilidad por piso, hora y fecha.</p>
             </div>
         </div>
     </div>
 
-    <!-- Filtros y Vista Rápida -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Filtros -->
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Filtros</h3>
+    <!-- Contenido principal -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Mapa del edificio con selector de hora -->
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-6">
 
-                <div class="space-y-4">
-                    <!-- Laboratorio -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Laboratorio</label>
-                        <select
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Todos los laboratorios</option>
-                            {% for lab in laboratories %}
-                            <option value="{{ lab.id }}">{{ lab.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Fecha -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
-                        <input type="date"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            value="{% if selected_date %}{{ selected_date }}{% else %}{% now "Y-m-d" %}{% endif %}">
-                    </div>
-
-                    <!-- Estado -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                        <select
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Todos</option>
-                            <option value="confirmed">Confirmadas</option>
-                            <option value="pending">Pendientes</option>
-                            <option value="cancelled">Canceladas</option>
-                        </select>
-                    </div>
-
-                    <!-- Tipo de Clase -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Clase</label>
-                        <select
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Todas</option>
-                            <option value="practica">Práctica</option>
-                            <option value="laboratorio">Laboratorio</option>
-                            <option value="examen">Examen</option>
-                        </select>
-                    </div>
+                <!-- Panel izquierdo: Lista de horas -->
+                <div class="w-full lg:w-1/4">
+                    <label for="hora" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar hora:</label>
+                    <select id="hora" class="w-full border border-gray-300 rounded-md text-sm p-2">
+                        <option>07:00/07:50</option>
+                        <option>07:50/08:40</option>
+                        <option>08:50/09:40</option>
+                        <option>09:40/10:30</option>
+                        <option>10:40/11:30</option>
+                        <option>11:30/12:20</option>
+                        <option>12:20/13:10</option>
+                        <option>13:10/14:00</option>
+                        <option>14:00/14:50</option>
+                        <option>14:50/15:40</option>
+                        <option>15:50/16:40</option>
+                        <option>16:40/17:30</option>
+                        <option>17:40/18:30</option>
+                        <option>18:30/19:20</option>
+                        <option>19:20/20:10</option>
+                    </select>
                 </div>
-            </div>
 
-            <!-- Disponibilidad Rápida -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Disponibilidad Hoy</h3>
-                <div class="space-y-3">
-                    {% for lab in laboratories %}
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <!-- Panel derecho: Edificio -->
+                <div class="flex-1">
+                    <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
                         <div>
-                            <p class="text-sm font-medium text-gray-900">{{ lab.name }}</p>
-                            <p class="text-xs text-gray-500">Capacidad: {{ lab.capacity }} personas</p>
+                            <h2 class="text-lg font-semibold text-gray-900">Edificio (por pisos)</h2>
+                            <p class="text-sm text-gray-600">Haz clic en un aula para alternar su reserva.</p>
                         </div>
-                        <div class="flex items-center">
-                            {% if lab.available_today %}
-                            <span
-                                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                Disponible
-                            </span>
-                            {% else %}
-                            <span
-                                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                Ocupado
-                            </span>
-                            {% endif %}
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-700">
+                                Fecha:
+                                <input type="date" id="fecha"
+                                    class="ml-2 border-2 border-gray-800 rounded-md px-3 py-1 text-sm">
+                            </label>
+                            <button id="btnMostrar"
+                                class="px-3 py-1 border-2 border-gray-800 rounded-md text-sm hover:bg-gray-50">Mostrar</button>
+                            <button id="btnLimpiar"
+                                class="px-3 py-1 border-2 border-gray-800 rounded-md text-sm hover:bg-gray-50">Limpiar</button>
                         </div>
                     </div>
-                    {% empty %}
-                    <p class="text-sm text-gray-500 text-center">No hay laboratorios disponibles</p>
-                    {% endfor %}
+
+                    <!-- Grilla del edificio -->
+                    <div id="edificio" class="space-y-4"></div>
+
+                    <!-- Leyenda -->
+                    <div class="legend flex items-center gap-4 text-sm text-gray-700 mt-4">
+                        <span class="inline-flex items-center">
+                            <span class="w-4 h-4 border border-gray-700 rounded-sm mr-2"
+                                style="background:#90ee90"></span>Libre
+                        </span>
+                        <span class="inline-flex items-center">
+                            <span class="w-4 h-4 border border-gray-700 rounded-sm mr-2"
+                                style="background:#ff6b6b"></span>Ocupada
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Contenido Principal -->
-        <div class="lg:col-span-3">
-            <!-- Estadísticas -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <!-- Reservas Activas -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i data-lucide="calendar-check" class="h-8 w-8 text-blue-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Reservas Activas</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ reservation_stats.active|default:"5" }}</p>
-                        </div>
-                    </div>
+        <!-- Panel lateral -->
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Acciones rápidas</h3>
                 </div>
-
-                <!-- Próxima Reserva -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i data-lucide="clock" class="h-8 w-8 text-green-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Próxima Reserva</p>
-                            <p class="text-lg font-bold text-gray-900">{{ next_reservation.time|default:"14:00" }}</p>
-                            <p class="text-xs text-gray-500">{{ next_reservation.lab|default:"Lab. Computación" }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Horas Reservadas -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <i data-lucide="timer" class="h-8 w-8 text-purple-600"></i>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Horas Esta Semana</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ reservation_stats.hours_week|default:"8" }}
-                            </p>
-                        </div>
-                    </div>
+                <div class="p-6 space-y-3">
+                    <a href="{% url 'profesor:asistencia' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50">
+                        <i data-lucide="calendar-check" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Registrar asistencia
+                    </a>
+                    <a href="{% url 'profesor:notas' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50">
+                        <i data-lucide="file-text" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Gestionar notas
+                    </a>
+                    <a href="{% url 'profesor:silabo' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50">
+                        <i data-lucide="book-open" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Ver Sílabo
+                    </a>
                 </div>
             </div>
 
-            <!-- Calendario Semanal -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div class="bg-white rounded-lg shadow-sm">
                 <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-medium text-gray-900">Calendario Semanal</h3>
-                        <div class="flex items-center space-x-2">
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i data-lucide="chevron-left" class="h-5 w-5"></i>
-                            </button>
-                            <span class="text-sm font-medium text-gray-900">Semana del 28 Oct - 3 Nov 2024</span>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i data-lucide="chevron-right" class="h-5 w-5"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Estado del día</h3>
                 </div>
                 <div class="p-6">
-                    <div class="grid grid-cols-7 gap-4">
-                        <!-- Días de la semana -->
-                        {% for day in week_days %}
-                        <div class="text-center">
-                            <div class="text-sm font-medium text-gray-900 mb-2">{{ day.name }}</div>
-                            <div class="text-xs text-gray-500 mb-3">{{ day.date }}</div>
-                            <div class="space-y-2">
-                                {% for reservation in day.reservations %}
-                                <div class="bg-blue-100 border border-blue-200 rounded p-2 text-xs">
-                                    <div class="font-medium text-blue-900">{{ reservation.time }}</div>
-                                    <div class="text-blue-700">{{ reservation.lab }}</div>
-                                    <div class="text-blue-600">{{ reservation.course }}</div>
-                                </div>
-                                {% empty %}
-                                <div class="text-xs text-gray-400">Sin reservas</div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Lista de Reservas -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-medium text-gray-900">Mis Reservas</h3>
-                        <div class="flex items-center space-x-2">
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i data-lucide="filter" class="h-5 w-5"></i>
-                            </button>
-                            <button class="text-gray-400 hover:text-gray-600">
-                                <i data-lucide="download" class="h-5 w-5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Fecha y Hora
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Laboratorio
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Curso
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Tipo
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Duración
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Estado
-                                </th>
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for reservation in reservations %}
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">
-                                        {{ reservation.date|date:"d/m/Y" }}
-                                    </div>
-                                    <div class="text-sm text-gray-500">
-                                        {{ reservation.start_time }} - {{ reservation.end_time }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ reservation.laboratory.name }}
-                                    </div>
-                                    <div class="text-sm text-gray-500">Capacidad: {{ reservation.laboratory.capacity }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ reservation.course.name }}</div>
-                                    <div class="text-sm text-gray-500">{{ reservation.course.code }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                 {% if reservation.type == 'practica' %}bg-blue-100 text-blue-800
-                                                 {% elif reservation.type == 'laboratorio' %}bg-purple-100 text-purple-800
-                                                 {% elif reservation.type == 'examen' %}bg-red-100 text-red-800
-                                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                        {{ reservation.get_type_display }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {{ reservation.duration }} horas
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                 {% if reservation.status == 'confirmed' %}bg-green-100 text-green-800
-                                                 {% elif reservation.status == 'pending' %}bg-yellow-100 text-yellow-800
-                                                 {% elif reservation.status == 'cancelled' %}bg-red-100 text-red-800
-                                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                        {{ reservation.get_status_display }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <div class="flex items-center space-x-2">
-                                        <button class="text-blue-600 hover:text-blue-900">
-                                            <i data-lucide="edit" class="h-4 w-4"></i>
-                                        </button>
-                                        <button class="text-red-600 hover:text-red-900">
-                                            <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                        </button>
-                                        <button class="text-green-600 hover:text-green-900">
-                                            <i data-lucide="check" class="h-4 w-4"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                                    No tienes reservas registradas
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <ul id="resumenDia" class="list-disc pl-5 text-sm text-gray-700 space-y-1">
+                        <!-- generado dinámicamente -->
+                    </ul>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para Nueva Reserva -->
-<div id="newReservationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden">
-    <div class="flex items-center justify-center min-h-screen">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div class="p-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Nueva Reserva de Laboratorio</h3>
-                <form class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Laboratorio</label>
-                            <select
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <option value="">Seleccionar laboratorio</option>
-                                {% for lab in laboratories %}
-                                <option value="{{ lab.id }}">{{ lab.name }} ({{ lab.capacity }} personas)</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
-                            <select
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <option value="">Seleccionar curso</option>
-                                {% for course in courses %}
-                                <option value="{{ course.id }}">{{ course.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
+<!-- estilos locales -->
+<style>
+    .aula {
+        border: 2px solid #333;
+        background-color: #90ee90;
+        /* libre */
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+        transition: transform .15s;
+        height: 90px;
+    }
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
-                            <input type="date"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Hora Inicio</label>
-                            <input type="time"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Duración (horas)</label>
-                            <select
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                <option value="1">1 hora</option>
-                                <option value="2">2 horas</option>
-                                <option value="3">3 horas</option>
-                                <option value="4">4 horas</option>
-                            </select>
-                        </div>
-                    </div>
+    .aula:hover {
+        transform: scale(1.03);
+    }
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Clase</label>
-                        <select
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="practica">Práctica</option>
-                            <option value="laboratorio">Laboratorio</option>
-                            <option value="examen">Examen</option>
-                        </select>
-                    </div>
+    .aula.ocupada {
+        background-color: #ff6b6b;
+    }
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                        <textarea
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            rows="3" placeholder="Observaciones adicionales..."></textarea>
-                    </div>
-                </form>
+    .titulo-piso {
+        font-weight: 600;
+        color: #1f2937;
+        text-align: center;
+        margin-top: .5rem;
+    }
 
-                <div class="mt-6 flex justify-end space-x-3">
-                    <button
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
-                        Cancelar
-                    </button>
-                    <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
-                        Crear Reserva
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    .piso-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 110px);
+        grid-auto-rows: 90px;
+        justify-content: center;
+        gap: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.lucide) { lucide.createIcons(); }
+
+        // ==========================
+        // Constantes de API
+        // ==========================
+        const API_ESTADO = "/profesor/reservas/estado/";
+        const API_RESERVAS = "/profesor/reservas/api/";          // POST crear
+        const API_RESERVA = (id) => `/profesor/reservas/api/${id}/`; // DELETE eliminar
+
+        // ==========================
+        // Elementos
+        // ==========================
+        const aulasPorPiso = {
+            1: ["A-101", "LAB-001", "LAB-002"],
+            2: ["A-201", "A-202", "A-203"],
+            3: ["A-301", "A-302", "A-303"],
+        };
+
+        const edificio = document.getElementById('edificio');
+        const fechaInput = document.getElementById('fecha');
+        const btnMostrar = document.getElementById('btnMostrar');
+        const btnLimpiar = document.getElementById('btnLimpiar');
+        const resumenDia = document.getElementById('resumenDia');
+        const horaSelect = document.getElementById('hora');
+
+        // ==========================
+        // CSRF helpers
+        // ==========================
+        function getCSRF() {
+            // 1) Preferimos el input generado por {% csrf_token %}
+            const fromInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (fromInput && fromInput.value) return fromInput.value;
+            // 2) Fallback (por si tienes CSRF_COOKIE_HTTPONLY=False)
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; csrftoken=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+
+        // ==========================
+        // Utilidades
+        // ==========================
+        const toISO = d => d.toISOString().slice(0, 10);
+
+        function selectedTimes() {
+            const raw = horaSelect.value || '';
+            const [start, end] = raw.split('/');
+            return { start: (start || '').trim(), end: (end || '').trim(), slot: raw.trim() };
+        }
+
+        // Fecha por defecto
+        const hoy = new Date();
+        if (!fechaInput.value) fechaInput.value = toISO(hoy);
+
+        // ==========================
+        // Render del edificio
+        // ==========================
+        function renderEdificio() {
+            edificio.innerHTML = '';
+            Object.keys(aulasPorPiso).map(Number).sort((a, b) => b - a).forEach(piso => {
+                const title = document.createElement('h3');
+                title.className = 'titulo-piso';
+                title.textContent = `Piso ${piso}`;
+                edificio.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'piso-grid';
+
+                aulasPorPiso[piso].forEach(code => {
+                    const div = document.createElement('div');
+                    div.className = 'aula';
+                    div.id = code;
+                    div.textContent = code;
+                    // metadata
+                    div.dataset.locked = '0';           // 1: bloqueada por clase/otra reserva
+                    div.dataset.reservationId = '';     // si es "mía"
+                    div.addEventListener('click', () => onToggle(code, div));
+                    grid.appendChild(div);
+                });
+
+                edificio.appendChild(grid);
+            });
+        }
+
+        // ==========================
+        // API: Estado
+        // ==========================
+        async function cargarEstado() {
+            const date = fechaInput?.value;
+            const { slot } = selectedTimes();
+            if (!date || !slot) {
+                alert("Selecciona fecha y franja horaria.");
+                return;
+            }
+
+            const url = `${API_ESTADO}?date=${encodeURIComponent(date)}&slot=${encodeURIComponent(slot)}`;
+
+            try {
+                const res = await fetch(url, {
+                    headers: { "Accept": "application/json" },
+                    credentials: "same-origin" // envía cookie de sesión
+                });
+
+                const ct = res.headers.get("content-type") || "";
+
+                if (!res.ok) {
+                    if (res.status === 401 || res.status === 403) {
+                        alert("Inicia sesión para ver el estado de reservas.");
+                        return;
+                    }
+                    const body = ct.includes("application/json") ? JSON.stringify(await res.json()) : await res.text();
+                    console.error("Error estado:", res.status, body);
+                    alert(`Error ${res.status}. ${body.substring(0, 200)}`);
+                    return;
+                }
+
+                if (!ct.includes("application/json")) {
+                    alert("Respuesta no válida (¿te redirigieron a login?). Inicia sesión.");
+                    return;
+                }
+
+                const data = await res.json();
+                pintarEstado(data?.occupied || []);
+                actualizarResumen(data?.occupied || []);
+            } catch (err) {
+                console.error("Fallo de red:", err);
+                alert("No se pudo contactar al servidor.");
+            }
+        }
+
+        function pintarEstado(occupied) {
+            // Reset
+            document.querySelectorAll('.aula').forEach(div => {
+                div.classList.remove('ocupada');
+                div.dataset.locked = '0';
+                div.dataset.reservationId = '';
+                div.title = '';
+            });
+
+            // Aplica ocupación
+            occupied.forEach(o => {
+                const div = document.getElementById(o.code);
+                if (!div) return;
+                div.classList.add('ocupada');
+
+                if (o.reason === 'class') {
+                    div.dataset.locked = '1';
+                    div.title = o.label || 'Clase';
+                    return;
+                }
+
+                if (o.reason === 'reservation') {
+                    if (o.mine) {
+                        div.dataset.reservationId = o.id || '';
+                        div.title = 'Tu reserva';
+                    } else {
+                        div.dataset.locked = '1';
+                        div.title = 'Reservado';
+                    }
+                }
+            });
+        }
+
+        function actualizarResumen(occupied) {
+            const delSlot = (occupied || []).slice().sort((a, b) => a.code.localeCompare(b.code));
+            resumenDia.innerHTML = '';
+            if (delSlot.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'No hay reservas/clases para la fecha y hora seleccionadas.';
+                resumenDia.appendChild(li);
+                return;
+            }
+            delSlot.forEach(o => {
+                const li = document.createElement('li');
+                const tag = (o.reason === 'class') ? 'Clase'
+                    : (o.mine ? 'Mi reserva' : 'Reserva');
+                li.textContent = `${o.code} — ${tag}${o.label ? ' — ' + o.label : ''}`;
+                resumenDia.appendChild(li);
+            });
+        }
+
+        // ==========================
+        // API: Crear / Eliminar reserva
+        // ==========================
+        async function crearReserva(resourceCode, date, slot) {
+            const res = await fetch(API_RESERVAS, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRFToken": getCSRF(),
+                },
+                credentials: "same-origin",
+                body: JSON.stringify({ resource_code: resourceCode, date, slot })
+            });
+
+            let json = null;
+            try { json = await res.json(); } catch (_) { /* noop */ }
+
+            if (res.status === 201) {
+                return { ok: true, id: json?.id || null };
+            }
+            if (res.status === 409) {
+                throw new Error(json?.error || "Conflicto: ya está ocupado.");
+            }
+            throw new Error(json?.error || `Error ${res.status}`);
+        }
+
+        async function eliminarReserva(reservaId) {
+            const res = await fetch(API_RESERVA(reservaId), {
+                method: "DELETE",
+                headers: {
+                    "Accept": "application/json",
+                    "X-CSRFToken": getCSRF(),
+                },
+                credentials: "same-origin",
+            });
+
+            if (res.ok) return true;
+
+            let json = null;
+            try { json = await res.json(); } catch (_) { /* noop */ }
+            throw new Error(json?.error || `Error ${res.status}`);
+        }
+
+        // ==========================
+        // Interacción (toggle)
+        // ==========================
+        async function onToggle(code, div) {
+            const date = fechaInput.value;
+            const { slot, start, end } = selectedTimes();
+            if (!date || !start || !end) { alert('Seleccione fecha y hora.'); return; }
+
+            // Bloqueado por clase u otra reserva → no permitir
+            if (div.dataset.locked === '1') {
+                alert('Aula ocupada.');
+                return;
+            }
+
+            try {
+                // Si ya es "mía", cancelar
+                if (div.dataset.reservationId) {
+                    await eliminarReserva(div.dataset.reservationId);
+                    await cargarEstado();
+                    alert('Reserva eliminada 🗑️');
+                    return;
+                }
+
+                // Crear nueva
+                await crearReserva(code, date, slot);
+                await cargarEstado();
+                alert('Reserva creada ✅');
+
+            } catch (err) {
+                console.error(err);
+                alert(err.message || 'No se pudo procesar la reserva.');
+            }
+        }
+
+        // ==========================
+        // Eventos
+        // ==========================
+        btnMostrar.addEventListener('click', (e) => { e.preventDefault(); cargarEstado(); });
+        btnLimpiar.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await cargarEstado(); // refresca estado (no borra reservas)
+        });
+        fechaInput.addEventListener('change', cargarEstado);
+        horaSelect.addEventListener('change', cargarEstado);
+
+        // ==========================
+        // Init
+        // ==========================
+        renderEdificio();
+        cargarEstado();
+    });
+</script>
 {% endblock %}

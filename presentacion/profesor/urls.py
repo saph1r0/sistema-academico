@@ -8,6 +8,7 @@ from . import views_silabo
 from . import api_views
 from . import views_grade_upload
 from . import views_asistencia
+from . import api_reservas
 
 app_name = 'profesor'
 
@@ -35,6 +36,11 @@ urlpatterns = [
     # Otras funcionalidades del profesor
     path('reservas/', views_simple.ProfesorReservasView.as_view(), name='reservas'),
     path('silabo/', views_silabo.ProfesorSilaboView.as_view(), name='silabo'),
+
+     # API de reservas
+    path('reservas/estado/', api_reservas.estado_ocupacion, name='reservas_estado'),
+    path('reservas/api/', api_reservas.crear_reserva, name='reservas_crear'),
+    path('reservas/api/<uuid:pk>/', api_reservas.eliminar_reserva, name='reservas_eliminar'),
     
     # Debug y herramientas
     path('debug/data/', views_simple.ProfesorDebugDataView.as_view(), name='debug_data'),
