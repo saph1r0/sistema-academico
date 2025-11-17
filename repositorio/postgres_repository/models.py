@@ -1031,6 +1031,15 @@ class Horario(models.Model):
     
     def __str__(self):
         return f"{self.course_group} - {self.dia_semana} {self.hora_inicio}-{self.hora_fin}"
+    
+    laboratory = models.ForeignKey(
+        Laboratory, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True,
+        related_name='horarios_set',
+        verbose_name='Laboratorio'
+    )
 
 # Alias para compatibilidad con el código existente
 UsuarioModel = User

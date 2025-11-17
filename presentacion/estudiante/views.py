@@ -24,6 +24,7 @@ from servicios.servicioAsistencia import ServicioAsistencia
 from servicios.servicioAvance import ServicioAvance
 from servicios.servicioReservas import ServicioReservas
 from servicios.servicioNotas import ServicioNotas, servicio_notas
+from servicios.servicioHorario import ServicioHorario
 from servicios.servicioEstudianteData import ServicioEstudianteData
 
 from django.shortcuts import render
@@ -120,7 +121,26 @@ class EstudianteDashboardView(EstudianteRequiredMixin, TemplateView):
                 'progreso_promedio': 0.0,
                 'total_laboratorios': 0
             }
-        
+        horario_actual = []
+
+        try:
+            servicio_horario = ServicioHorario()
+            data_horario = servicio_horario.obtener_horario_estudiante(estudiante_id)
+
+            eventos = data_horario.get("events", [])
+
+            # Obtener día actual en formato que usa tu BD
+            hoy = datetime.now().strftime("%A").lower()   # monday / tuesday / ...
+
+            # Filtrar clases del día
+            horario_actual = [
+                e for e in eventos
+                if e.get("dia") == hoy
+            ]
+
+        except Exception as e:
+            logger.error(f"Error obteniendo horario del dashboard: {e}")
+            horario_actual = []
         context.update({
             'horario_actual': [],  # Por implementar después
             'porcentaje_avance': estadisticas.get('progreso_promedio', 0.0),
@@ -401,9 +421,11 @@ class EstudianteHorarioView(EstudianteRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+        from servicios.servicioHorario import ServicioHorario
         from repositorio.postgres_repository.models import Enrollment, Horario
         from datetime import time
+        # Crea una instancia del servicio
+        servicio_horario = ServicioHorario()
         
         # Obtener el estudiante
         student = self.request.user.student
@@ -509,7 +531,7 @@ class EstudianteHorarioView(EstudianteRequiredMixin, TemplateView):
                 })
             
             horario_semanal.append(franja)
-        
+
         context.update({
             'cursos_matriculados': cursos_matriculados,
             'horario_semanal': horario_semanal,
@@ -517,6 +539,7 @@ class EstudianteHorarioView(EstudianteRequiredMixin, TemplateView):
             'total_laboratorios': 0,  # Por implementar
             'total_aulas': len(aulas_set)
         })
+
         
         return context
     
