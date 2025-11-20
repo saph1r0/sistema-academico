@@ -4,6 +4,7 @@ VERSIÓN CORREGIDA - Sin duplicados
 """
 from django.urls import path
 from . import views
+from . import views, views_asistencia
 from .views_horario import (
     StudentScheduleView,
     GetStudentScheduleView,
@@ -41,6 +42,9 @@ urlpatterns = [
     path('api/horario/', GetStudentScheduleView.as_view(), name='api_horario'),
     path('api/horario/laboratorios/', GetEnrolledLaboratoriesView.as_view(), name='api_labs'),
     path('api/horario/conflictos/', CheckScheduleConflictView.as_view(), name='api_conflictos'),
+
+    #asistenciaXwa
+    path('asistencia/', views_asistencia.EstudianteAsistenciaView.as_view(), name='mis_asistencias'),
 ]
 '''
 """

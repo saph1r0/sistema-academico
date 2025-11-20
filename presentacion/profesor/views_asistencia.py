@@ -14,6 +14,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from datetime import date
 import json
+from django.urls import reverse
 
 from .mixins import ProfesorRequiredMixin
 from servicios.servicioAsistencia import servicio_asistencia
@@ -229,9 +230,12 @@ class asistencia(ProfesorRequiredMixin, TemplateView):
                         messages.warning(request, f'Errores encontrados: {len(resultado["errors"])}')
                 else:
                     messages.error(request, f'Error: {resultado["error"]}')
-            
-            # Redirigir manteniendo los parámetros
-            return redirect(f'profesor:asistencia?course_group_id={course_group_id}&fecha={fecha_str}')
+ 
+            # Obtenemos la URL base primero
+            base_url = reverse('profesor:asistencia')
+            # Concatenamos los parámetros manualmente
+            return redirect(f'{base_url}?course_group_id={course_group_id}&fecha={fecha_str}')
+   
             
         except AttributeError:
             messages.error(request, 'No se encontró perfil de profesor.')
