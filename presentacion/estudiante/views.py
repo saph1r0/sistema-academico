@@ -334,33 +334,62 @@ class EstudianteNotasView(EstudianteRequiredMixin, TemplateView):
 @login_required
 def cursos(request):
     student = request.user.student
+
     enrollments = Enrollment.objects.filter(student=student).select_related(
-        "course_group__course", "academic_period"
+        "course_group__course",
+        "course_group",
+        "course_group__teacher__user",
+        "academic_period",
     )
 
     # Recuperamos laboratorios matriculados desde la sesión
-    matriculas_labs = request.session.get('matriculas_labs', {})
+    matriculas_labs = request.session.get("matriculas_labs", {})
 
-    cursos = []
+    courses_info = []
+
     for e in enrollments:
-        curso_nombre = e.course_group.course.name
-        curso_codigo = e.course_group.course.code
-        curso_grupo = e.course_group.group_code
+        course = e.course_group.course
+        group = e.course_group
 
-        # Revisar si el curso tiene laboratorio matriculado
+        # Datos del profesor
+        teacher = getattr(group, "teacher", None)
+
+        # Datos de laboratorio
         lab_data = matriculas_labs.get(str(e.id))
         tiene_lab = lab_data is not None
-        laboratorio_asignado = lab_data['lab_key'] if lab_data else None
+        laboratorio_asignado = lab_data["lab_key"] if lab_data else None
 
-        cursos.append({
-            "nombre": curso_nombre,
-            "codigo": curso_codigo,
-            "grupo": curso_grupo,
-            "tiene_lab": tiene_lab,
-            "laboratorio_asignado": laboratorio_asignado,
+        # Cálculo de progreso del curso (ejemplo simple)
+        progress_info = {
+            "progress_percentage": group.progress_percentage if hasattr(group, "progress_percentage") else 0,
+            "current_week": group.current_week if hasattr(group, "current_week") else 1,
+            "total_weeks": group.total_weeks if hasattr(group, "total_weeks") else 16,
+        }
+
+        courses_info.append({
+            "course": {
+                "name": course.name,
+                "code": course.code,
+                "credits": course.credits,
+                "theory_hours": course.theory_hours,
+                "practice_hours": course.practice_hours,
+            },
+            "course_group": {
+                "group_code": group.group_code,
+                "id": group.id,
+            },
+            "teacher": teacher,
+            "has_syllabus": getattr(group, "has_syllabus", False),
+            "progress_info": progress_info,
         })
 
-    return render(request, "estudiante/cursos.html", {"cursos": cursos})
+    context = {
+        "courses_info": courses_info,
+        "error": None,
+    }
+
+    return render(request, "estudiante/cursos.html", context)
+
 
 @login_required
 def matricular_lab(request):

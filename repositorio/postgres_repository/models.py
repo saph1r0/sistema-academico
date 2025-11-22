@@ -1043,3 +1043,176 @@ class Horario(models.Model):
 
 # Alias para compatibilidad con el código existente
 UsuarioModel = User
+
+
+class Syllabus(models.Model):
+    """Sílabo de un curso"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    course_group = models.OneToOneField(
+        CourseGroup, 
+        on_delete=models.CASCADE, 
+        related_name='syllabus',
+        verbose_name='Grupo de Curso'
+    )
+    academic_period = models.ForeignKey(
+        AcademicPeriod,
+        on_delete=models.CASCADE,
+        related_name='syllabi',
+        verbose_name='Período Académico'
+    )
+    uploaded_by = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        verbose_name='Subido por'
+    )
+    total_weeks = models.IntegerField(default=16, verbose_name='Total de Semanas')
+    start_date = models.DateField(verbose_name='Fecha de Inicio')
+    end_date = models.DateField(verbose_name='Fecha de Fin')
+    is_active = models.BooleanField(default=True, verbose_name='Activo')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'syllabi'
+        verbose_name = 'Sílabo'
+        verbose_name_plural = 'Sílabos'
+        unique_together = ['course_group', 'academic_period']
+    
+    def __str__(self):
+        return f"Sílabo - {self.course_group}"
+    
+    def get_current_week(self):
+        """Calcula la semana actual del semestre"""
+        if not self.start_date:
+            return 1
+        
+        today = timezone.now().date()
+        if today < self.start_date:
+            return 0
+        elif today > self.end_date:
+            return self.total_weeks
+        
+        days_elapsed = (today - self.start_date).days
+        current_week = min((days_elapsed // 7) + 1, self.total_weeks)
+        return max(1, current_week)
+    
+    def get_progress_percentage(self):
+        """Calcula el porcentaje de progreso automático basado en semanas"""
+        current_week = self.get_current_week()
+        return round((current_week / self.total_weeks) * 100, 1)
+    
+    def get_topics_progress(self):
+        """Calcula el progreso de los temas principales"""
+        topics = self.main_topics.all().order_by('order')
+        total_topics = topics.count()
+        
+        if total_topics == 0:
+            return 0
+        
+        current_week = self.get_current_week()
+        weeks_per_topic = self.total_weeks / total_topics
+        
+        # Calcular cuántos temas deberían estar completados
+        completed_topics = int(current_week / weeks_per_topic)
+        
+        return {
+            'total_topics': total_topics,
+            'completed_topics': min(completed_topics, total_topics),
+            'current_week': current_week,
+            'total_weeks': self.total_weeks,
+            'progress_percentage': self.get_progress_percentage()
+        }
+
+
+class SyllabusMainTopic(models.Model):
+    """Tema principal del sílabo"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    syllabus = models.ForeignKey(
+        Syllabus,
+        on_delete=models.CASCADE,
+        related_name='main_topics',
+        verbose_name='Sílabo'
+    )
+    order = models.IntegerField(verbose_name='Orden')
+    title = models.CharField(max_length=300, verbose_name='Título del Tema')
+    description = models.TextField(blank=True, verbose_name='Descripción')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'syllabus_main_topics'
+        verbose_name = 'Tema Principal'
+        verbose_name_plural = 'Temas Principales'
+        ordering = ['syllabus', 'order']
+        unique_together = ['syllabus', 'order']
+    
+    def __str__(self):
+        return f"{self.order}. {self.title}"
+    
+    def get_assigned_weeks(self):
+        """Calcula las semanas asignadas a este tema"""
+        total_topics = self.syllabus.main_topics.count()
+        if total_topics == 0:
+            return (1, self.syllabus.total_weeks)
+        
+        weeks_per_topic = self.syllabus.total_weeks / total_topics
+        start_week = int((self.order - 1) * weeks_per_topic) + 1
+        end_week = int(self.order * weeks_per_topic)
+        
+        return (start_week, end_week)
+    
+    def is_current_topic(self):
+        """Verifica si este es el tema actual según la semana"""
+        current_week = self.syllabus.get_current_week()
+        start_week, end_week = self.get_assigned_weeks()
+        return start_week <= current_week <= end_week
+    
+    def is_completed(self):
+        """Verifica si el tema ya fue completado según la semana actual"""
+        current_week = self.syllabus.get_current_week()
+        _, end_week = self.get_assigned_weeks()
+        return current_week > end_week
+    
+    def get_progress_percentage(self):
+        """Calcula el progreso del tema principal"""
+        current_week = self.syllabus.get_current_week()
+        start_week, end_week = self.get_assigned_weeks()
+        
+        if current_week < start_week:
+            return 0
+        elif current_week > end_week:
+            return 100
+        else:
+            weeks_in_topic = end_week - start_week + 1
+            weeks_completed = current_week - start_week + 1
+            return round((weeks_completed / weeks_in_topic) * 100, 1)
+
+
+class SyllabusSubTopic(models.Model):
+    """Subtema opcional dentro de un tema principal"""
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    main_topic = models.ForeignKey(
+        SyllabusMainTopic,
+        on_delete=models.CASCADE,
+        related_name='subtopics',
+        verbose_name='Tema Principal'
+    )
+    order = models.IntegerField(verbose_name='Orden')
+    title = models.CharField(max_length=300, verbose_name='Título del Subtema')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'syllabus_subtopics'
+        verbose_name = 'Subtema'
+        verbose_name_plural = 'Subtemas'
+        ordering = ['main_topic', 'order']
+        unique_together = ['main_topic', 'order']
+    
+    def __str__(self):
+        return f"{self.main_topic.order}.{self.order} {self.title}"
+    
+    def is_completed(self):
+        """Un subtema está completado si su tema principal está completado"""
+        return self.main_topic.is_completed()

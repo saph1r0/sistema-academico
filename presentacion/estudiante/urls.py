@@ -17,7 +17,10 @@ from .views_laboratorios import (
     VerificarConflictoAPIView,
     laboratorio_detalle,
 )
-
+from .views_temario import (
+    EstudianteMisCursosView,
+    EstudianteCursoTemarioView
+)
 app_name = 'estudiante'
 
 urlpatterns = [
@@ -25,7 +28,7 @@ urlpatterns = [
     path('dashboard/', views.EstudianteDashboardView.as_view(), name='dashboard'),
     path('curso/<uuid:course_id>/', views.EstudianteCursoDetalleView.as_view(), name='curso_detalle'),
     path('notas/', views.EstudianteNotasView.as_view(), name='notas'),
-    path('cursos/', views.cursos, name='cursos'),
+    #path('cursos/', views.cursos, name='cursos'),
     
     # Laboratorios - Vista principal con POST para matrícula/desmatrícula
     path('laboratorios/', EstudianteLaboratoriosView.as_view(), name='laboratorios'),
@@ -45,6 +48,10 @@ urlpatterns = [
 
     #asistenciaXwa
     path('asistencia/', views_asistencia.EstudianteAsistenciaView.as_view(), name='mis_asistencias'),
+
+    #temario
+    path('cursos/', EstudianteMisCursosView.as_view(), name='cursos'),
+    path('curso/<uuid:course_group_id>/temario/', EstudianteCursoTemarioView.as_view(), name='curso_temario'),
 ]
 '''
 """

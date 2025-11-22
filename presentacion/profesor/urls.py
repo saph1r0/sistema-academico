@@ -10,6 +10,12 @@ from . import views_grade_upload
 from . import views_asistencia
 from . import api_reservas
 
+from .views_silabo import (
+    ProfesorSilaboView,
+    SubirSilaboView,
+    EditarSilaboView,
+)
+
 app_name = 'profesor'
 
 urlpatterns = [
@@ -49,4 +55,9 @@ urlpatterns = [
     # API endpoints (temporalmente comentadas)
     # path('api/cursos/', api_views.ProfesorCursosAPIView.as_view(), name='api_cursos'),
     # path('api/estadisticas/', api_views.ProfesorEstadisticasAPIView.as_view(), name='api_estadisticas'),
+
+     path('silabo/', ProfesorSilaboView.as_view(), name='silabo'),
+    path('silabo/subir/', SubirSilaboView.as_view(), name='subir_silabo'),
+    path('silabo/editar/', EditarSilaboView.as_view(), name='editar_silabo'), 
+
 ]
