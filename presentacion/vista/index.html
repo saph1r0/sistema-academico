@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Estudiantes</title>
+</head>
+<body>
+    <h1>Lista de Estudiantes</h1>
+    <ul>
+        {% for estudiante in estudiantes %}
+            <li>
+                {{ estudiante.student_id }} - 
+                {{ estudiante.nombre }} {{ estudiante.apellido }} 
+                (Ingreso: {{ estudiante.año_ingreso }})
+            </li>
+        {% empty %}
+            <li>No hay estudiantes registrados</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Subir archivo</h2>
+    <form method="post" enctype="multipart/form-data" action="/cargar">
+        {% csrf_token %}
+        <input type="file" name="file">
+        <button type="submit">Cargar</button>
+    </form>
+</body>
+</html>

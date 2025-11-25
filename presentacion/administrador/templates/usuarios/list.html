@@ -1,0 +1,53 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="p-6">
+  <h2 class="text-2xl font-bold mb-4">Gestión de Usuarios</h2>
+
+  <!-- Botón Agregar -->
+  <div class="mb-4">
+    <a href="{% url 'usuarios:create' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Agregar Nuevo Usuario</a>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mb-4 flex space-x-4">
+    <a href="#estudiantes" class="px-3 py-2 bg-gray-200 rounded">Estudiantes</a>
+    <a href="#profesores" class="px-3 py-2 bg-gray-200 rounded">Profesores</a>
+    <a href="#administradores" class="px-3 py-2 bg-gray-200 rounded">Administradores</a>
+  </div>
+
+  <!-- Tabla de usuarios -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white rounded shadow">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="py-2 px-4 text-left">Nombre</th>
+          <th class="py-2 px-4 text-left">Código</th>
+          <th class="py-2 px-4 text-left">Carrera / Rol</th>
+          <th class="py-2 px-4 text-left">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in usuarios %}
+        <tr class="border-b">
+          <td class="py-2 px-4">{{ user.nombre }}</td>
+          <td class="py-2 px-4">{{ user.codigo }}</td>
+          <td class="py-2 px-4">{{ user.rol }}</td>
+          <td class="py-2 px-4 space-x-2">
+            <a href="{% url 'usuarios:detail' user.id %}" class="text-blue-600 hover:underline">Ver</a>
+            <a href="{% url 'usuarios:edit' user.id %}" class="text-yellow-600 hover:underline">Editar</a>
+            <a href="{% url 'usuarios:delete' user.id %}" class="text-red-600 hover:underline">Eliminar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="py-4 text-center text-gray-500">No hay usuarios registrados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

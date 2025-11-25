@@ -1,0 +1,210 @@
+{% extends 'estudiante/base_estudiante.html' %}
+
+{% block title %}Mis Notas - Sistema Académico{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-7xl">
+    <div class="bg-gradient-to-br from-blue-600 to-blue-900 rounded-2xl p-6 mb-8 text-white shadow-lg">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex-1">
+                <h2 class="text-2xl font-bold mb-2 flex items-center gap-3">
+                    <i data-lucide="bar-chart-2" class="w-8 h-8"></i>
+                    Mis Notas Académicas
+                </h2>
+                <p class="text-blue-100 opacity-90">
+                    Consulta tus calificaciones organizadas por fases de evaluación
+                </p>
+            </div>
+            
+            <div class="flex items-center gap-6 bg-white/10 p-4 rounded-xl backdrop-blur-sm">
+                <div class="text-right">
+                    <h3 class="text-3xl font-bold">{{ general_average|default:"0.0" }}</h3>
+                    <span class="text-xs uppercase tracking-wider opacity-75">Promedio General</span>
+                </div>
+                
+                <div class="relative w-16 h-16">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="none" class="text-blue-300 opacity-30" />
+                        <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="4" fill="none" class="text-white" 
+                            stroke-dasharray="175" 
+                            style="stroke-dashoffset: calc(175px - (175px * {{ general_average|default:0 }} / 20));" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-xs font-bold">
+                        <span>{{ total_courses }}</span>
+                        <span class="text-[8px] font-normal uppercase">Cursos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if courses_data %}
+    <div class="space-y-8">
+        {% for curso_data in courses_data %}
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300">
+            <div class="bg-gray-50 p-6 border-b border-gray-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">{{ curso_data.course.name }}</h3>
+                        <p class="text-sm text-gray-500 mt-1">
+                            {{ curso_data.course.code }} • Grupo {{ curso_data.course_group.group_code }} • {{ curso_data.teacher_name }}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        {% if curso_data.average %}
+                        <span class="px-4 py-1.5 rounded-full text-sm font-bold 
+                            {% if curso_data.average >= 16 %}bg-green-100 text-green-700
+                            {% elif curso_data.average >= 13 %}bg-blue-100 text-blue-700
+                            {% elif curso_data.average >= 11 %}bg-yellow-100 text-yellow-700
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            Promedio: {{ curso_data.average }}
+                        </span>
+                        {% else %}
+                        <span class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-500">
+                            Sin promedio
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+                
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-4 text-blue-600">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        <h4 class="font-semibold uppercase text-xs tracking-wider">Primera Fase</h4>
+                    </div>
+                    
+                    {% if curso_data.phases.primera and curso_data.phases.primera.has_grades %}
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Parcial</span>
+                                <span class="font-bold text-gray-900">{{ curso_data.phases.primera.partial_grade }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Continua</span>
+                                <span class="font-bold text-gray-900">{{ curso_data.phases.primera.continuous_grade }}</span>
+                            </div>
+                            {% if curso_data.phases.primera.final_grade %}
+                            <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span class="text-xs font-medium text-gray-500 uppercase">Promedio Fase 1</span>
+                                <span class="font-bold text-blue-600">{{ curso_data.phases.primera.final_grade }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="flex flex-col items-center justify-center h-32 text-gray-400">
+                            <i data-lucide="clock" class="w-8 h-8 mb-2 opacity-50"></i>
+                            <span class="text-sm">Pendiente</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-4 text-orange-600">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        <h4 class="font-semibold uppercase text-xs tracking-wider">Segunda Fase</h4>
+                    </div>
+
+                    {% if curso_data.phases.segunda and curso_data.phases.segunda.has_grades %}
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Parcial</span>
+                                <span class="font-bold text-gray-900">{{ curso_data.phases.segunda.partial_grade }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Continua</span>
+                                <span class="font-bold text-gray-900">{{ curso_data.phases.segunda.continuous_grade }}</span>
+                            </div>
+                            {% if curso_data.phases.segunda.final_grade %}
+                            <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span class="text-xs font-medium text-gray-500 uppercase">Promedio Fase 2</span>
+                                <span class="font-bold text-orange-600">{{ curso_data.phases.segunda.final_grade }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="flex flex-col items-center justify-center h-32 text-gray-400">
+                            <i data-lucide="lock" class="w-8 h-8 mb-2 opacity-50"></i>
+                            <span class="text-sm">Bloqueado</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="p-6">
+                    <div class="flex items-center gap-2 mb-4 text-green-600">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        <h4 class="font-semibold uppercase text-xs tracking-wider">Tercera Fase</h4>
+                    </div>
+
+                    {% if curso_data.phases.tercera and curso_data.phases.tercera.has_grades %}
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Parcial</span>
+                                <span class="font-bold text-gray-900">{{ curso_data.phases.tercera.partial_grade }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Continua</span>
+                                <span class="font-bold text-gray-900">{{ curso_data.phases.tercera.continuous_grade }}</span>
+                            </div>
+                            {% if curso_data.phases.tercera.final_grade %}
+                            <div class="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center bg-gray-50 p-2 rounded-lg">
+                                <span class="text-xs font-medium text-gray-500 uppercase">Promedio Fase 3</span>
+                                <span class="font-bold text-green-600">{{ curso_data.phases.tercera.final_grade }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="flex flex-col items-center justify-center h-32 text-gray-400">
+                            <i data-lucide="lock" class="w-8 h-8 mb-2 opacity-50"></i>
+                            <span class="text-sm">Bloqueado</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ total_courses }}</div>
+            <div class="text-xs text-gray-500 uppercase mt-1">Cursos</div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center border-l-4 border-blue-500">
+            <div class="text-2xl font-bold text-blue-600">{{ general_average|default:"0.0" }}</div>
+            <div class="text-xs text-gray-500 uppercase mt-1">Promedio Ponderado</div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <div class="text-2xl font-bold text-green-600">{{ courses_with_grades }}</div>
+            <div class="text-xs text-gray-500 uppercase mt-1">Con Notas</div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
+            <div class="text-2xl font-bold text-gray-900">{{ active_period.name|default:"2025-I" }}</div>
+            <div class="text-xs text-gray-500 uppercase mt-1">Periodo</div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="clipboard-list" class="w-8 h-8 text-gray-400"></i>
+        </div>
+        <h3 class="text-lg font-bold text-gray-900 mb-2">No hay notas registradas</h3>
+        <p class="text-gray-500 mb-6 max-w-md mx-auto">
+            Aún no se han registrado notas para tus cursos matriculados. 
+            Las calificaciones aparecerán aquí en cuanto los docentes las publiquen.
+        </p>
+        <a href="{% url 'estudiante:dashboard' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>
+            Volver al Dashboard
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

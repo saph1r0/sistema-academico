@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Profesor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-blue-600 text-white p-4">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold">Portal Profesor</h1>
+                <div class="flex items-center space-x-4">
+                    <span>{{ user.first_name }} {{ user.last_name }}</span>
+                    <a href="{% url 'login:logout' %}" class="bg-blue-700 px-3 py-1 rounded">Salir</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto p-6">
+            <!-- Welcome Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                    ¡Bienvenido, {{ user.first_name }}!
+                </h2>
+                <p class="text-gray-600">
+                    {% if teacher %}
+                    Código: {{ teacher.teacher_code }} | Departamento: {{ teacher.department }}
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-blue-100 rounded-full">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Cursos Asignados</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ total_cursos }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-green-100 rounded-full">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Estudiantes</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ total_estudiantes }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-purple-100 rounded-full">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Progreso Promedio</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ promedio_progreso }}%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 bg-orange-100 rounded-full">
+                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Mi Asistencia</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ porcentaje_asistencia_general|floatformat:1
+                                }}%</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas de Asistencia -->
+            {% if estadisticas_generales %}
+            <div class="bg-white rounded-lg shadow mb-6">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Estadísticas de Mi Asistencia</h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-blue-600">{{
+                                estadisticas_generales.dias_asistencia|default:0 }}</div>
+                            <div class="text-sm text-gray-600">Días Asistidos</div>
+                            <div class="text-xs text-gray-500">de {{ estadisticas_generales.dias_laborables|default:0 }}
+                                laborables</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-green-600">{{
+                                estadisticas_generales.tiempo_total_horas|default:0 }}</div>
+                            <div class="text-sm text-gray-600">Horas Totales</div>
+                            <div class="text-xs text-gray-500">{{ estadisticas_generales.promedio_horas_dia|default:0 }}
+                                hrs/día promedio</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold text-purple-600">{{
+                                estadisticas_generales.total_sesiones|default:0 }}</div>
+                            <div class="text-sm text-gray-600">Sesiones Registradas</div>
+                            <div class="text-xs text-gray-500">{{ estadisticas_generales.sesiones_completas|default:0 }}
+                                completas</div>
+                        </div>
+                    </div>
+                    {% if ultima_sesion %}
+                    <div class="mt-4 text-center text-sm text-gray-600">
+                        <strong>Última sesión:</strong> {{ ultima_sesion.login_time|date:"d/m/Y H:i" }}
+                        {% if ultima_sesion.logout_time %}
+                        - {{ ultima_sesion.logout_time|date:"H:i" }}
+                        {% else %}
+                        (Sesión activa)
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Cursos Asignados -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Mis Cursos</h3>
+                    <p class="text-sm text-gray-600 mt-1">Gestiona tus clases, progreso y estadísticas</p>
+                </div>
+                <div class="p-6">
+                    {% if cursos_asignados %}
+                    <div class="grid gap-6">
+                        {% for curso_info in cursos_asignados %}
+                        <div class="border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-colors">
+                            <!-- Encabezado del curso -->
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex-1">
+                                    <h4 class="text-xl font-medium text-gray-900">{{ curso_info.curso.course.name }}
+                                    </h4>
+                                    <p class="text-sm text-gray-600">{{ curso_info.curso.course.code }} - Grupo {{
+                                        curso_info.curso.group_code }}</p>
+                                    <p class="text-sm text-gray-500">{{ curso_info.curso.academic_period.name }}</p>
+                                </div>
+                                <div class="flex flex-col items-end space-y-2">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                        {% if curso_info.estado_color == 'green' %}bg-green-100 text-green-800
+                                        {% elif curso_info.estado_color == 'blue' %}bg-blue-100 text-blue-800
+                                        {% elif curso_info.estado_color == 'yellow' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-red-100 text-red-800{% endif %}">
+                                        {{ curso_info.estado|title }}
+                                    </span>
+                                    {% if curso_info.curso.classroom %}
+                                    <span class="text-xs text-gray-500">Aula: {{ curso_info.curso.classroom }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Estadísticas del curso -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                    <p class="text-sm font-medium text-blue-900">Estudiantes</p>
+                                    <p class="text-lg font-bold text-blue-900">{{ curso_info.total_estudiantes }}</p>
+                                    <p class="text-xs text-blue-700">de {{ curso_info.curso.capacity }} cupos</p>
+                                </div>
+                                <div class="bg-green-50 rounded-lg p-3 text-center">
+                                    <p class="text-sm font-medium text-green-900">Progreso</p>
+                                    <p class="text-lg font-bold text-green-900">{{
+                                        curso_info.progreso_porcentaje|floatformat:1 }}%</p>
+                                    <p class="text-xs text-green-700">del curso</p>
+                                </div>
+                                <div class="bg-purple-50 rounded-lg p-3 text-center">
+                                    <p class="text-sm font-medium text-purple-900">Asistencia</p>
+                                    <p class="text-lg font-bold text-purple-900">{{ curso_info.clases_asistidas }}</p>
+                                    <p class="text-xs text-purple-700">de {{ curso_info.total_clases_programadas }}
+                                        clases</p>
+                                </div>
+                                <div class="bg-orange-50 rounded-lg p-3 text-center">
+                                    <p class="text-sm font-medium text-orange-900">Temas</p>
+                                    <p class="text-lg font-bold text-orange-900">{{ curso_info.temas_completados }}</p>
+                                    <p class="text-xs text-orange-700">de {{ curso_info.total_temas }} completados</p>
+                                </div>
+                            </div>
+
+                            <!-- Barra de progreso -->
+                            <div class="mb-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium text-gray-700">Progreso del Curso</span>
+                                    <span class="text-sm text-gray-600">{{ curso_info.progreso_porcentaje|floatformat:1
+                                        }}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="h-2 rounded-full transition-all duration-300
+                                        {% if curso_info.estado_color == 'green' %}bg-green-600
+                                        {% elif curso_info.estado_color == 'blue' %}bg-blue-600
+                                        {% elif curso_info.estado_color == 'yellow' %}bg-yellow-600
+                                        {% else %}bg-red-600{% endif %}"
+                                        style="width: {{ curso_info.progreso_porcentaje }}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Información adicional -->
+                            <div class="flex justify-between items-center text-sm text-gray-600">
+                                <div class="flex space-x-4">
+                                    <span><strong>Créditos:</strong> {{ curso_info.curso.course.credits }}</span>
+                                    <span><strong>Asistencia Docente:</strong> {{
+                                        curso_info.porcentaje_asistencia_docente|floatformat:1 }}%</span>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'profesor:course_detail' course_group_id=curso_info.curso.id %}"
+                                        class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors">
+                                        Ver Detalle
+                                    </a>
+                                    <button
+                                        class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                                        Gestionar Temas
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                            </path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No hay cursos asignados</h3>
+                        <p class="mt-1 text-sm text-gray-500">Contacta al administrador para asignación de cursos.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mt-6">
+                {% for message in messages %}
+                <div
+                    class="bg-{% if message.tags == 'error' %}red{% else %}blue{% endif %}-100 border border-{% if message.tags == 'error' %}red{% else %}blue{% endif %}-400 text-{% if message.tags == 'error' %}red{% else %}blue{% endif %}-700 px-4 py-3 rounded mb-4">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</body>
+
+</html>

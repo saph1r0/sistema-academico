@@ -1,0 +1,92 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Debug - Procesar Excel{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h1 class="text-2xl font-bold text-gray-900">Debug - Procesar Excel de Notas</h1>
+        <p class="text-gray-600 mt-1">Procesar el archivo Excel para cargar notas en la base de datos</p>
+    </div>
+
+    <!-- Información del Archivo -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Archivo a Procesar</h3>
+        <div class="bg-gray-50 rounded-lg p-4">
+            <div class="flex items-center">
+                <i data-lucide="file-spreadsheet" class="h-8 w-8 text-green-600 mr-3"></i>
+                <div>
+                    <p class="font-medium text-gray-900">{{ excel_file }}</p>
+                    <p class="text-sm text-gray-600">Archivo Excel con notas del Parcial 1</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instrucciones -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-blue-900 mb-3">Instrucciones</h3>
+        <div class="text-blue-800 space-y-2">
+            <p>• El archivo debe estar en la raíz del proyecto</p>
+            <p>• Debe tener la columna 'CUI' con los códigos de estudiante</p>
+            <p>• Debe tener la columna 'P1' con las notas del Parcial 1</p>
+            <p>• El header debe estar en la fila 9 del Excel</p>
+            <p>• Las notas deben estar entre 0 y 20</p>
+        </div>
+    </div>
+
+    <!-- Botón de Procesamiento -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Procesar Archivo</h3>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center space-x-2">
+                <i data-lucide="play" class="h-5 w-5"></i>
+                <span>Procesar Excel de Notas</span>
+            </button>
+        </form>
+
+        <div class="mt-4 text-sm text-gray-600">
+            <p>⚠️ Este proceso:</p>
+            <ul class="list-disc list-inside mt-2 space-y-1">
+                <li>Leerá el archivo Excel desde el disco</li>
+                <li>Extraerá las notas de la columna P1</li>
+                <li>Las guardará en la base de datos</li>
+                <li>Actualizará las estadísticas para los gráficos</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Enlaces de Navegación -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Navegación</h3>
+        <div class="flex flex-wrap gap-4">
+            <a href="{% url 'profesor:debug_data' %}"
+                class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="database" class="h-4 w-4"></i>
+                <span>Verificar Datos</span>
+            </a>
+
+            <a href="{% url 'profesor:notas' %}"
+                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="bar-chart" class="h-4 w-4"></i>
+                <span>Ver Gráficos</span>
+            </a>
+
+            <a href="{% url 'profesor:dashboard' %}"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="home" class="h-4 w-4"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Gestión de Sílabo - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gestión de Sílabo / Temario</h1>
+                <p class="text-gray-600 mt-1">Administra el temario de tu curso</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                {% if has_syllabus %}
+                <a href="{% url 'profesor:editar_silabo' %}"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="edit" class="h-4 w-4"></i>
+                    <span>Editar Temario</span>
+                </a>
+                {% else %}
+                <a href="{% url 'profesor:subir_silabo' %}"
+                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                    <i data-lucide="upload" class="h-4 w-4"></i>
+                    <span>Subir Temario</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <i data-lucide="alert-circle" class="h-5 w-5 text-red-600 mr-3"></i>
+            <p class="text-red-800">{{ error }}</p>
+        </div>
+    </div>
+    {% elif not has_course %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <i data-lucide="alert-triangle" class="h-12 w-12 text-yellow-600 mx-auto mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes cursos asignados</h3>
+        <p class="text-gray-600">Contacta con la administración para que te asignen un curso.</p>
+    </div>
+    {% elif not has_syllabus %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+        <i data-lucide="book-open" class="h-12 w-12 text-blue-600 mx-auto mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No has subido el temario</h3>
+        <p class="text-gray-600 mb-4">Sube el temario de tu curso para que los estudiantes puedan ver el contenido del semestre.</p>
+        <a href="{% url 'profesor:subir_silabo' %}"
+            class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+            <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
+            Subir Temario Ahora
+        </a>
+    </div>
+    {% else %}
+    <!-- Información del Curso -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Información del Curso</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Curso</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.name }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course.code }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ course_group.group_code }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Duración</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ syllabus.total_weeks }} semanas</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ syllabus.start_date|date:"d/m/Y" }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin</label>
+                        <p class="text-sm text-gray-900 bg-gray-50 p-2 rounded">{{ syllabus.end_date|date:"d/m/Y" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progreso Automático -->
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Progreso del Curso</h3>
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-blue-900">Semana Actual</span>
+                            <span class="text-sm font-bold text-blue-900">{{ progress_info.current_week }} / {{ progress_info.total_weeks }}</span>
+                        </div>
+                        <div class="w-full bg-blue-200 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ progress_info.progress_percentage }}%"></div>
+                        </div>
+                        <p class="text-xs text-blue-700 mt-1">{{ progress_info.progress_percentage }}% completado</p>
+                    </div>
+
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-green-900">Temas Completados</span>
+                            <span class="text-sm font-bold text-green-900">{{ progress_info.completed_topics }} / {{ progress_info.total_topics }}</span>
+                        </div>
+                        <div class="w-full bg-green-200 rounded-full h-2">
+                            {% if progress_info.total_topics > 0 %}
+                            <div class="bg-green-600 h-2 rounded-full" 
+                                style="width: {% widthratio progress_info.completed_topics progress_info.total_topics 100 %}%"></div>
+                            {% else %}
+                            <div class="bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <div class="text-center">
+                            <p class="text-sm font-medium text-purple-900 mb-1">Progreso se actualiza</p>
+                            <p class="text-xs text-purple-700">Automáticamente cada semana</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Temario -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Temario del Curso</h3>
+            <p class="text-sm text-gray-600 mt-1">El progreso se actualiza automáticamente cada semana</p>
+        </div>
+        <div class="p-6">
+            <div class="space-y-6">
+                {% for topic in main_topics %}
+                <div class="border border-gray-200 rounded-lg p-5 {% if topic.is_current_topic %}bg-blue-50 border-blue-300{% endif %}">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <h4 class="text-lg font-semibold text-gray-900">{{ topic.order }}. {{ topic.title }}</h4>
+                                {% if topic.is_completed %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
+                                    Completado
+                                </span>
+                                {% elif topic.is_current_topic %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <i data-lucide="play-circle" class="h-3 w-3 mr-1"></i>
+                                    En Progreso
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <i data-lucide="circle" class="h-3 w-3 mr-1"></i>
+                                    Pendiente
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if topic.description %}
+                            <p class="text-sm text-gray-600 mb-3">{{ topic.description }}</p>
+                            {% endif %}
+
+                            <!-- Semanas asignadas -->
+                            {% with weeks=topic.get_assigned_weeks %}
+                            <div class="flex items-center text-sm text-gray-500 mb-3">
+                                <i data-lucide="calendar" class="h-4 w-4 mr-2"></i>
+                                <span>Semanas {{ weeks.0 }} - {{ weeks.1 }}</span>
+                            </div>
+                            {% endwith %}
+
+                            <!-- Barra de progreso del tema -->
+                            <div class="mb-3">
+                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>Progreso del tema</span>
+                                    <span>{{ topic.get_progress_percentage }}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="{% if topic.is_completed %}bg-green-600{% elif topic.is_current_topic %}bg-blue-600{% else %}bg-gray-400{% endif %} h-2 rounded-full" 
+                                        style="width: {{ topic.get_progress_percentage }}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Subtemas -->
+                            {% if topic.subtopics.exists %}
+                            <div class="mt-3">
+                                <h5 class="text-sm font-medium text-gray-700 mb-2">Subtemas:</h5>
+                                <ul class="space-y-1">
+                                    {% for subtopic in topic.subtopics.all %}
+                                    <li class="flex items-start text-sm text-gray-600">
+                                        <i data-lucide="{% if subtopic.is_completed %}check-circle{% else %}circle{% endif %}" 
+                                            class="h-4 w-4 mr-2 mt-0.5 flex-shrink-0 {% if subtopic.is_completed %}text-green-500{% else %}text-gray-400{% endif %}"></i>
+                                        <span>{{ topic.order }}.{{ subtopic.order }} {{ subtopic.title }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8">
+                    <i data-lucide="book-open" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+                    <p class="text-gray-500">No hay temas en el temario</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Nota informativa -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <i data-lucide="info" class="h-5 w-5 text-blue-600 mr-3 mt-0.5"></i>
+            <div class="flex-1">
+                <h4 class="text-sm font-semibold text-blue-900 mb-1">Información importante</h4>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• El progreso se calcula automáticamente según la semana actual del semestre</li>
+                    <li>• Los temas se marcan como completados automáticamente cuando pasa su período</li>
+                    <li>• Puedes editar el temario en cualquier momento usando el botón "Editar Temario"</li>
+                    <li>• Los estudiantes pueden ver este mismo temario con el progreso actualizado</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

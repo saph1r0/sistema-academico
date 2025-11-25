@@ -1,0 +1,138 @@
+{% extends 'estudiante/base_estudiante.html' %}
+
+{% block title %}Mis Cursos - Portal Estudiante{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Mis Cursos</h1>
+                <p class="text-gray-600 mt-1">Lista de cursos en los que estás matriculado</p>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <i data-lucide="alert-circle" class="h-5 w-5 text-red-600 mr-3"></i>
+            <p class="text-red-800">{{ error }}</p>
+        </div>
+    </div>
+    {% elif not courses_info %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <i data-lucide="book-x" class="h-12 w-12 text-yellow-600 mx-auto mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes cursos matriculados</h3>
+        <p class="text-gray-600">Contacta con tu coordinador académico para realizar tu matrícula.</p>
+    </div>
+    {% else %}
+    <!-- Lista de Cursos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {% for info in courses_info %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div class="p-6">
+                <!-- Header del Curso -->
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ info.course.name }}</h3>
+                        <p class="text-sm text-gray-600">{{ info.course.code }} - Grupo {{ info.course_group.group_code }}</p>
+                    </div>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Activo
+                    </span>
+                </div>
+
+                <!-- Información del Profesor -->
+                {% if info.teacher %}
+                <div class="flex items-center text-sm text-gray-600 mb-4">
+                    <i data-lucide="user" class="h-4 w-4 mr-2"></i>
+                    <span>{{ info.teacher.user.get_full_name }}</span>
+                </div>
+                {% endif %}
+
+                <!-- Progreso del Curso -->
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-700">Progreso del curso</span>
+                        <span class="text-gray-600">{{ info.progress_info.progress_percentage|floatformat:1 }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                            style="width: {{ info.progress_info.progress_percentage }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Semana {{ info.progress_info.current_week }} de {{ info.progress_info.total_weeks }}
+                    </p>
+                </div>
+
+                <!-- Información adicional -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-600 mb-1">Créditos</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ info.course.credits }}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-600 mb-1">Horas/semana</p>
+                        <p class="text-sm font-semibold text-gray-900">
+                            {{ info.course.theory_hours|add:info.course.practice_hours }}h
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                    {% if info.has_syllabus %}
+                    <a href="{% url 'estudiante:curso_temario' info.course_group.id %}"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
+                        <i data-lucide="book-open" class="h-4 w-4 mr-2"></i>
+                        Ver Temario
+                    </a>
+                    {% else %}
+                    <span class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm cursor-not-allowed">
+                        <i data-lucide="book-x" class="h-4 w-4 mr-2"></i>
+                        Temario no disponible
+                    </span>
+                    {% endif %}
+                    
+                    <div class="flex items-center space-x-2">
+                        <button 
+                            class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Ver notas">
+                            <i data-lucide="file-text" class="h-4 w-4"></i>
+                        </button>
+                        <button 
+                            class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Ver horario">
+                            <i data-lucide="calendar" class="h-4 w-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Información adicional -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <i data-lucide="info" class="h-5 w-5 text-blue-600 mr-3 mt-0.5"></i>
+            <div class="flex-1">
+                <h4 class="text-sm font-semibold text-blue-900 mb-1">Información</h4>
+                <p class="text-sm text-blue-800">
+                    El temario de cada curso muestra el contenido completo del semestre. 
+                    El progreso se actualiza automáticamente según el avance de las semanas.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

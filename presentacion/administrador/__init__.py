@@ -1,0 +1,1 @@
+# Submódulo administrador para el panel administrativo
