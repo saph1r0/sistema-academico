@@ -6,6 +6,7 @@ Vistas para gestión de asistencia del profesor
 Registro simple: PRESENTE/FALTA
 """
 
+from repositorio.postgres_repository.models import TeacherAttendance
 from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
@@ -211,12 +212,14 @@ class asistencia(ProfesorRequiredMixin, TemplateView):
                         request, 
                         f'Todos los estudiantes marcados como presentes. '
                         f'Registros creados: {resultado["created"]}, actualizados: {resultado["updated"]}'
-                    )
+                    )            
+                    registrar_asistencia_profesor(teacher, course_group, fecha, request)
+
                     if resultado['errors']:
                         messages.warning(request, f'Errores encontrados: {len(resultado["errors"])}')
                 else:
                     messages.error(request, f'Error: {resultado["error"]}')
-            
+
             elif accion == 'registrar_asistencia':
                 resultado = self._registrar_asistencia_individual(teacher, course_group, fecha, request.POST)
                 
@@ -226,6 +229,8 @@ class asistencia(ProfesorRequiredMixin, TemplateView):
                         f'Asistencia registrada exitosamente. '
                         f'Registros creados: {resultado["created"]}, actualizados: {resultado["updated"]}'
                     )
+                    registrar_asistencia_profesor(teacher, course_group, fecha, request)
+
                     if resultado['errors']:
                         messages.warning(request, f'Errores encontrados: {len(resultado["errors"])}')
                 else:
@@ -664,3 +669,16 @@ class ProfesorAsistenciaHistorialView(ProfesorRequiredMixin, TemplateView):
             return []
         except Exception as e:
             return []
+        
+def registrar_asistencia_profesor(teacher, course_group, fecha, request):
+    """Crea un registro de asistencia del profesor si no existe."""
+    TeacherAttendance.objects.get_or_create(
+        teacher=teacher,
+        course_group=course_group,
+        login_time=timezone.make_aware(
+            timezone.datetime.combine(fecha, timezone.now().time())
+        ),
+        defaults={
+            "ip_address": request.META.get("REMOTE_ADDR", "0.0.0.0")
+        }
+    )

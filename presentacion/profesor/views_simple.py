@@ -86,9 +86,14 @@ class ProfesorDashboardView(LoginRequiredMixin, TemplateView):
                     porcentaje_asistencia = 85.0
                 
                 curso_info = {
-                    'curso': curso,
-                    'total_estudiantes': estudiantes_matriculados,
-                    'progreso_porcentaje': progreso,
+                    'id': curso.id,
+                    'nombre': curso.course.name,
+                    'codigo': curso.course.code,
+                    'grupo': curso.group_code,
+                    'estudiantes_matriculados': estudiantes_matriculados,
+                    'avance_porcentaje': progreso,
+                    'horarios': curso.schedule_info or [],
+
                     'clases_asistidas': curso.classes_attended_by_teacher or 0,
                     'total_clases_programadas': curso.total_planned_classes or 68,
                     'porcentaje_asistencia_docente': round(porcentaje_asistencia, 1),
@@ -96,15 +101,15 @@ class ProfesorDashboardView(LoginRequiredMixin, TemplateView):
                     'temas_completados': temas_completados,
                     'estado': estado,
                     'estado_color': estado_color,
-                    'progress_stats': {'success': True}
                 }
+
                 
                 cursos_con_estadisticas.append(curso_info)
                 total_estudiantes += estudiantes_matriculados
             
             # Calcular promedio de progreso de todos los cursos
             if cursos_con_estadisticas:
-                promedio_progreso = sum(c['progreso_porcentaje'] for c in cursos_con_estadisticas) / len(cursos_con_estadisticas)
+                promedio_progreso = sum(c['avance_porcentaje'] for c in cursos_con_estadisticas) / len(cursos_con_estadisticas)
                 promedio_asistencia = sum(c['porcentaje_asistencia_docente'] for c in cursos_con_estadisticas) / len(cursos_con_estadisticas)
             else:
                 promedio_progreso = 0
