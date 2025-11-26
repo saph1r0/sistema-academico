@@ -3,8 +3,29 @@
 {% block title %}Mi Horario - Portal Docente{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+
+    <style>
+    /* Aumentar la altura de cada fila de tiempo */
+    .fc .fc-timegrid-slot {
+        height: 3.5rem;  /* prueba 3.5rem, 4rem o incluso 60px */
+    }
+
+    /* Asegurar que los eventos no queden demasiado comprimidos */
+    .fc .fc-timegrid-event {
+        min-height: 2.5rem;
+    }
+
+    /* Permitir varias líneas de texto dentro del evento */
+    .fc .fc-event-main-frame,
+    .fc .fc-event-title,
+    .fc .fc-event-title-container {
+        white-space: normal !important;
+        overflow: visible !important;
+    }
+    </style>
 {% endblock %}
+
 
 {% block content %}
 <div class="space-y-6">
@@ -275,22 +296,28 @@
             eventClick: function (info) {
                 mostrarDetalleEvento(info.event);
             },
+
             eventContent: function (arg) {
+                const aula = arg.event.extendedProps.aula || '';
+
                 return {
                     html: `
-                    <div class="fc-event-main-frame p-1">
-                        <div class="fc-event-title-container">
-                            <div class="fc-event-title font-semibold text-xs">
-                                ${arg.event.title}
+                        <div class="fc-event-main-frame">
+                            <div class="fc-event-title-container">
+                                <div class="fc-event-title font-semibold"
+                                    style="font-size:11px; line-height:1.1;">
+                                    ${arg.event.title}
+                                </div>
+                            </div>
+                            <div class="fc-event-desc"
+                                style="font-size:10px; line-height:1.1; opacity:0.85;">
+                                ${aula}
                             </div>
                         </div>
-                        <div class="fc-event-desc text-xs opacity-90">
-                            ${arg.event.extendedProps.aula || ''}
-                        </div>
-                    </div>
-                `
-                };
-            }
+                    `
+    };
+}
+
         });
 
         calendar.render();
