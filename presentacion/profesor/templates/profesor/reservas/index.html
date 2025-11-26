@@ -120,6 +120,34 @@
                     </ul>
                 </div>
             </div>
+        
+        <!-- NUEVO: Mis reservas -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Mis reservas</h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Reservas creadas por ti para la fecha y franja horaria seleccionadas.
+                    </p>
+                </div>
+                <div class="p-6">
+                    <table class="min-w-full text-sm text-gray-700">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-1 pr-3 font-semibold">Aula</th>
+                                <th class="text-left py-1 pr-3 font-semibold">Fecha</th>
+                                <th class="text-left py-1 font-semibold">Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="misReservasBody">
+                            <tr>
+                                <td colspan="3" class="py-2 text-center text-gray-500">
+                                    No tienes reservas para la fecha y hora seleccionadas.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -194,6 +222,8 @@
         const btnLimpiar = document.getElementById('btnLimpiar');
         const resumenDia = document.getElementById('resumenDia');
         const horaSelect = document.getElementById('hora');
+        const misReservasBody = document.getElementById('misReservasBody');
+
 
         // ==========================
         // CSRF helpers
@@ -294,6 +324,8 @@
                 const data = await res.json();
                 pintarEstado(data?.occupied || []);
                 actualizarResumen(data?.occupied || []);
+                actualizarMisReservas(data?.occupied || []);
+
             } catch (err) {
                 console.error("Fallo de red:", err);
                 alert("No se pudo contactar al servidor.");
@@ -377,6 +409,53 @@
                 resumenDia.appendChild(li);
             });
         }
+
+        function actualizarMisReservas(occupied) {
+            const date = fechaInput.value;
+            const { slot } = selectedTimes();
+
+            // Limpiamos tabla
+            misReservasBody.innerHTML = '';
+
+            if (!date || !slot) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+            <td colspan="3" class="py-2 text-center text-gray-500">
+                Selecciona fecha y franja horaria.
+            </td>`;
+                misReservasBody.appendChild(tr);
+                return;
+            }
+
+            // Filtramos solo las reservas del profesor en sesión
+            const mias = (occupied || []).filter(o =>
+                o.reason === 'reservation' && o.mine
+            );
+
+            if (mias.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+            <td colspan="3" class="py-2 text-center text-gray-500">
+                No tienes reservas para la fecha y hora seleccionadas.
+            </td>`;
+                misReservasBody.appendChild(tr);
+                return;
+            }
+
+            // Ordenar por aula
+            mias.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+
+            mias.forEach(o => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+            <td class="py-1 pr-3">${o.code || '-'}</td>
+            <td class="py-1 pr-3">${date}</td>
+            <td class="py-1">${slot}</td>
+        `;
+                misReservasBody.appendChild(tr);
+            });
+        }
+        
 
         // ==========================
         // API: Crear / Eliminar reserva
