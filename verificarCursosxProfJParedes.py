@@ -17,17 +17,3 @@ print("Periodo activo:", periodo_activo)
 # 3. Ver TODOS los CourseGroup del profesor en el período activo
 course_groups = (
     CourseGroup.objects
-    .filter(teacher=teacher, academic_period=periodo_activo)
-    .select_related('course')
-    .prefetch_related('horarios')
-)
-
-print("\n=== COURSE GROUPS DEL PROFESOR (PERIODO ACTIVO) ===")
-for cg in course_groups:
-    print(
-        f"- cg_id={cg.id} | {cg.course.code} {cg.course.name} | "
-        f"Grupo={cg.group_code} | horarios={cg.horarios.count()}"
-    )
-    for h in cg.horarios.all():
-        aula_codigo = h.aula.codigo if h.aula else None
-        print(f"    · {h.dia_semana} {h.hora_inicio}-{h.hora_fin} | Aula={aula_codigo}")

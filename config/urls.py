@@ -30,7 +30,7 @@ urlpatterns = [
     # Role-based modules with namespaces
     path('administrador/', include('presentacion.administrador.urls', namespace='administrador')),
     path('profesor/', include('presentacion.profesor.urls', namespace='profesor')),
-    #path('secretario/', include('presentacion.secretario.urls', namespace='secretario')),
+    path('secretario/', include('presentacion.secretario.urls', namespace='secretario')),
     path('estudiante/', include('presentacion.estudiante.urls', namespace='estudiante')),
     path('login/', include('presentacion.login.urls', namespace='login')),
     

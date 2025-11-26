@@ -22,7 +22,7 @@ from .mixins import EstudianteRequiredMixin
 from servicios.servicioMatricula import ServicioMatricula
 from servicios.servicioAsistencia import ServicioAsistencia
 from servicios.servicioAvance import ServicioAvance
-#from servicios.servicioReservas import ServicioReservas
+from servicios.servicioReservas import servicio_reservas
 from servicios.servicioNotas import ServicioNotas, servicio_notas
 from servicios.servicioHorario import ServicioHorario
 from servicios.servicioEstudianteData import ServicioEstudianteData

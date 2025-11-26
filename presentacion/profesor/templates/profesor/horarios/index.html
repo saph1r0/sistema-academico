@@ -13,7 +13,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Mi Horario</h1>
-                <p class="text-gray-600 mt-1">Clases y laboratorios que dicto en el período académico</p>
+                <p class="text-gray-600 mt-1">Horarios de clases y laboratorios CONFIRMADOS que dicto en el período académico</p>
                 {% if teacher_name %}
                     <p class="text-sm text-gray-500 mt-1">
                         Profesor: <span class="font-semibold">{{ teacher_name }}</span>
@@ -103,16 +103,11 @@
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-900">Horario Semanal</h2>
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Horario Semanal 
+                    <span class="text-sm font-bold text-gray-600">(Cursos y laboratorios con horarios asignados)</span>
+                </h2>
                 <div class="flex items-center space-x-4">
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-                        <span class="text-sm text-gray-600">Clases</span>
-                    </div>
-                    <div class="flex items-center">
-                        <div class="w-4 h-4 bg-red-600 rounded mr-2"></div>
-                        <span class="text-sm text-gray-600">Laboratorios</span>
-                    </div>
                 </div>
             </div>
         </div>
@@ -185,30 +180,77 @@ async function cargarHorario() {
 }
 
 function actualizarEstadisticas(data) {
-    // Soporta tanto nombres en inglés como en español
-    const totalCursos = (data.total_cursos !== undefined ? data.total_cursos : data.total_courses) || 0;
-    const totalLabs = (data.total_laboratorios !== undefined ? data.total_laboratorios : data.total_labs) || 0;
+    let horasClases = 0;
+    let horasLabs   = 0;
+    let aulasSet    = new Set();
 
-    document.getElementById('total-cursos').textContent = totalCursos;
-    document.getElementById('total-labs').textContent = totalLabs;
-
-    let totalHoras = 0;
-    const aulasSet = new Set();
+    // Para contar cursos y labs sin duplicados
+    const cursosSet = new Set();   // solo clases
+    const labsSet   = new Set();   // solo labs
 
     (data.events || []).forEach(event => {
-        const [startH, startM] = event.startTime.split(':').map(Number);
-        const [endH, endM] = event.endTime.split(':').map(Number);
-        const duracion = ((endH * 60 + endM) - (startH * 60 + startM)) / 60;
-        totalHoras += duracion;
+        const props = event.extendedProps || {};
 
-        if (event.extendedProps && event.extendedProps.aula) {
-            aulasSet.add(event.extendedProps.aula);
+        // 1) Detectar si es laboratorio
+        let isLab = false;
+
+        if (props.type === 'laboratorio') {
+            isLab = true;
+        } else if (props.aula) {
+            const aulaLower = String(props.aula).toLowerCase();
+            if (aulaLower.includes('lab')) {  // ej: "LAB 101", "lab-203"
+                isLab = true;
+            }
+        }
+
+        // 2) Calcular horas de este evento
+        if (!event.startTime || !event.endTime) return;
+
+        const [startH, startM] = event.startTime.split(':').map(Number);
+        const [endH,   endM]   = event.endTime.split(':').map(Number);
+        const duracion = ((endH * 60 + endM) - (startH * 60 + startM)) / 60;
+
+        if (isLab) {
+            horasLabs += duracion;
+        } else {
+            horasClases += duracion;
+        }
+
+        // 3) Sets de cursos / labs (clave: codigo+grupo o título)
+        const codigo = props.codigo || event.title || '';
+        const grupo  = props.grupo || '';
+        const key    = `${codigo}|${grupo}`;
+
+        if (isLab) {
+            labsSet.add(key);
+        } else {
+            cursosSet.add(key);
+        }
+
+        // 4) Aulas distintas
+        if (props.aula) {
+            aulasSet.add(props.aula);
         }
     });
 
-    document.getElementById('total-horas').textContent = Math.round(totalHoras);
-    document.getElementById('total-aulas').textContent = aulasSet.size;
+    const totalHoras = horasClases + horasLabs;
+
+    // Pintar estadísticas
+    const elTotalCursos = document.getElementById('total-cursos');
+    const elTotalLabs   = document.getElementById('total-labs');
+    const elHorasClases = document.getElementById('horas-clases');
+    const elHorasLabs   = document.getElementById('horas-labs');
+    const elTotalHoras  = document.getElementById('total-horas'); // si lo usas
+    const elTotalAulas  = document.getElementById('total-aulas');
+
+    if (elTotalCursos) elTotalCursos.textContent = cursosSet.size;
+    if (elTotalLabs)   elTotalLabs.textContent   = labsSet.size;
+    if (elHorasClases) elHorasClases.textContent = Math.round(horasClases);
+    if (elHorasLabs)   elHorasLabs.textContent   = Math.round(horasLabs);
+    if (elTotalHoras)  elTotalHoras.textContent  = Math.round(totalHoras);
+    if (elTotalAulas)  elTotalAulas.textContent  = aulasSet.size;
 }
+
 
 function inicializarCalendario(events) {
     const calendarEl = document.getElementById('calendar');
@@ -253,17 +295,40 @@ function inicializarCalendario(events) {
     calendar.render();
 }
 
+function esLaboratorio(event) {
+    const props = event.extendedProps || {};
+
+    // 1) Si el backend ya marcó el tipo
+    if (props.type === 'laboratorio') {
+        return true;
+    }
+
+    // 2) Heurística por aula
+    if (props.aula) {
+        const aulaLower = String(props.aula).toLowerCase();
+        if (aulaLower.includes('lab')) {   // LAB 101, lab-203, etc.
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 function llenarListaClases(events) {
     const container = document.getElementById('lista-clases');
-    const clases = (events || []).filter(e => e.extendedProps && e.extendedProps.type === 'clase');
+
+    // Tomamos solo los que NO son laboratorio
+    const clases = (events || []).filter(e => !esLaboratorio(e));
 
     // Agrupar por curso + grupo
     const mapa = new Map();
 
     clases.forEach(clase => {
-        const codigo = clase.extendedProps.codigo || '';
-        const grupo = clase.extendedProps.grupo || '';
-        const key = `${codigo}_${grupo}`;
+        const props  = clase.extendedProps || {};
+        const codigo = props.codigo || clase.title || '';
+        const grupo  = props.grupo || '';
+        const key    = `${codigo}_${grupo}`;
 
         if (!mapa.has(key)) {
             mapa.set(key, clase);
@@ -310,13 +375,18 @@ function llenarListaClases(events) {
 
 function llenarListaLaboratorios(events) {
     const container = document.getElementById('lista-laboratorios');
-    const labs = (events || []).filter(e => e.extendedProps && e.extendedProps.type === 'laboratorio');
 
+    // Solo los que detectamos como laboratorio
+    const labs = (events || []).filter(e => esLaboratorio(e));
+
+    // Agrupar por código + grupo (por si un lab tiene varios bloques)
     const mapa = new Map();
 
     labs.forEach(lab => {
-        const codigo = lab.extendedProps.codigo || lab.title || '';
-        const key = codigo;
+        const props  = lab.extendedProps || {};
+        const codigo = props.codigo || lab.title || '';
+        const grupo  = props.grupo || '';
+        const key    = `${codigo}_${grupo}`;
 
         if (!mapa.has(key)) {
             mapa.set(key, lab);
@@ -345,6 +415,7 @@ function llenarListaLaboratorios(events) {
                     <h4 class="text-sm font-medium text-gray-900">${lab.title}</h4>
                     <p class="text-xs text-gray-600 mt-1">
                         ${lab.extendedProps.codigo || ''}
+                        ${lab.extendedProps.grupo ? ' - Grupo ' + lab.extendedProps.grupo : ''}
                     </p>
                     <div class="mt-2 space-y-1">
                         <p class="text-xs text-gray-500">
@@ -362,6 +433,7 @@ function llenarListaLaboratorios(events) {
         </div>
     `).join('');
 }
+
 
 function obtenerDiasHorario(events, evento) {
     const diasNombres = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
