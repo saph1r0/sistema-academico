@@ -9,6 +9,7 @@ from . import api_views
 from . import views_grade_upload
 from . import views_asistencia
 from . import views_reservas
+from . import views_horario
 
 
 from .views_silabo import (
@@ -60,5 +61,9 @@ urlpatterns = [
      path('silabo/', ProfesorSilaboView.as_view(), name='silabo'),
     path('silabo/subir/', SubirSilaboView.as_view(), name='subir_silabo'),
     path('silabo/editar/', EditarSilaboView.as_view(), name='editar_silabo'), 
-
+    
+   
+    path('horario/', views_horario.TeacherScheduleView.as_view(), name='horario'),
+    path('horario/api/', views_horario.GetTeacherScheduleView.as_view(), name='horario_api'),
 ]
+
