@@ -112,7 +112,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'modelsistak',
         'USER': 'postgres',
-        'PASSWORD': '913337240',
+        'PASSWORD': '131070',
         'HOST': 'localhost',
         'PORT': '5432',
     }

@@ -54,8 +54,7 @@
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-600">Mi Asistencia</p>
-                    <p class="text-2xl font-bold text-gray-900">{{
-                        asistencia_propia.porcentaje|default:1|default:"0.0" }}%</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ porcentaje_asistencia_general|default:0 }}%</p>
                 </div>
             </div>
         </div>
@@ -105,8 +104,7 @@
                                             <div class="bg-green-600 h-2 rounded-full"
                                                 style="width: {{ curso.avance_porcentaje }}%"></div>
                                         </div>
-                                        <span class="text-sm font-medium text-gray-900">{{
-                                            curso.avance_porcentaje|default:0 }}%</span>
+                                        <span class="text-sm font-medium text-gray-900">{{curso_info.avance_porcentaje|default:0 }}%</span>
                                     </div>
                                 </div>
                             </div>
@@ -122,8 +120,10 @@
                             </div>
 
                             <!-- Acciones rápidas -->
+                            
                             <div class="mt-3 flex space-x-2">
-                                <a href="{% url 'profesor:asistencia' %}?curso={{ curso.id }}"
+
+                               <a href="{% url 'profesor:asistencia' %}?curso={{ curso.id }}"
                                     class="text-xs text-blue-600 hover:text-blue-700">
                                     Registrar Asistencia
                                 </a>
@@ -165,6 +165,12 @@
                         <i data-lucide="calendar-check" class="h-5 w-5 text-gray-400 mr-3"></i>
                         Registrar Asistencia
                     </a>
+                    <a href="{% url 'profesor:mi_asistencia' %}"
+                        class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i data-lucide="clock" class="h-5 w-5 text-gray-400 mr-3"></i>
+                        Mi Asistencia
+                    </a>
+
                     <a href="{% url 'profesor:notas' %}"
                         class="flex items-center p-3 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                         <i data-lucide="file-text" class="h-5 w-5 text-gray-400 mr-3"></i>

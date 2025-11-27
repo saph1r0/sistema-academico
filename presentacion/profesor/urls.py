@@ -9,6 +9,7 @@ from . import api_views
 from . import views_grade_upload
 from . import views_asistencia
 from . import api_reservas
+from . import views_asistencia_profesor
 from . import views_reportes
 
 from .views_silabo import (
@@ -26,8 +27,11 @@ from .views_exam_accreditation import (
 )
 urlpatterns = [
     # Vista principal simplificada
+    path("", views_simple.ProfesorDashboardView.as_view(), name="home"),
+
+    # Vista principal simplificada
     path('dashboard/', views_simple.ProfesorDashboardView.as_view(), name='dashboard'),
-    
+
     # Vista de detalle de curso
     path('curso/<uuid:course_group_id>/', views_simple.ProfesorCourseDetailView.as_view(), name='course_detail'),
     
@@ -40,6 +44,7 @@ urlpatterns = [
     path('notas/plantilla/descargar/', views_grade_upload.DownloadExcelTemplateView.as_view(), name='download_excel_template'),
     
     # Gestión de asistencia
+    path('mi-asistencia/', views_asistencia_profesor.ProfesorAsistenciaPersonalView.as_view(), name='mi_asistencia'),
     path('asistencia/', views_asistencia.asistencia.as_view(), name='asistencia'),
     path('asistencia/historial/', views_asistencia.ProfesorAsistenciaHistorialView.as_view(), name='asistencia_historial'),
     path('asistencia/reporte/', views_asistencia.ProfesorReporteAsistenciaView.as_view(), name='asistencia_reporte'),
