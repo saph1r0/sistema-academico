@@ -11,6 +11,7 @@ from . import views_asistencia
 from . import views_reservas
 from . import views_asistencia_profesor
 from . import views_reportes
+from . import views_horario
 
 from .views_silabo import (
     ProfesorSilaboView,
@@ -80,4 +81,8 @@ urlpatterns = [
     #REPORTESxDOCENTE
     path('reportes/', views_reportes.ReportesView.as_view(), name='reportes'),
     path('reportes/pdf/', views_reportes.GenerarPDFView.as_view(), name='reportes_pdf'),
+    
+    #HORARIOS
+    path('horario/', views_horario.TeacherScheduleView.as_view(), name='horario'),
+    path('horario/api/', views_horario.GetTeacherScheduleView.as_view(), name='horario_api'),
 ]

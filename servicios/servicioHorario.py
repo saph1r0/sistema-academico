@@ -187,6 +187,176 @@ class ServicioHorario:
             'total_courses': enrollments.count(),
             'total_labs': lab_enrollments.count()
         }
+        
+    def obtener_horario_profesor(self, teacher_id: int) -> Dict:
+        """
+        Obtiene el horario completo del profesor (todas sus secciones + laboratorios)
+        en el período académico activo.
+
+        Formato compatible con FullCalendar (igual que en estudiante).
+        """
+        try:
+            teacher = Teacher.objects.select_related('user').get(id=teacher_id)
+        except Teacher.DoesNotExist:
+            return {
+                'success': False,
+                'error': 'Profesor no encontrado',
+                'events': []
+            }
+
+        if not self.periodo_activo:
+            return {
+                'success': False,
+                'error': 'No hay período académico activo',
+                'events': []
+            }
+
+        events: List[Dict] = []
+        color_index = 0
+
+        # ==========================================================
+        # 1) OBTENER TODOS LOS COURSE_GROUP DONDE PARTICIPA EL PROFESOR
+        #    - Como docente principal del curso (course_group.teacher)
+        #    - Como docente de un laboratorio de ese curso (laboratory.teacher)
+        # ==========================================================
+
+        # IDs de CourseGroup donde el profesor dicta laboratorio
+        lab_coursegroup_ids = (
+            Laboratory.objects
+            .filter(
+                teacher=teacher,
+                course_group__academic_period=self.periodo_activo
+            )
+            .exclude(course_group__isnull=True)
+            .values_list('course_group_id', flat=True)
+            .distinct()
+        )
+
+        course_groups = (
+            CourseGroup.objects
+            .filter(
+                academic_period=self.periodo_activo
+            )
+            .filter(
+                Q(teacher=teacher) | Q(id__in=lab_coursegroup_ids)
+            )
+            .select_related(
+                'course',
+                'teacher__user',
+            )
+            .prefetch_related(
+                Prefetch(
+                    'horarios',
+                    queryset=Horario.objects.select_related('aula')
+                )
+            )
+            .order_by('course__name', 'group_code')
+            .distinct()
+        )
+
+        # ==========================================================
+        # 2) GENERAR EVENTOS PARA CADA HORARIO DE CADA COURSE_GROUP
+        # ==========================================================
+        for course_group in course_groups:
+            color = self.COLORES_CURSOS[color_index % len(self.COLORES_CURSOS)]
+
+            for horario in course_group.horarios.all():
+                events.append({
+                    'id': f'clase_{horario.id}',
+                    'title': course_group.course.name,
+                    'daysOfWeek': [self.DIAS_SEMANA.get(horario.dia_semana.lower(), 1)],
+                    'startTime': parse_time(horario.hora_inicio).strftime('%H:%M'),
+                    'endTime': parse_time(horario.hora_fin).strftime('%H:%M'),
+                    'color': color,
+                    'extendedProps': {
+                        'type': 'clase',
+                        'codigo': course_group.course.code,
+                        'grupo': course_group.group_code,
+                        'profesor': course_group.teacher.user.get_full_name()
+                                     if course_group.teacher else 'Sin asignar',
+                        'aula': (
+                            horario.aula.codigo
+                            if hasattr(horario, 'aula') and horario.aula
+                            else 'Por asignar'
+                        ),
+                        'creditos': getattr(course_group.course, 'credits', None),
+                        'dia': horario.dia_semana.capitalize(),
+                    }
+                })
+
+            color_index += 1
+
+        # ==========================================================
+        # 3) LABORATORIOS DONDE PARTICIPA EL PROFESOR
+        #    (como responsable del lab o como docente del CourseGroup)
+        # ==========================================================
+        laboratories = (
+            Laboratory.objects
+            .filter(
+                Q(teacher=teacher) | Q(course_group__teacher=teacher),
+                course_group__academic_period=self.periodo_activo
+            )
+            .select_related(
+                'course_group__course',
+                'teacher__user',
+            )
+            .order_by('course_group__course__name', 'lab_code')
+            .distinct()
+        )
+
+        for lab in laboratories:
+            lab_horarios = (
+                Horario.objects
+                .filter(laboratory=lab)
+                .select_related('aula')
+            )
+
+            for horario in lab_horarios:
+                events.append({
+                    'id': f'lab_{horario.id}',
+                    'title': f'{lab.course_group.course.name} - LAB',
+                    'daysOfWeek': [self.DIAS_SEMANA.get(horario.dia_semana.lower(), 1)],
+                    'startTime': parse_time(horario.hora_inicio).strftime('%H:%M'),
+                    'endTime': parse_time(horario.hora_fin).strftime('%H:%M'),
+                    'color': '#dc2626',  # rojo laboratorios
+                    'extendedProps': {
+                        'type': 'laboratorio',
+                        'codigo': lab.lab_code,
+                        'curso': lab.course_group.course.name,
+                        'grupo': lab.course_group.group_code,
+                        'profesor': (
+                            lab.teacher.user.get_full_name()
+                            if lab.teacher
+                            else teacher.user.get_full_name()
+                        ),
+                        'aula': (
+                            horario.aula.codigo
+                            if hasattr(horario, 'aula') and horario.aula
+                            else lab.lab_room
+                        ),
+                        'capacidad': lab.capacity,
+                        'dia': horario.dia_semana.capitalize(),
+                    }
+                })
+
+        # ==========================================================
+        # 4) RESUMEN
+        # ==========================================================
+        return {
+            'success': True,
+            'teacher_name': teacher.user.get_full_name(),
+            'events': events,
+            'total_eventos': len(events),
+
+            # Totales en español
+            'total_cursos': course_groups.count(),
+            'total_laboratorios': laboratories.count(),
+
+            # Alias en inglés para que el JS actual funcione sin romper nada
+            'total_courses': course_groups.count(),
+            'total_labs': laboratories.count(),
+        }
+
     
     def obtener_laboratorios_estudiante(self, student_id: int) -> Dict:
         """Obtiene solo los laboratorios matriculados del estudiante"""

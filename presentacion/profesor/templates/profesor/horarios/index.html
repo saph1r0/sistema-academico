@@ -1,0 +1,518 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Mi Horario - Portal Docente{% endblock %}
+
+{% block extra_css %}
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+
+    <style>
+    /* Aumentar la altura de cada fila de tiempo */
+    .fc .fc-timegrid-slot {
+        height: 3.5rem;  /* prueba 3.5rem, 4rem o incluso 60px */
+    }
+
+    /* Asegurar que los eventos no queden demasiado comprimidos */
+    .fc .fc-timegrid-event {
+        min-height: 2.5rem;
+    }
+
+    /* Permitir varias líneas de texto dentro del evento */
+    .fc .fc-event-main-frame,
+    .fc .fc-event-title,
+    .fc .fc-event-title-container {
+        white-space: normal !important;
+        overflow: visible !important;
+    }
+    </style>
+{% endblock %}
+
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Mi Horario</h1>
+                <p class="text-gray-600 mt-1">Horarios de clases y laboratorios CONFIRMADOS que dicto en el período
+                    académico</p>
+                {% if teacher_name %}
+                <p class="text-sm text-gray-500 mt-1">
+                    Profesor: <span class="font-semibold">{{ teacher_name }}</span>
+                </p>
+                {% endif %}
+                {% if not success and error %}
+                <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+                {% endif %}
+            </div>
+            <div class="flex space-x-3">
+                <button type="button" onclick="exportarPDF()"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Descargar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen estadístico -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-blue-50 rounded-full">
+                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Cursos</p>
+                    <p id="total-cursos" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-red-50 rounded-full">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Laboratorios</p>
+                    <p id="total-labs" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-green-50 rounded-full">
+                    <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Horas Semanales</p>
+                    <p id="total-horas" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <div class="flex items-center">
+                <div class="p-3 bg-purple-50 rounded-full">
+                    <svg class="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">Aulas Diferentes</p>
+                    <p id="total-aulas" class="text-2xl font-bold text-gray-900">-</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendario de horario -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">
+                    Horario Semanal
+                    <span class="text-sm font-bold text-gray-600">(Cursos y laboratorios con horarios asignados)</span>
+                </h2>
+                <div class="flex items-center space-x-4">
+                </div>
+            </div>
+        </div>
+
+        <div id="calendar" class="p-6"></div>
+    </div>
+
+    <!-- Lista de eventos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Clases -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Mis Clases</h3>
+            </div>
+            <div id="lista-clases" class="divide-y divide-gray-200">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Laboratorios -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Mis Laboratorios</h3>
+            </div>
+            <div id="lista-laboratorios" class="divide-y divide-gray-200">
+                <!-- Se llenará dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+<script>
+    let calendar;
+    let horarioData = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        cargarHorario();
+    });
+
+    async function cargarHorario() {
+        try {
+            const response = await fetch("{% url 'profesor:horario_api' %}");
+            const data = await response.json();
+
+            if (!data.success) {
+                mostrarError(data.error || 'Error al cargar el horario');
+                return;
+            }
+
+            horarioData = data;
+
+            // Actualizar estadísticas
+            actualizarEstadisticas(data);
+
+            // Inicializar calendario
+            inicializarCalendario(data.events);
+
+            // Llenar listas
+            llenarListaClases(data.events);
+            llenarListaLaboratorios(data.events);
+
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarError('Error al conectar con el servidor');
+        }
+    }
+
+    function actualizarEstadisticas(data) {
+        let horasClases = 0;
+        let horasLabs = 0;
+        let aulasSet = new Set();
+
+        // Para contar cursos y labs sin duplicados
+        const cursosSet = new Set();   // solo clases
+        const labsSet = new Set();   // solo labs
+
+        (data.events || []).forEach(event => {
+            const props = event.extendedProps || {};
+
+            // 1) Detectar si es laboratorio
+            let isLab = false;
+
+            if (props.type === 'laboratorio') {
+                isLab = true;
+            } else if (props.aula) {
+                const aulaLower = String(props.aula).toLowerCase();
+                if (aulaLower.includes('lab')) {  // ej: "LAB 101", "lab-203"
+                    isLab = true;
+                }
+            }
+
+            // 2) Calcular horas de este evento
+            if (!event.startTime || !event.endTime) return;
+
+            const [startH, startM] = event.startTime.split(':').map(Number);
+            const [endH, endM] = event.endTime.split(':').map(Number);
+            const duracion = ((endH * 60 + endM) - (startH * 60 + startM)) / 60;
+
+            if (isLab) {
+                horasLabs += duracion;
+            } else {
+                horasClases += duracion;
+            }
+
+            // 3) Sets de cursos / labs (clave: codigo+grupo o título)
+            const codigo = props.codigo || event.title || '';
+            const grupo = props.grupo || '';
+            const key = `${codigo}|${grupo}`;
+
+            if (isLab) {
+                labsSet.add(key);
+            } else {
+                cursosSet.add(key);
+            }
+
+            // 4) Aulas distintas
+            if (props.aula) {
+                aulasSet.add(props.aula);
+            }
+        });
+
+        const totalHoras = horasClases + horasLabs;
+
+        // Pintar estadísticas
+        const elTotalCursos = document.getElementById('total-cursos');
+        const elTotalLabs = document.getElementById('total-labs');
+        const elHorasClases = document.getElementById('horas-clases');
+        const elHorasLabs = document.getElementById('horas-labs');
+        const elTotalHoras = document.getElementById('total-horas'); // si lo usas
+        const elTotalAulas = document.getElementById('total-aulas');
+
+        if (elTotalCursos) elTotalCursos.textContent = cursosSet.size;
+        if (elTotalLabs) elTotalLabs.textContent = labsSet.size;
+        if (elHorasClases) elHorasClases.textContent = Math.round(horasClases);
+        if (elHorasLabs) elHorasLabs.textContent = Math.round(horasLabs);
+        if (elTotalHoras) elTotalHoras.textContent = Math.round(totalHoras);
+        if (elTotalAulas) elTotalAulas.textContent = aulasSet.size;
+    }
+
+
+    function inicializarCalendario(events) {
+        const calendarEl = document.getElementById('calendar');
+
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'es',
+            headerToolbar: {
+                left: '',
+                center: 'title',
+                right: ''
+            },
+            allDaySlot: false,
+            slotMinTime: '07:00:00',
+            slotMaxTime: '22:00:00',
+            slotDuration: '01:00:00',
+            height: 'auto',
+            expandRows: true,
+            hiddenDays: [0], // ocultar domingo
+            events: events,
+            eventClick: function (info) {
+                mostrarDetalleEvento(info.event);
+            },
+
+            eventContent: function (arg) {
+                const aula = arg.event.extendedProps.aula || '';
+
+                return {
+                    html: `
+                        <div class="fc-event-main-frame">
+                            <div class="fc-event-title-container">
+                                <div class="fc-event-title font-semibold"
+                                    style="font-size:11px; line-height:1.1;">
+                                    ${arg.event.title}
+                                </div>
+                            </div>
+                            <div class="fc-event-desc"
+                                style="font-size:10px; line-height:1.1; opacity:0.85;">
+                                ${aula}
+                            </div>
+                        </div>
+                    `
+    };
+}
+
+        });
+
+        calendar.render();
+    }
+
+    function esLaboratorio(event) {
+        const props = event.extendedProps || {};
+
+        // 1) Si el backend ya marcó el tipo
+        if (props.type === 'laboratorio') {
+            return true;
+        }
+
+        // 2) Heurística por aula
+        if (props.aula) {
+            const aulaLower = String(props.aula).toLowerCase();
+            if (aulaLower.includes('lab')) {   // LAB 101, lab-203, etc.
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    function llenarListaClases(events) {
+        const container = document.getElementById('lista-clases');
+
+        // Tomamos solo los que NO son laboratorio
+        const clases = (events || []).filter(e => !esLaboratorio(e));
+
+        // Agrupar por curso + grupo
+        const mapa = new Map();
+
+        clases.forEach(clase => {
+            const props = clase.extendedProps || {};
+            const codigo = props.codigo || clase.title || '';
+            const grupo = props.grupo || '';
+            const key = `${codigo}_${grupo}`;
+
+            if (!mapa.has(key)) {
+                mapa.set(key, clase);
+            }
+        });
+
+        const clasesUnicas = Array.from(mapa.values());
+
+        if (clasesUnicas.length === 0) {
+            container.innerHTML = '<p class="p-6 text-center text-gray-500">No tienes clases registradas</p>';
+            return;
+        }
+
+        container.innerHTML = clasesUnicas.map(clase => `
+        <div class="p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4 flex-1">
+                    <h4 class="text-sm font-medium text-gray-900">${clase.title}</h4>
+                    <p class="text-xs text-gray-600 mt-1">
+                        ${(clase.extendedProps.codigo || '')}
+                        ${clase.extendedProps.grupo ? ' - Grupo ' + clase.extendedProps.grupo : ''}
+                    </p>
+                    <div class="mt-2 space-y-1">
+                        <p class="text-xs text-gray-500">
+                            <span class="font-medium">Horario:</span> ${obtenerDiasHorario(events, clase)}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            <span class="font-medium">Aula:</span> ${clase.extendedProps.aula || 'Por asignar'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    }
+
+    function llenarListaLaboratorios(events) {
+        const container = document.getElementById('lista-laboratorios');
+
+        // Solo los que detectamos como laboratorio
+        const labs = (events || []).filter(e => esLaboratorio(e));
+
+        // Agrupar por código + grupo (por si un lab tiene varios bloques)
+        const mapa = new Map();
+
+        labs.forEach(lab => {
+            const props = lab.extendedProps || {};
+            const codigo = props.codigo || lab.title || '';
+            const grupo = props.grupo || '';
+            const key = `${codigo}_${grupo}`;
+
+            if (!mapa.has(key)) {
+                mapa.set(key, lab);
+            }
+        });
+
+        const labsUnicos = Array.from(mapa.values());
+
+        if (labsUnicos.length === 0) {
+            container.innerHTML = '<p class="p-6 text-center text-gray-500">No tienes laboratorios a cargo</p>';
+            return;
+        }
+
+        container.innerHTML = labsUnicos.map(lab => `
+        <div class="p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="ml-4 flex-1">
+                    <h4 class="text-sm font-medium text-gray-900">${lab.title}</h4>
+                    <p class="text-xs text-gray-600 mt-1">
+                        ${lab.extendedProps.codigo || ''}
+                        ${lab.extendedProps.grupo ? ' - Grupo ' + lab.extendedProps.grupo : ''}
+                    </p>
+                    <div class="mt-2 space-y-1">
+                        <p class="text-xs text-gray-500">
+                            <span class="font-medium">Horario:</span> ${obtenerDiasHorario(events, lab)}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            <span class="font-medium">Aula:</span> ${lab.extendedProps.aula || 'Por asignar'}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                            <span class="font-medium">Capacidad:</span> ${lab.extendedProps.capacidad || '-'} estudiantes
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    }
+
+
+    function obtenerDiasHorario(events, evento) {
+        const diasNombres = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        const mismos = (events || []).filter(e =>
+            e.title === evento.title &&
+            e.extendedProps.type === evento.extendedProps.type
+        );
+
+        return mismos.map(e => {
+            const diasTexto = (e.daysOfWeek || []).map(d => diasNombres[d]).join(', ');
+            return `${diasTexto} ${e.startTime}-${e.endTime}`;
+        }).join(' | ');
+    }
+
+    function mostrarDetalleEvento(event) {
+        const props = event.extendedProps || {};
+        const tipo = props.type === 'laboratorio' ? 'Laboratorio' : 'Clase';
+
+        const inicio = event.start
+            ? event.start.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+            : '';
+        const fin = event.end
+            ? event.end.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+            : '';
+
+        alert(`
+    ${tipo}: ${event.title}
+    Código: ${props.codigo || ''}
+    ${props.grupo ? 'Grupo: ' + props.grupo : ''}
+    Aula: ${props.aula || 'Por asignar'}
+    Horario: ${inicio} - ${fin}
+        `.trim());
+    }
+
+
+    function exportarPDF() {
+        alert('Funcionalidad de exportación a PDF en desarrollo');
+    }
+
+    function mostrarError(mensaje) {
+        const container = document.getElementById('calendar');
+        container.innerHTML = `
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Error</h3>
+            <p class="mt-1 text-sm text-gray-500">${mensaje}</p>
+        </div>
+    `;
+    }
+</script>
+{% endblock %}
