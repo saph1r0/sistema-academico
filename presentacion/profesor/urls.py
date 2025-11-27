@@ -18,6 +18,11 @@ from .views_silabo import (
 
 app_name = 'profesor'
 
+from .views_exam_accreditation import (
+    TeacherExamAccreditationView,
+    ExamAccreditationUploadAjaxView,
+    ExamAccreditationDownloadView,
+)
 urlpatterns = [
     # Vista principal simplificada
     path('dashboard/', views_simple.ProfesorDashboardView.as_view(), name='dashboard'),
@@ -59,5 +64,10 @@ urlpatterns = [
      path('silabo/', ProfesorSilaboView.as_view(), name='silabo'),
     path('silabo/subir/', SubirSilaboView.as_view(), name='subir_silabo'),
     path('silabo/editar/', EditarSilaboView.as_view(), name='editar_silabo'), 
+
+    #acreditacion examenes
+    path('exam-accreditation/',TeacherExamAccreditationView.as_view(),name='exam_accreditation' ),
+    path('exam-accreditation/upload-ajax/',ExamAccreditationUploadAjaxView.as_view(),name='exam_accreditation_upload_ajax'),
+    path( 'exam-accreditation/download/<uuid:accreditation_id>/<str:file_type>/', ExamAccreditationDownloadView.as_view(),name='exam_accreditation_download'),
 
 ]

@@ -1,0 +1,304 @@
+{% extends 'base_profesor.html' %}
+{% load custom_filters %}
+{% block title %}Acreditación de Exámenes - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Acreditación de Exámenes</h1>
+                <p class="text-gray-600 mt-1">Suba 2 archivos (mejor y peor nota) por cada parcial en formato PDF/PNG</p>
+            </div>
+            <button onclick="openUploadModal()"
+                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <i data-lucide="upload" class="h-4 w-4"></i>
+                <span>Subir Exámenes</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Instrucciones -->
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i data-lucide="alert-circle" class="h-5 w-5 text-amber-600"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-amber-800">Importante</h3>
+                <div class="mt-2 text-sm text-amber-700">
+                    <ul class="list-disc list-inside space-y-1">
+                        <li>Debe subir <strong>2 exámenes por cada parcial</strong>: mejor nota y peor nota</li>
+                        <li>Total: <strong>3 parciales × 2 archivos = 6 exámenes</strong></li>
+                        <li>Solo se aceptan archivos <strong>PDF o PNG</strong></li>
+                        <li>Las estadísticas se calculan <strong>automáticamente</strong></li>
+                        <li>Debe haber <strong>notas registradas</strong> en PhaseGrade</li>
+                        <li>Tamaño máximo: <strong>10MB por archivo</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selección de Curso -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Seleccionar Curso</h3>
+
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+                <select name="course_id" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="">Seleccionar curso...</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}" {% if selected_course and selected_course.id == course.id %}selected{% endif %}>
+                        {{ course.course_name }} - {{ course.group_code }} ({{ course.academic_period }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if selected_course %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Progreso</label>
+                <div class="bg-gray-50 rounded-lg p-3">
+                    <p class="text-sm font-medium text-gray-900">
+                        {{ selected_course.total_uploaded }} / {{ selected_course.total_required }} parciales
+                    </p>
+                    <div class="mt-2 space-y-1">
+                        <p class="text-xs text-gray-600">
+                            {% if selected_course.accreditations_by_parcial.1 %}
+                                <i data-lucide="check-circle" class="h-3 w-3 inline text-green-600"></i>
+                            {% else %}
+                                <i data-lucide="circle" class="h-3 w-3 inline text-gray-400"></i>
+                            {% endif %}
+                            Parcial 1
+                        </p>
+                        <p class="text-xs text-gray-600">
+                            {% if selected_course.accreditations_by_parcial.2 %}
+                                <i data-lucide="check-circle" class="h-3 w-3 inline text-green-600"></i>
+                            {% else %}
+                                <i data-lucide="circle" class="h-3 w-3 inline text-gray-400"></i>
+                            {% endif %}
+                            Parcial 2
+                        </p>
+                        <p class="text-xs text-gray-600">
+                            {% if selected_course.accreditations_by_parcial.3 %}
+                                <i data-lucide="check-circle" class="h-3 w-3 inline text-green-600"></i>
+                            {% else %}
+                                <i data-lucide="circle" class="h-3 w-3 inline text-gray-400"></i>
+                            {% endif %}
+                            Parcial 3
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Lista de Acreditaciones -->
+    {% if selected_course %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Exámenes Acreditados</h3>
+        </div>
+
+        {% if accreditations %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parcial</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mejor Nota</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peor Nota</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estadísticas</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for acc in accreditations %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                                {% if acc.exam_number == 1 %}bg-blue-100 text-blue-800
+                                {% elif acc.exam_number == 2 %}bg-purple-100 text-purple-800
+                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ acc.exam_number_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-2">
+                                {% if acc.best_file.is_pdf %}
+                                <i data-lucide="file-text" class="h-4 w-4 text-red-500"></i>
+                                {% else %}
+                                <i data-lucide="image" class="h-4 w-4 text-blue-500"></i>
+                                {% endif %}
+                                <div>
+                                    <p class="text-sm text-gray-900">{{ acc.best_file.name|truncatechars:25 }}</p>
+                                    <p class="text-xs text-gray-500">{{ acc.best_file.size|filesizeformat }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-2">
+                                {% if acc.worst_file.is_pdf %}
+                                <i data-lucide="file-text" class="h-4 w-4 text-red-500"></i>
+                                {% else %}
+                                <i data-lucide="image" class="h-4 w-4 text-blue-500"></i>
+                                {% endif %}
+                                <div>
+                                    <p class="text-sm text-gray-900">{{ acc.worst_file.name|truncatechars:25 }}</p>
+                                    <p class="text-xs text-gray-500">{{ acc.worst_file.size|filesizeformat }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm space-y-1">
+                                <p><strong>Prom:</strong> {{ acc.statistics.avg|floatformat:2 }}</p>
+                                <p class="text-xs text-gray-600">
+                                    Máx: {{ acc.statistics.max|floatformat:2 }} | 
+                                    Mín: {{ acc.statistics.min|floatformat:2 }}
+                                </p>
+                                <p class="text-xs text-gray-600">
+                                    Estudiantes: {{ acc.statistics.total_students }}
+                                </p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ acc.uploaded_at|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex flex-col space-y-1">
+                                <a href="{% url 'profesor:exam_accreditation_download' acc.id 'best' %}"
+                                   class="text-xs text-blue-600 hover:text-blue-900">
+                                    <i data-lucide="download" class="h-3 w-3 inline"></i> Mejor
+                                </a>
+                                <a href="{% url 'profesor:exam_accreditation_download' acc.id 'worst' %}"
+                                   class="text-xs text-red-600 hover:text-red-900">
+                                    <i data-lucide="download" class="h-3 w-3 inline"></i> Peor
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i data-lucide="file-x" class="h-16 w-16 text-gray-400 mx-auto mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No hay exámenes acreditados</h3>
+            <p class="text-gray-500 mb-4">Comience subiendo los exámenes del primer parcial</p>
+            <button onclick="openUploadModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                Subir Exámenes
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Subida -->
+<div id="uploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-medium text-gray-900">Subir Exámenes</h3>
+                        <button type="button" onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600">
+                            <i data-lucide="x" class="h-5 w-5"></i>
+                        </button>
+                    </div>
+
+                    {% if selected_course %}
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <strong>Curso:</strong> {{ selected_course.course_name }} - {{ selected_course.group_code }}
+                        </p>
+                    </div>
+
+                    <!-- Campo oculto -->
+                    {{ upload_form.course_group_id }}
+
+                    <div class="space-y-4">
+                        <!-- Parcial -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Número de Parcial *</label>
+                            {{ upload_form.exam_number }}
+                            {% for error in upload_form.exam_number.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Mejor Nota -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Examen de Mejor Nota (PDF/PNG) *
+                            </label>
+                            {{ upload_form.best_exam_file }}
+                            {% for error in upload_form.best_exam_file.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Peor Nota -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Examen de Peor Nota (PDF/PNG) *
+                            </label>
+                            {{ upload_form.worst_exam_file }}
+                            {% for error in upload_form.worst_exam_file.errors %}
+                            <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeUploadModal()"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center space-x-2">
+                            <i data-lucide="upload" class="h-4 w-4"></i>
+                            <span>Subir</span>
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <p class="text-gray-600">Debe seleccionar un curso primero</p>
+                        <button type="button" onclick="closeUploadModal()"
+                            class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">Cerrar</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+});
+
+function openUploadModal() {
+    {% if not selected_course %}
+    alert('Debe seleccionar un curso primero');
+    return;
+    {% endif %}
+    document.getElementById('uploadModal').classList.remove('hidden');
+}
+
+function closeUploadModal() {
+    document.getElementById('uploadModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

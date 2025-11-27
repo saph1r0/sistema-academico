@@ -71,6 +71,13 @@
                             <span class="ml-3">Subir Notas Excel</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{% url 'profesor:exam_accreditation' %}"
+                            class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if 'exam_accreditation' in request.resolver_match.url_name %}bg-blue-700{% endif %}">
+                            <span>📊</span>
+                             <span class="ml-3">Acreditación de Exámenes</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
 

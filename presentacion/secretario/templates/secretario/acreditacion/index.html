@@ -1,0 +1,290 @@
+{% extends 'base_secretario.html' %}
+{% load exam_filters %}
+{% block title %}Acreditaciones de Exámenes - Secretaría{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Acreditaciones de Exámenes</h1>
+                <p class="text-gray-600 mt-1">Supervisión de exámenes acreditados por profesores</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 rounded-lg">
+                    <i data-lucide="file-check" class="h-5 w-5 mr-2"></i>
+                    <span class="font-medium">{{ total_accreditations }} acreditaciones</span>
+                </span>
+                <button onclick="window.print()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    <i data-lucide="printer" class="h-4 w-4 inline mr-2"></i>
+                    Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Filtros de Búsqueda</h3>
+            <button onclick="clearFilters()" class="text-sm text-purple-600 hover:text-purple-700">
+                Limpiar filtros
+            </button>
+        </div>
+
+        <form method="GET" id="filterForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Período -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Período Académico</label>
+                <select name="academic_period" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    {% for period in academic_periods %}
+                    <option value="{{ period.id }}" {% if filters_applied.academic_period_id == period.id|stringformat:"s" %}selected{% endif %}>
+                        {{ period.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Curso -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Curso</label>
+                <select name="course" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}" {% if filters_applied.course_id == course.id|stringformat:"s" %}selected{% endif %}>
+                        {{ course.code }} - {{ course.name|truncatechars:30 }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Profesor -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Profesor</label>
+                <select name="teacher" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    {% for teacher in teachers %}
+                    <option value="{{ teacher.id }}" {% if filters_applied.teacher_id == teacher.id|stringformat:"s" %}selected{% endif %}>
+                        {{ teacher.user.get_full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Parcial -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Parcial</label>
+                <select name="exam_number" onchange="this.form.submit()"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="">Todos</option>
+                    <option value="1" {% if filters_applied.exam_number == '1' %}selected{% endif %}>Primer Parcial</option>
+                    <option value="2" {% if filters_applied.exam_number == '2' %}selected{% endif %}>Segundo Parcial</option>
+                    <option value="3" {% if filters_applied.exam_number == '3' %}selected{% endif %}>Tercer Parcial</option>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900">Lista de Acreditaciones</h3>
+                <span class="text-sm text-gray-500">{{ accreditations|length }} resultados</span>
+            </div>
+        </div>
+
+        {% if accreditations %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Curso</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profesor</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parcial</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mejor Nota</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Peor Nota</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estadísticas</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for acc in accreditations %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ acc.course.name|truncatechars:40 }}</p>
+                                <p class="text-xs text-gray-500">{{ acc.course.code }} - Grupo {{ acc.course.group }}</p>
+                                <p class="text-xs text-gray-500">{{ acc.academic_period }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div>
+                                <p class="text-sm text-gray-900">{{ acc.teacher.name }}</p>
+                                <p class="text-xs text-gray-500">{{ acc.teacher.code }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                                {% if acc.exam_number == 1 %}bg-blue-100 text-blue-800
+                                {% elif acc.exam_number == 2 %}bg-purple-100 text-purple-800
+                                {% else %}bg-green-100 text-green-800{% endif %}">
+                                {{ acc.exam_number_display }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    {% if acc.best_file.is_pdf %}
+                                    <i data-lucide="file-text" class="h-4 w-4 text-red-500"></i>
+                                    {% else %}
+                                    <i data-lucide="image" class="h-4 w-4 text-blue-500"></i>
+                                    {% endif %}
+                                    <span class="text-xs text-gray-900">{{ acc.best_file.name|truncatechars:20 }}</span>
+                                </div>
+                                <a href="{% url 'secretario:exam_accreditation_download' acc.id 'best' %}"
+                                   class="text-xs text-blue-600 hover:text-blue-900">
+                                    <i data-lucide="download" class="h-3 w-3 inline"></i> Descargar
+                                </a>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col space-y-2">
+                                <div class="flex items-center space-x-2">
+                                    {% if acc.worst_file.is_pdf %}
+                                    <i data-lucide="file-text" class="h-4 w-4 text-red-500"></i>
+                                    {% else %}
+                                    <i data-lucide="image" class="h-4 w-4 text-blue-500"></i>
+                                    {% endif %}
+                                    <span class="text-xs text-gray-900">{{ acc.worst_file.name|truncatechars:20 }}</span>
+                                </div>
+                                <a href="{% url 'secretario:exam_accreditation_download' acc.id 'worst' %}"
+                                   class="text-xs text-red-600 hover:text-red-900">
+                                    <i data-lucide="download" class="h-3 w-3 inline"></i> Descargar
+                                </a>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Prom:</span>
+                                    <span class="font-medium">{{ acc.statistics.avg|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Máx:</span>
+                                    <span class="text-green-600">{{ acc.statistics.max|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Mín:</span>
+                                    <span class="text-red-600">{{ acc.statistics.min|floatformat:2 }}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-gray-500">Est:</span>
+                                    <span>{{ acc.statistics.total_students }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ acc.uploaded_at|date:"d/m/Y" }}<br>
+                            <span class="text-xs">{{ acc.uploaded_at|date:"H:i" }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i data-lucide="inbox" class="h-16 w-16 text-gray-400 mx-auto mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No hay acreditaciones</h3>
+            <p class="text-gray-500">No se encontraron acreditaciones con los filtros aplicados</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Resumen -->
+    {% if accreditations %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Resumen</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Por Parcial</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Parcial 1:</span>
+                        <span class="font-medium">{{ accreditations|filter_by_exam:1|length }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Parcial 2:</span>
+                        <span class="font-medium">{{ accreditations|filter_by_exam:2|length }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Parcial 3:</span>
+                        <span class="font-medium">{{ accreditations|filter_by_exam:3|length }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Archivos</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">PDF:</span>
+                        <span class="font-medium text-red-600">
+                            {% widthratio accreditations|length 2 1 %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">PNG:</span>
+                        <span class="font-medium text-blue-600">
+                            {% widthratio accreditations|length 2 1 %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Total archivos:</span>
+                        <span class="font-medium">{{ accreditations|length|mul:2 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4 class="text-sm font-medium text-gray-700 mb-3">General</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Total acreditaciones:</span>
+                        <span class="font-medium text-blue-600">{{ total_accreditations }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Cursos:</span>
+                        <span class="font-medium">{{ accreditations|unique_courses|length }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">Profesores:</span>
+                        <span class="font-medium">{{ accreditations|unique_teachers|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+});
+
+function clearFilters() {
+    window.location.href = '{% url "secretario:exam_accreditation" %}';
+}
+</script>
+{% endblock %}

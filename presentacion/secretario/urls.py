@@ -3,6 +3,12 @@ URLs para el módulo de secretarios
 """
 from django.urls import path
 from . import views
+from django.urls import path
+from .views_exam_accreditation import (
+    SecretaryExamAccreditationView,
+    ExamAccreditationDownloadView
+)
+
 
 app_name = 'secretario'
 
@@ -19,4 +25,13 @@ urlpatterns = [
     path('cargar-cursos-docentes/', views.cargar_cursos_docentes, name='cargar_cursos_docentes'),
     path('cargar-horarios/', views.cargar_horarios, name='cargar_horarios'),
         path('cargar-estudiantes/', views.cargar_estudiantes, name='cargar_estudiantes'),
+
+
+
+    path('exam-accreditation/',SecretaryExamAccreditationView.as_view(),name='exam_accreditation'),
+    path(
+        'exam-accreditation/download/<uuid:accreditation_id>/<str:file_type>/',
+        ExamAccreditationDownloadView.as_view(),
+        name='exam_accreditation_download'
+    ),
 ]

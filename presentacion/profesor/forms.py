@@ -3,7 +3,7 @@ Formularios para el módulo de profesores
 """
 from django import forms
 from django.core.validators import FileExtensionValidator
-
+from django.core.exceptions import ValidationError
 
 class SubirNotasForm(forms.Form):
     """Formulario para subir archivo de notas"""
@@ -144,3 +144,66 @@ class SubirSilaboForm(forms.Form):
         label='Competencias',
         required=False
     )
+
+from repositorio.postgres_repository.models import CourseGroup, ExamAccreditation
+
+
+class ExamAccreditationForm(forms.Form):
+
+    course_group_id = forms.UUIDField(
+        required=True,
+        widget=forms.HiddenInput()
+    )
+
+    exam_number = forms.ChoiceField(
+        choices=[
+            ("1", "Primer Parcial"),
+            ("2", "Segundo Parcial"),
+            ("3", "Tercer Parcial")
+        ],
+        required=True,
+        widget=forms.Select(attrs={
+            "class": "form-select"
+        })
+    )
+
+    best_exam_file = forms.FileField(
+        required=True,
+        label="Examen de mejor nota",
+        widget=forms.ClearableFileInput(attrs={
+            "accept": ".pdf,.png",
+            "id": "best_exam_file"
+        })
+    )
+
+    worst_exam_file = forms.FileField(
+        required=True,
+        label="Examen de peor nota",
+        widget=forms.ClearableFileInput(attrs={
+            "accept": ".pdf,.png",
+            "id": "worst_exam_file"
+        })
+    )
+
+
+    def clean(self):
+        cleaned = super().clean()
+
+        course_group_id = cleaned.get("course_group_id")
+        exam_number = cleaned.get("exam_number")
+
+        # Validar el curso
+        if course_group_id and not CourseGroup.objects.filter(id=course_group_id).exists():
+            raise forms.ValidationError("El grupo de curso no existe.")
+
+        # Validar duplicado
+        if course_group_id and exam_number:
+            if ExamAccreditation.objects.filter(
+                course_group_id=course_group_id,
+                exam_number=exam_number
+            ).exists():
+                raise forms.ValidationError(
+                    f"Ya existe una acreditación para el Parcial {exam_number}."
+                )
+
+        return cleaned

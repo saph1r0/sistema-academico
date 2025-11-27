@@ -110,3 +110,50 @@ class FiltroLaboratoriosForm(forms.Form):
         label='Estado',
         required=False
     )
+
+
+
+from repositorio.postgres_repository.models import AcademicPeriod, Course, Teacher
+
+
+class SecretaryExamFilterForm(forms.Form):
+    academic_period = forms.ModelChoiceField(
+        queryset=AcademicPeriod.objects.filter(is_active=True).order_by('-start_date'),
+        required=False,
+        label="Periodo académico"
+    )
+
+    course = forms.ModelChoiceField(
+        queryset=Course.objects.filter(is_active=True).order_by('name'),
+        required=False,
+        label="Asignatura"
+    )
+
+    teacher = forms.ModelChoiceField(
+        queryset=Teacher.objects.select_related("user").order_by('user__last_name', 'user__first_name'),
+        required=False,
+        label="Docente"
+    )
+
+    exam_number = forms.ChoiceField(
+        choices=[
+            ("", "Todos"),
+            ("1", "Primer Parcial"),
+            ("2", "Segundo Parcial"),
+            ("3", "Tercer Parcial"),
+        ],
+        required=False,
+        label="Parcial"
+    )
+
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label="Desde"
+    )
+
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        label="Hasta"
+    )

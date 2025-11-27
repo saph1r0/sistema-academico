@@ -2,10 +2,14 @@
 Modelos Django ORM simplificados para PostgreSQL
 """
 import uuid
+import os
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.utils import timezone
 
+from django.core.validators import FileExtensionValidator
+from django.db.models import Avg, Max, Min
+from decimal import Decimal
 
 class UserManager(BaseUserManager):
     """Manager personalizado para el modelo User"""
@@ -1216,3 +1220,120 @@ class SyllabusSubTopic(models.Model):
     def is_completed(self):
         """Un subtema está completado si su tema principal está completado"""
         return self.main_topic.is_completed()
+
+def exam_file_path(instance, filename):
+    """Genera la ruta del archivo de examen"""
+    ext = filename.split('.')[-1]
+    new_filename = (
+        f"{instance.course_group.course.code}_"
+        f"parcial{instance.exam_number}_"
+        f"{timezone.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
+    )
+
+    return os.path.join(
+        'exam_accreditations',
+        str(instance.course_group.academic_period.name),
+        str(instance.course_group.course.code),
+        f"parcial_{instance.exam_number}",
+        new_filename
+    )
+
+
+class ExamAccreditation(models.Model):
+    """
+    Acreditación de exámenes por parcial.
+    El profesor sube 2 imágenes:
+    - examen de la mejor nota
+    - examen de la peor nota
+    """
+
+    EXAM_NUMBER_CHOICES = [
+        (1, 'Primer Parcial'),
+        (2, 'Segundo Parcial'),
+        (3, 'Tercer Parcial'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    course_group = models.ForeignKey(
+        'CourseGroup',
+        on_delete=models.CASCADE,
+        related_name='exam_accreditations'
+    )
+
+    uploaded_by = models.ForeignKey(
+        'Teacher',
+        on_delete=models.CASCADE,
+        related_name='uploaded_exams'
+    )
+
+    exam_number = models.IntegerField(choices=EXAM_NUMBER_CHOICES)
+
+    # 🔥 ARCHIVOS QUE SUBE EL PROFESOR
+    best_exam_file = models.FileField(
+        upload_to=exam_file_path,
+        validators=[FileExtensionValidator(['pdf', 'png'])],
+        verbose_name="Examen Mejor Nota",
+        null=True, blank=True
+    )
+
+    worst_exam_file = models.FileField(
+        upload_to=exam_file_path,
+        validators=[FileExtensionValidator(['pdf', 'png'])],
+        verbose_name="Examen Peor Nota",
+        null=True, blank=True
+    )
+
+    # 🔥 Estadísticas automáticas
+    max_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    min_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    average_grade = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    total_students = models.IntegerField(default=0)
+
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['course_group', 'exam_number']
+
+    def save(self, *args, **kwargs):
+        """Calcula estadísticas automáticamente antes de guardar."""
+        self.calculate_statistics()
+        super().save(*args, **kwargs)
+
+    def calculate_statistics(self):
+        """Obtiene notas de PhaseGrade según el parcial"""
+
+        from repositorio.postgres_repository.models import PhaseGrade
+
+        # Seleccionar campo según el parcial
+        field_map = {
+            1: "partial_grade",
+            2: "continuous_grade",
+            3: "final_phase_grade"
+        }
+
+        grade_field = field_map.get(self.exam_number)
+
+        if not grade_field:
+            return
+
+        grades = PhaseGrade.objects.filter(course_group=self.course_group)
+
+        if not grades.exists():
+            self.max_grade = 0
+            self.min_grade = 0
+            self.average_grade = 0
+            self.total_students = 0
+            return
+
+        stats = grades.aggregate(
+            max=Max(grade_field),
+            min=Min(grade_field),
+            avg=Avg(grade_field)
+        )
+
+        self.max_grade = stats['max'] or 0
+        self.min_grade = stats['min'] or 0
+        self.average_grade = stats['avg'] or 0
+        self.total_students = grades.count()
