@@ -51,6 +51,11 @@ Sistema web completo que digitaliza y automatiza los procesos académicos univer
   <img width="1363" height="614" alt="image" src="https://github.com/user-attachments/assets/82496cb7-aace-49ff-889e-79471f8ca7a5" />
 - **Toma de asistencia dinamica**: El docente tomara asistencia a los estudiantes
   <img width="1364" height="606" alt="image" src="https://github.com/user-attachments/assets/2fb72db3-7a93-4b05-818b-b8b89d5e12b4" />
+- **Reservas de Ambientes**: El docente podra reservar las aulas que no esten ocupadas y ver sus reservas
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/5ee74caf-74a0-4ebc-a3fd-66b03b91b916" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/61c9d15b-5dde-41e5-913f-0be24126f01f" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/a66dc471-2527-4e82-a8da-e12939426722" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/519a75eb-80bc-40a1-aac5-6b77c834066e" />
 
 
 ### 👨‍🎓 Módulo Estudiante
