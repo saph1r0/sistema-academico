@@ -12,7 +12,7 @@ from .mixins import ProfesorRequiredMixin
 from servicios.servicioUsuario import ServicioUsuario
 from servicios.servicioNotas import ServicioNotas
 from servicios.servicioAsistencia import ServicioAsistencia
-from servicios.servicioReservas import ServicioReservas
+from servicios.servicioReservas import servicio_reservas
 
 
 class ProfesorDashboardView(ProfesorRequiredMixin, TemplateView):

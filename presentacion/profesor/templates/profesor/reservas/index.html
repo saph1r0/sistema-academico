@@ -120,6 +120,59 @@
                     </ul>
                 </div>
             </div>
+        
+        <!-- NUEVO: Mis reservas -->
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Mis reservas</h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                            Todas las reservas que has creado (todas las fechas y horas).
+                    </p>
+                </div>
+                <!-- 🔹 Botón para recargar -->
+                <button id="btnVerTodas"
+                    class="px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 hover:bg-gray-50">
+                    Ver todas
+                </button>
+                </div>
+                <div class="p-6">
+                    <table class="min-w-full text-sm text-gray-700">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-1 pr-3 font-semibold">Aula</th>
+                                <th class="text-left py-1 pr-3 font-semibold">Fecha</th>
+                                <th class="text-left py-1 font-semibold">Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="misReservasBody">
+                            <tr>
+                                <td colspan="3" class="py-2 text-center text-gray-500">
+                                    No tienes reservas registradas.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                </div>
+                <div class="p-6">
+                    <table class="min-w-full text-sm text-gray-700">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-1 pr-3 font-semibold">Aula</th>
+                                <th class="text-left py-1 pr-3 font-semibold">Fecha</th>
+                                <th class="text-left py-1 font-semibold">Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="misReservasBody">
+                            <tr>
+                                <td colspan="3" class="py-2 text-center text-gray-500">
+                                    No tienes reservas para la fecha y hora seleccionadas.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -177,14 +230,16 @@
         const API_ESTADO = "/profesor/reservas/estado/";
         const API_RESERVAS = "/profesor/reservas/api/";          // POST crear
         const API_RESERVA = (id) => `/profesor/reservas/api/${id}/`; // DELETE eliminar
+        const API_MIS_RESERVAS = "/profesor/reservas/mis/";
 
         // ==========================
         // Elementos
         // ==========================
         const aulasPorPiso = {
-            1: ["A-101", "LAB-001", "LAB-002"],
-            2: ["A-201", "A-202", "A-203"],
-            3: ["A-301", "A-302", "A-303"],
+            1: ["101", "102", "103"],
+            2: ["201", "202", "203"],
+            3: ["301", "302", "303"],
+            
         };
 
         const edificio = document.getElementById('edificio');
@@ -193,7 +248,11 @@
         const btnLimpiar = document.getElementById('btnLimpiar');
         const resumenDia = document.getElementById('resumenDia');
         const horaSelect = document.getElementById('hora');
+        const btnVerTodas = document.getElementById('btnVerTodas');
+        const misReservasBody = document.getElementById('misReservasBody');
 
+
+        
         // ==========================
         // CSRF helpers
         // ==========================
@@ -293,14 +352,36 @@
                 const data = await res.json();
                 pintarEstado(data?.occupied || []);
                 actualizarResumen(data?.occupied || []);
+
             } catch (err) {
                 console.error("Fallo de red:", err);
                 alert("No se pudo contactar al servidor.");
             }
         }
 
+        // Convierte el code que viene del backend ("26.4-205/AULA 201")
+        // a un id de aula ("201")
+        function normalizarCode(backendCode) {
+            if (!backendCode) return null;
+
+            // Nos quedamos solo con dígitos
+            const digits = backendCode.replace(/\D/g, '');  // "264205201"
+
+            if (digits.length >= 3) {
+                // Tomamos los últimos 3 dígitos → "201"
+                return digits.slice(-3);
+            }
+
+            // Si por alguna razón no hay 3 dígitos, devolvemos lo original
+            return backendCode;
+}
+
+
+
         function pintarEstado(occupied) {
             // Reset
+            console.log("OCUPADOS RECIBIDOS =", occupied);
+
             document.querySelectorAll('.aula').forEach(div => {
                 div.classList.remove('ocupada');
                 div.dataset.locked = '0';
@@ -308,10 +389,15 @@
                 div.title = '';
             });
 
-            // Aplica ocupación
             occupied.forEach(o => {
-                const div = document.getElementById(o.code);
-                if (!div) return;
+                const id = normalizarCode(o.code);   // 🔹 "26.4-205/AULA 201" -> "201"
+                const div = document.getElementById(id);
+
+                if (!div) {
+                    console.warn("No encontré aula para code backend =", o.code, " -> id =", id);
+                    return;
+                }
+
                 div.classList.add('ocupada');
 
                 if (o.reason === 'class') {
@@ -330,6 +416,7 @@
                     }
                 }
             });
+
         }
 
         function actualizarResumen(occupied) {
@@ -350,7 +437,7 @@
             });
         }
 
-        // ==========================
+         // ==========================
         // API: Crear / Eliminar reserva
         // ==========================
         async function crearReserva(resourceCode, date, slot) {
@@ -427,7 +514,42 @@
                 alert(err.message || 'No se pudo procesar la reserva.');
             }
         }
+        
+            // 🔹 función para cargar TODAS las reservas del profesor
+        async function cargarMisReservas() {
+            try {
+                const resp = await fetch(API_MIS_RESERVAS, {
+                    headers: { "Accept": "application/json" },
+                    credentials: "same-origin",
+                });
+                const data = await resp.json();
 
+                misReservasBody.innerHTML = "";
+
+                if (!data.reservas || data.reservas.length === 0) {
+                    misReservasBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="py-2 text-center text-gray-500">
+                                No tienes reservas registradas.
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                data.reservas.forEach(r => {
+                    const tr = document.createElement("tr");
+                    tr.className = "border-b";
+                    tr.innerHTML = `
+                        <td class="py-1 pr-3">${r.aula}</td>
+                        <td class="py-1 pr-3">${r.fecha}</td>
+                        <td class="py-1">${r.slot}</td>
+                    `;
+                    misReservasBody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Error cargando mis reservas:", err);
+            }
+        }
         // ==========================
         // Eventos
         // ==========================
@@ -439,11 +561,23 @@
         fechaInput.addEventListener('change', cargarEstado);
         horaSelect.addEventListener('change', cargarEstado);
 
+            // 🔹 botón "Ver todas"
+        if (btnVerTodas) {
+            btnVerTodas.addEventListener('click', (e) => {
+                e.preventDefault();
+                cargarMisReservas();
+            });
+        }
+
         // ==========================
         // Init
         // ==========================
         renderEdificio();
         cargarEstado();
+        cargarMisReservas();   
     });
+
+
+
 </script>
 {% endblock %}

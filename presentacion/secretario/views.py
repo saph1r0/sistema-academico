@@ -29,7 +29,7 @@ from repositorio.postgres_repository.models import (
 )
 from .mixins import SecretarioRequiredMixin
 from servicios.servicioMatricula import ServicioMatricula
-from servicios.servicioReservas import ServicioReservas
+from servicios.servicioReservas import servicio_reservas
 from servicios.servicioReportes import ServicioReportes
 from servicios.servicioMonitoreo import ServicioMonitoreo
 
