@@ -1,289 +1,327 @@
-# Sistema Académico UNSA
+# Sistema de Gestión Académica - UNSA
 
-Sistema de gestión académica desarrollado con Django siguiendo arquitectura DDD (Domain-Driven Design) con sistema completo de permisos por roles.
+Sistema integral de gestión académica para la Escuela Profesional de Ciencia de la Computación de la Universidad Nacional de San Agustín de Arequipa.
 
-## 🚀 Instalación Rápida
+Dashboard Profesor
+<img width="1364" height="629" alt="image" src="https://github.com/user-attachments/assets/9f5ad634-76ba-4a10-8ac4-40ebecb84465" />
 
-### 1. Activar entorno virtual
+
+## 📋 Descripción
+
+Sistema web completo que digitaliza y automatiza los procesos académicos universitarios, incluyendo gestión de matrículas, notas, asistencia, sílabos y acreditación de exámenes. Implementado con Django siguiendo arquitectura DDD (Domain-Driven Design).
+
+## 🎯 Características Principales
+
+### 👨‍🏫 Módulo Docente
+
+- **Dashboard Interactivo**: Vista general de cursos asignados, estudiantes y estadísticas
+- **Gestión de Notas**: Subida masiva mediante Excel, registro manual, cálculo automático de estadísticas
+- **Registro de Asistencia**: Sistema simplificado (Presente/Falta) con registro automático del docente
+- **Horarios Visuales**: Calendario interactivo con clases y laboratorios
+
+![Mi Horario](image_4.png)
+
+- **Sílabos Inteligentes**: Subida de temas con cálculo automático de avance semanal
+  <img width="1366" height="569" alt="image" src="https://github.com/user-attachments/assets/8366ec34-ef99-4de5-ab80-45690785e72f" />
+  <img width="1356" height="687" alt="image" src="https://github.com/user-attachments/assets/8aa4c274-c512-4f4f-93b1-3f7cb3649dfc" />
+
+
+- **Acreditación de Exámenes**: Sistema para subir 2 archivos por parcial (mejor y peor nota)
+
+![Acreditación Exámenes]
+<img width="1362" height="678" alt="image" src="https://github.com/user-attachments/assets/308b519d-6634-4bf8-ba16-b824c8b933c5" />
+<img width="1361" height="591" alt="image" src="https://github.com/user-attachments/assets/c2bc6410-4322-4b28-aded-47310c0930c4" />
+<img width="1030" height="584" alt="image" src="https://github.com/user-attachments/assets/2b9e6297-6560-4465-84f6-ed284bd417cc" />
+
+
+- **Reportes Exportables**: Generación de reportes en PDF y Excel
+
+![Generación Reportes]
+
+<img width="757" height="801" alt="image" src="https://github.com/user-attachments/assets/d1182c54-d3e1-4b1d-a4f7-f17d0829b51b" />
+<img width="710" height="847" alt="image" src="https://github.com/user-attachments/assets/ed8c727b-adac-42e9-91bc-1c5d535e88a2" />
+<img width="1600" height="869" alt="image" src="https://github.com/user-attachments/assets/6addb203-fde0-4287-ba9b-322f09821b6f" />
+
+- **Gestion de notas por fases **: Las notas se suben deacuerdo a als fases correspondientes en un formato excel determinado y se generan estadisticas en tiempo real 
+  <img width="1363" height="614" alt="image" src="https://github.com/user-attachments/assets/82496cb7-aace-49ff-889e-79471f8ca7a5" />
+- **Toma de asistencia dinamica**: El docente tomara asistencia a los estudiantes
+  <img width="1364" height="606" alt="image" src="https://github.com/user-attachments/assets/2fb72db3-7a93-4b05-818b-b8b89d5e12b4" />
+
+
+### 👨‍🎓 Módulo Estudiante
+
+![Portal Estudiante](image_10.png)
+
+- **Consulta de Notas**: Visualización de calificaciones por fase y promedio acumulado
+  <img width="1360" height="673" alt="image" src="https://github.com/user-attachments/assets/0998c303-c47d-4305-a745-756f691c5783" />
+
+- **Mis Asistencias**: Dashboard con porcentaje de asistencia por curso
+  <img width="1365" height="583" alt="image" src="https://github.com/user-attachments/assets/1be671c0-3d98-4611-b585-37ff49309902" />
+
+
+![Mis Asistencias](image_11.png)
+
+- **Avance de Sílabo**: Seguimiento del progreso del curso
+  <img width="1352" height="583" alt="image" src="https://github.com/user-attachments/assets/f06d7057-fc20-4239-846c-e6ab0d0ad75b" />
+
+- **Matrícula de Laboratorios**: Gestión autónoma dentro del período habilitado
+
+![Laboratorios](image_9.png)
+
+- **Horario Personalizado**: Vista calendario con todas las clases matriculadas
+- **Constancia de Matrícula**: Descarga en PDF para trámites
+
+  
+
+### 👩‍💼 Módulo Secretaría
+
+![Portal Secretaría](image_6.png)
+
+- **Gestión de Usuarios**: Activación/desactivación, reset de contraseñas
+- **Carga Masiva de Matrículas**: Importación desde archivos Excel de SISACAD
+- **Supervisión de Acreditaciones**: Visualización y descarga de todos los exámenes acreditados
+- **Reportes Globales**: Estadísticas de todos los cursos, profesores y estudiantes
+- **Gestión de Laboratorios**: Asignación de capacidades y profesores
+- **Monitoreo de Asistencia**: Control de asistencia docente automática por IP
+
+## 🏗️ Arquitectura
+
+### Stack Tecnológico
+
+- **Backend**: Django 5.0+ con Python 3.11+
+- **Base de Datos**: PostgreSQL 15+
+- **Frontend**: HTML5, Tailwind CSS 3.0, JavaScript (Vanilla)
+- **Gráficos**: Chart.js, Lucide Icons
+- **Procesamiento**: Pandas, OpenPyXL (Excel)
+- **PDFs**: ReportLab, WeasyPrint
+
+### Estructura del Proyecto
+
+```
+proyecto/
+├── repositorio/
+│   └── postgres_repository/
+│       └── models.py              # Modelos ORM
+├── servicios/
+│   ├── servicioNotas.py           # Lógica de notas
+│   ├── servicioAsistencia.py      # Lógica de asistencia
+│   ├── servicioSilabo.py          # Gestión de sílabos
+│   └── servicioAcreditacionExamenes.py  # Acreditación
+├── profesor/
+│   ├── views.py                   # Vistas del módulo
+│   ├── forms.py                   # Formularios
+│   ├── urls.py                    # Rutas
+│   └── templates/                 # Templates
+├── estudiante/
+│   ├── views.py
+│   ├── urls.py
+│   └── templates/
+├── secretario/
+│   ├── views.py
+│   ├── urls.py
+│   └── templates/
+└── media/
+    └── exam_accreditations/       # Archivos de exámenes
+```
+
+## 📊 Módulos Implementados
+
+### 1. Gestión de Usuarios (RF01-RF07)
+- ✅ Autenticación por correo institucional
+- ✅ Roles: Estudiante, Docente, Secretaría, Admin
+- ✅ Permisos diferenciados por rol
+
+### 2. Matrícula (RF08-RF19)
+- ✅ Carga masiva desde Excel
+- ✅ Gestión de laboratorios con capacidad
+- ✅ Validación de horarios sin cruces
+- ✅ Período de matrícula configurable
+- ✅ Visualización de horarios gráfica
+- ✅ Constancia de matrícula en PDF
+
+### 3. Asistencia (RF20-RF23)
+- ✅ Registro docente (Presente/Falta)
+- ✅ Registro automático de asistencia del profesor
+- ✅ Cálculo de porcentajes
+- ✅ Reportes por curso
+
+### 4. Gestión de Notas (RF24-RF28)
+- ✅ Subida manual y masiva (Excel)
+- ✅ Cálculo automático de estadísticas
+- ✅ Visualización con gráficos
+- ✅ Consulta para estudiantes
+- ✅ Acreditación de 3 parciales (2 archivos c/u)
+
+### 5. Sílabos (RF29-RF32)
+- ✅ Subida de temas por unidades
+- ✅ Cálculo automático de avance semanal
+- ✅ Pronóstico de cumplimiento
+- ✅ Visualización para estudiantes
+
+### 6. Reportes (RF33-RF37)
+- ✅ Reportes por docente
+- ✅ Reportes globales para secretaría
+- ✅ Exportación en PDF y Excel
+- ✅ Estadísticas visuales con gráficos
+
+### 7. Administración (RF38-RF41)
+- ✅ Configuración de períodos académicos
+- ✅ Fechas límite configurables
+- ✅ Supervisión global
+
+### 8. Reservas (RF8.1-RF8.5)
+- ✅ Consulta de disponibilidad
+- ✅ Gestión de solicitudes
+- ✅ Prevención de conflictos
+- ✅ Notificaciones de resultado
+
+## 🚀 Instalación
+
+### Requisitos Previos
 
 ```bash
-# Si usas Poetry (recomendado)
-poetry shell
-
-# O si usas venv
-source venv/bin/activate  # Linux/Mac
-# o
-venv\Scripts\activate     # Windows
+Python 3.11+
+PostgreSQL 15+
+pip
+virtualenv (recomendado)
 ```
 
-### 2. Configurar base de datos PostgreSQL
+### Pasos de Instalación
 
-Asegúrate de tener PostgreSQL ejecutándose con:
-
-- Base de datos: `modelsistak`
-- Usuario: `postgres`
-- Contraseña: `131070`
-- Host: `localhost`
-- Puerto: `5432`
-
-### 3. Ejecutar script de configuración
-
+1. **Clonar el repositorio**
 ```bash
-python setup_sistema.py
-```
-
-### 4. Iniciar servidor
-
-```bash
-python manage.py runserver
-```
-
-### 5. Acceder al sistema
-
-Abrir: http://127.0.0.1:8000
-
-## 👤 Credenciales de Prueba
-
-| Rol               | Email               | Contraseña    | Descripción                |
-| ----------------- | ------------------- | ------------- | -------------------------- |
-| **Administrador** | admin@unsa.edu.pe   | admin123      | Acceso completo al sistema |
-| **Estudiante**    | sesteba@unsa.edu.pe | 20241234      | Portal estudiantil         |
-| **Profesor**      | jperez@unsa.edu.pe  | profesor123   | Portal docente             |
-| **Secretario**    | mgarcia@unsa.edu.pe | secretario123 | Portal secretarial         |
-
-## 🎯 Funcionalidades por Rol
-
-### 👤 Administrador
-
-- **Dashboard**: Métricas del sistema, alertas, estadísticas
-- **Gestión de usuarios**: Activar/desactivar cuentas, supervisar roles
-- **Reportes globales**: Asistencia, notas, estadísticas por curso/docente/alumno
-- **Recursos**: Estado de laboratorios, reservas automáticas
-- **Configuración**: Parámetros técnicos del sistema
-
-### 🎓 Estudiante
-
-- **Dashboard personal**: Horario, avance de cursos, asistencia   
-- **Laboratorios**: Matrícula/desmatrícula en laboratorios
-- **Notas**: Consulta de calificaciones
-- **Horarios**: Visualización de horario académico
-
-### 👨‍🏫 Profesor
-
-- **Dashboard docente**: Cursos asignados, horarios, asistencia propia
-- **Gestión de notas**: Carga mediante Excel, reportes
-- **Asistencia**: Registro de estudiantes, reportes
-- **Reservas**: Solicitud de laboratorios y aulas
-- **Sílabo**: Gestión de contenidos y avance
-
-### 📋 Secretario
-
-- **Dashboard académico**: Resumen del sistema educativo
-- **Laboratorios**: Supervisión de inscripciones
-- **Reportes académicos**: Generación de reportes consolidados
-
-## 📁 Estructura del Proyecto
-
-```
-├── config/                     # Configuración Django
-├── dominio/                   # Capa de dominio (DDD)
-│   └── modelo/
-│       └── admin_sistema/     # Modelos administrativos
-├── presentacion/              # Capa de presentación
-│   ├── administrador/         # Módulo administrativo
-│   ├── estudiante/           # Módulo estudiantil
-│   ├── profesor/             # Módulo docente
-│   ├── secretario/           # Módulo secretarial
-│   ├── login/                # Sistema de autenticación
-│   └── templates/            # Templates por rol
-├── repositorio/              # Capa de repositorio
-│   └── postgres_repository/  # Modelos PostgreSQL
-├── servicios/                # Capa de servicios
-└── tests/                    # Pruebas unitarias
-```
-
-## 🛠️ Desarrollo
-
-### Ejecutar Tests
-
-```bash
-python manage.py test
-```
-
-### Crear Migraciones
-
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-### Cargar Datos de Prueba
-
-```bash
-python create_test_users.py
-```
-
-## 📊 Sistema de Asignación Automática de Cursos
-
-El sistema incluye una funcionalidad avanzada para asignar estudiantes a cursos automáticamente desde archivos Excel.
-
-### 🚀 Uso Rápido
-
-```bash
-# Asignación básica (usa directorio EXELS por defecto)
-python manage.py assign_courses
-
-# Con directorio específico
-python manage.py assign_courses --directory /path/to/excel
-
-# Con logging detallado
-python manage.py assign_courses --verbose --log-level DEBUG
-
-# Ejecutar demostración completa
-python demo_assign_courses.py
-```
-
-### 📁 Estructura de Archivos Requerida
-
-```
-EXELS/
-├── bdtotall.xlsx              # Archivo principal con todos los estudiantes
-├── alumnos_matematica.xlsx    # Estudiantes del curso de matemática
-├── alumnos_fisica.xlsx        # Estudiantes del curso de física
-└── alumnos_*.xlsx            # Más archivos de cursos
-```
-
-### ✨ Características
-
-- **Lectura automática**: Procesa archivos Excel automáticamente
-- **Extracción inteligente**: Extrae nombres de cursos desde nombres de archivos
-- **Creación automática**: Crea cursos en base de datos si no existen
-- **Prevención de duplicados**: Evita asignaciones duplicadas
-- **Reportes detallados**: Genera reportes completos del proceso
-- **Manejo de errores**: Continúa procesando aunque algunos archivos fallen
-- **Verificación de resultados**: Incluye verificación en base de datos
-
-### 📋 Parámetros del Comando
-
-| Parámetro     | Descripción                   | Valor por defecto |
-| ------------- | ----------------------------- | ----------------- |
-| `--directory` | Directorio con archivos Excel | `EXELS`           |
-| `--verbose`   | Mostrar información detallada | `False`           |
-| `--log-level` | Nivel de logging              | `INFO`            |
-
-### 🎯 Casos de Uso
-
-- **Matrícula masiva**: Asignar cientos de estudiantes automáticamente
-- **Actualización de cursos**: Procesar nuevas listas de estudiantes
-- **Migración de datos**: Importar datos desde sistemas externos
-- **Auditoría**: Verificar asignaciones existentes
-
-## 🔧 Tecnologías
-
-- **Backend**: Django 5.2.7, Python 3.12
-- **Base de datos**: PostgreSQL
-- **Frontend**: Tailwind CSS, HTML5
-- **Autenticación**: Django Auth con roles personalizados
-- **Arquitectura**: Domain-Driven Design (DDD)
-- **Procesamiento Excel**: openpyxl, pandas
-
-
------
-
-# 📚 Guía 
-
-## 1\. 📂 Clonación del Proyecto
-
-```bash
-git clone -b feature/erika3 https://github.com/saph1r0/sistema-academico.git
+git clone <url-repositorio>
 cd sistema-academico
 ```
 
------
-
-## 2\. ⚙️ Configuración de PostgreSQL y Entorno
-
-### 2.1 Configuración de la Base de Datos
-
+2. **Crear entorno virtual**
 ```bash
-sudo -u postgres psql
-
-# Dentro de psql, ejecute estos comandos:
-CREATE DATABASE sisacad_db;
-ALTER USER postgres WITH PASSWORD '123456';
-\q
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
 ```
 
-### 2.2 Instalación de Dependencias
-
+3. **Instalar dependencias**
 ```bash
-# Instalación de dependencias Python (Poetry)
-poetry install
-source $(poetry env info --path)/bin/activate
-
-# Instalación de herramientas de sistema (OCR y PDF)
-sudo apt install tesseract-ocr poppler-utils
+pip install -r requirements.txt
 ```
 
------
+4. **Configurar base de datos**
 
-## 3\. 💾 Migraciones y Creación de Usuarios
+Crear base de datos PostgreSQL:
+```sql
+CREATE DATABASE sistema_academico;
+CREATE USER admin WITH PASSWORD 'password';
+GRANT ALL PRIVILEGES ON DATABASE sistema_academico TO admin;
+```
 
-### 3.1 Aplicación de Migraciones
+Configurar en `settings.py`:
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'sistema_academico',
+        'USER': 'admin',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+```
 
+5. **Aplicar migraciones**
 ```bash
-# Crea la carpeta 'logs' para evitar FileNotFoundError
-mkdir logs
-
-# Generar y Aplicar migraciones
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 3.2 Creación de Usuarios Iniciales
-
-Cree las cuentas Admin y Secretaria manualmente en el shell de Django:
-
+6. **Crear superusuario**
 ```bash
-python manage.py shell
+python manage.py createsuperuser
 ```
 
-*Dentro del shell, pegue el siguiente script:*
-
-```python
-from repositorio.postgres_repository.models import User
-from django.contrib.auth.hashers import make_password
-
-# Crear Administrador
-User.objects.create(institutional_email="admin@unsa.edu.pe", first_name="Admin", last_name="Sistema", role="admin", password=make_password("admin123"), is_active=True, is_superuser=True, is_staff=True)
-
-# Crear Secretaria
-User.objects.create(institutional_email="secretary@unsa.edu.pe", first_name="Secretaria", last_name="Sistema", role="secretary", password=make_password("secretary123"), is_active=True)
-
-exit()
+7. **Configurar archivos media**
+```bash
+mkdir -p media/exam_accreditations
+chmod 755 media/
 ```
 
------
-
-## 4\. 🚀 Arranque y Prueba de Carga
-
-### 4.1 Iniciar el Servidor
-
+8. **Ejecutar servidor**
 ```bash
 python manage.py runserver
 ```
 
-### 4.2 Cargar los Documentos desde la Interfaz Web
+Acceder a: `http://127.0.0.1:8000`
 
-Una vez que el servidor esté corriendo ([http://127.0.0.1:8000/](http://127.0.0.1:8000/)):
+## 📝 Uso del Sistema
 
-1.  Inicie sesión como **Secretaria**
+### Roles y Accesos
 
-      * **Correo:** `secretary@unsa.edu.pe`
-      * **Contraseña:** `secretary123`
+#### Profesor
+- **URL**: `/profesor/`
+- **Funciones**:
+  - Subir notas por Excel o manual
+  - Registrar asistencia de estudiantes
+  - Gestionar sílabo y avance
+  - Acreditar exámenes (2 archivos por parcial)
+  - Ver reportes de sus cursos
+  - Consultar horario
+  - Reservar ambientes
 
-2.  En la página de carga de documentos, suba los archivos en este **orden obligatorio** :
+#### Estudiante
+- **URL**: `/estudiante/`
+- **Funciones**:
+  - Consultar notas y promedio
+  - Ver asistencia por curso
+  - Matricularse en laboratorios
+  - Consultar horario
+  - Ver avance de sílabo
 
-      * **1°:** `docentes_450_2025.pdf` (Crea Cursos, Profesores y Período Académico)
-      * **2°:** `HORARIOS-AULAS.pdf` (Asigna Horarios y Aulas a los Cursos)
-      * **3°:** `alumnos_450_1703240_B_A (1).xlsx` (Crea Estudiantes y sus Matrículas)
+#### Secretaría
+- **URL**: `/secretario/`
+- **Funciones**:
+  - Cargar matrículas masivas
+  - Gestionar usuarios
+  - Ver acreditaciones de exámenes
+  - Generar reportes globales
+  - Supervisar asistencia docente
+  - Gestionar laboratorios
+
+### Acreditación de Exámenes
+
+El sistema requiere que cada docente suba **2 archivos por parcial** (mejor y peor nota):
+
+- **Parcial 1**: 2 archivos (mejor nota + peor nota)
+- **Parcial 2**: 2 archivos (mejor nota + peor nota)
+- **Parcial 3**: 2 archivos (mejor nota + peor nota)
+- **Total**: 6 archivos por curso
+
+**Formatos aceptados**: PDF o PNG (máx 10MB)
+
+Las estadísticas (nota máxima, mínima, promedio) se calculan **automáticamente** desde las notas registradas en `PhaseGrade`.
+
+## 🔒 Seguridad
+
+- ✅ Autenticación por correo institucional
+- ✅ Permisos por rol (RBAC)
+- ✅ Validación de archivos (tipo, tamaño)
+- ✅ CSRF protection
+- ✅ SQL injection protection (ORM)
+- ✅ Validación de IP para asistencia docente
+
+## 📊 Base de Datos
+
+### Modelos Principales
+
+- **User**: Usuarios del sistema (estudiantes, docentes, secretaría)
+- **Student**: Información de estudiantes
+- **Teacher**: Información de docentes
+- **Course**: Cursos académicos
+- **CourseGroup**: Grupos/secciones de cursos
+- **Laboratory**: Laboratorios
+- **Enrollment**: Matrículas
+- **PhaseGrade**: Notas por fase (Primera, Segunda, Tercera)
+- **SimpleAttendanceRecord**: Asistencia de estudiantes
+- **TeacherAttendance**: Asistencia automática de docentes
+- **ExamAccreditation**: Acreditación de exámenes
+- **Syllabus**: Sílabos de cursos
