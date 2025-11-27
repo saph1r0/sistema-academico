@@ -1,0 +1,100 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Reportes Académicos{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <i data-lucide="file-bar-chart-2" class="text-blue-600"></i>
+            Generación de Reportes
+        </h1>
+        <p class="text-gray-600 mt-1">Selecciona un curso y el tipo de información que deseas consultar.</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Curso Asignado</label>
+                <select name="curso_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" required>
+                    <option value="">-- Seleccionar Curso --</option>
+                    {% for c in cursos %}
+                    <option value="{{ c.id }}" {% if seleccion.curso_id == c.id|stringformat:"s" %}selected{% endif %}>
+                        {{ c.course.name }} (Grupo {{ c.group_code }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
+                <select name="tipo_reporte" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" required>
+                    <option value="">-- Seleccionar Tipo --</option>
+                    <option value="notas" {% if seleccion.tipo_reporte == 'notas' %}selected{% endif %}>Registro de Notas</option>
+                    <option value="asistencia" {% if seleccion.tipo_reporte == 'asistencia' %}selected{% endif %}>Registro de Asistencia</option>
+                </select>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2">
+                <i data-lucide="search" class="w-4 h-4"></i>
+                Consultar
+            </button>
+        </form>
+    </div>
+
+    {% if seleccion %}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Estadísticas Generales</h3>
+            <div class="h-64 w-full flex justify-center">
+                <canvas id="reportChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 flex flex-col justify-center items-center text-center">
+            <div class="mb-4 p-4 bg-blue-50 rounded-full">
+                <i data-lucide="file-text" class="w-12 h-12 text-blue-600"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Exportar Documento</h3>
+            <p class="text-sm text-gray-500 mb-6">Descarga el reporte oficial en formato PDF con el encabezado institucional.</p>
+            
+            <a href="{% url 'profesor:reportes_pdf' %}?curso_id={{ seleccion.curso_id }}&tipo_reporte={{ seleccion.tipo_reporte }}" 
+               class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+               target="_blank">
+                <i data-lucide="download" class="w-5 h-5"></i>
+                Descargar PDF
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {% if datos_grafico %}
+    const datos = JSON.parse('{{ datos_grafico|safe }}');
+    const ctx = document.getElementById('reportChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: datos.labels,
+            datasets: [{
+                data: datos.data,
+                backgroundColor: datos.colors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

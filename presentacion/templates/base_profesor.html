@@ -78,6 +78,13 @@
                              <span class="ml-3">Acreditación de Exámenes</span>
                         </a>
                     </li>
+                    <li>
+                        <a  href="{% url 'profesor:reportes' %}"
+                            class="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 {% if 'reportes' in request.resolver_match.url_name %}bg-blue-700{% endif %}">
+                            <i data-lucide="file-bar-chart-2" class="w-5 h-5"></i>
+                            <span class="ml-3">Reportes</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
 

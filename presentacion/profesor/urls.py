@@ -9,6 +9,7 @@ from . import api_views
 from . import views_grade_upload
 from . import views_asistencia
 from . import api_reservas
+from . import views_reportes
 
 from .views_silabo import (
     ProfesorSilaboView,
@@ -70,4 +71,7 @@ urlpatterns = [
     path('exam-accreditation/upload-ajax/',ExamAccreditationUploadAjaxView.as_view(),name='exam_accreditation_upload_ajax'),
     path( 'exam-accreditation/download/<uuid:accreditation_id>/<str:file_type>/', ExamAccreditationDownloadView.as_view(),name='exam_accreditation_download'),
 
+    #REPORTESxDOCENTE
+    path('reportes/', views_reportes.ReportesView.as_view(), name='reportes'),
+    path('reportes/pdf/', views_reportes.GenerarPDFView.as_view(), name='reportes_pdf'),
 ]
