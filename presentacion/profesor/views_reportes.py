@@ -141,7 +141,7 @@ class GenerarPDFView(ProfesorRequiredMixin, View):
                     })
                     
             elif tipo_reporte == 'notas':
-                titulo_reporte = "REPORTE DE NOTAS - CONSOLIDADO POR FASES"
+                titulo_reporte = "REPORTE DE NOTAS"
                 headers = ["N°", "CUI", "Apellidos y Nombres", "Fase 1", "Fase 2", "Fase 3"]
                 
                 for idx, mat in enumerate(matriculas, 1):
