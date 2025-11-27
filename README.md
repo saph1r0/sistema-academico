@@ -15,11 +15,16 @@ Sistema web completo que digitaliza y automatiza los procesos académicos univer
 ### 👨‍🏫 Módulo Docente
 
 - **Dashboard Interactivo**: Vista general de cursos asignados, estudiantes y estadísticas
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/fac068d3-9e48-4d63-a227-4b15487993f0" />
 - **Gestión de Notas**: Subida masiva mediante Excel, registro manual, cálculo automático de estadísticas
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/991b1961-432f-472f-a1bd-3cefb1868593" />
 - **Registro de Asistencia**: Sistema simplificado (Presente/Falta) con registro automático del docente
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d99778fb-ad7f-4a6c-80c8-61bba3ad27e0" />
 - **Horarios Visuales**: Calendario interactivo con clases y laboratorios
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c107eeef-2216-4ffe-8374-1c68f6e29879" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/d47ed69d-4ff5-4809-890e-30b5166cc01f" />
+  <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/24e0e860-f13a-4a30-aebc-a430b55b4e73" />
 
-![Mi Horario](image_4.png)
 
 - **Sílabos Inteligentes**: Subida de temas con cálculo automático de avance semanal
   <img width="1366" height="569" alt="image" src="https://github.com/user-attachments/assets/8366ec34-ef99-4de5-ab80-45690785e72f" />
@@ -69,6 +74,7 @@ Sistema web completo que digitaliza y automatiza los procesos académicos univer
 ![Laboratorios](image_9.png)
 
 - **Horario Personalizado**: Vista calendario con todas las clases matriculadas
+  
 - **Constancia de Matrícula**: Descarga en PDF para trámites
 
   
