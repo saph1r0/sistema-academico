@@ -176,9 +176,10 @@ class ServicioReservaAmbientes:
 
             # 2) Localizar el aula
             # Usa el campo que tengas: code, codigo, name...
-            classroom = Classroom.objects.filter(code=resource_code).first()
+            classroom = Classroom.objects.filter(code__icontains=resource_code).first()
             if not classroom:
-                classroom = Classroom.objects.filter(name=resource_code).first()
+                classroom = Classroom.objects.filter(name__icontains=resource_code).first()
+
             if not classroom:
                 error_msg = f"No se encontró el ambiente '{resource_code}'."
                 self.logger.error(error_msg)

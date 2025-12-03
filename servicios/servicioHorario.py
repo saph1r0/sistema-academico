@@ -13,6 +13,7 @@ from repositorio.postgres_repository.models import (
     Student, Teacher, Horario, Laboratory, LaboratoryEnrollment,
     Enrollment, CourseGroup, AcademicPeriod, Aula
 )
+from django.db.utils import ProgrammingError, OperationalError
 
 
 def parse_time(value) -> time:
@@ -65,12 +66,26 @@ class ServicioHorario:
     ]
     
     def __init__(self):
-        self.periodo_activo = self._obtener_periodo_activo()
-    
-    def _obtener_periodo_activo(self) -> Optional[AcademicPeriod]:
-        """Obtiene el período académico activo"""
+        # No consultes la BD aquí
+        pass
+
+    def _obtener_periodo_activo(self):
+        # Aquí sí haces la query real
         return AcademicPeriod.objects.filter(is_active=True).first()
-    
+
+    @property
+    def periodo_activo(self):
+        """
+        Cada vez que alguien haga servicio_horario.periodo_activo
+        se intentará leer de la BD. Si la BD no está lista (migrate),
+        devolvemos None en vez de explotar.
+        """
+        try:
+            return self._obtener_periodo_activo()
+        except (ProgrammingError, OperationalError):
+            # Durante migrate u operaciones donde aún no existe la tabla
+            return None
+
     def obtener_horario_estudiante(self, student_id: int) -> Dict:
         """
         Obtiene el horario completo del estudiante (clases + laboratorios)

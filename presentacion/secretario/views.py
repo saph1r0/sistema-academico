@@ -25,7 +25,7 @@ from django.db.models import Q
 
 # 4. Importaciones de la Aplicación (Modelos y Servicios)
 from repositorio.postgres_repository.models import (
-    User, Teacher, Course, CourseGroup, AcademicPeriod, Aula, Horario, Student, Enrollment
+    User, Teacher, Course, CourseGroup, AcademicPeriod, Aula, Horario, Student, Enrollment,Classroom
 )
 from .mixins import SecretarioRequiredMixin
 from servicios.servicioMatricula import ServicioMatricula
@@ -483,6 +483,18 @@ def cargar_horarios(request):
                                 defaults={"nombre": nombre_aula, "capacidad": 40, "tipo": "teoria"}
                             )
                             if creada: aulas_creadas += 1
+                            if creada:
+                                Classroom.objects.get_or_create(
+                                    code=nombre_aula[:20],
+                                    defaults={
+                                        "name": nombre_aula,
+                                        "room_type": "teoria",
+                                        "capacity": 40,
+                                        "equipment": "",
+                                        "location": "",
+                                        "is_active": True,
+                                    }
+                                )
                             continue
 
                         # 2️⃣ Detectar línea de horario
