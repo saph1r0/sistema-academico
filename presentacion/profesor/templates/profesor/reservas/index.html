@@ -9,6 +9,46 @@
         {% csrf_token %}
     </form>
 
+    <!-- Widget para mostrar en la página de reservas del profesor -->
+    <div class="bg-blue-50 rounded-lg shadow-sm border border-blue-200 p-4 mb-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i data-lucide="info" class="w-6 h-6 text-blue-600"></i>
+            </div>
+            <div class="ml-3 flex-1">
+                <h3 class="text-sm font-semibold text-blue-900 mb-2">
+                    📋 Restricciones de Reserva
+                </h3>
+                
+                <!-- Estado de restricciones -->
+                <div id="restriccionesInfo" class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-blue-800">Reservas esta semana:</span>
+                        <span id="reservasSemana" class="font-bold text-blue-900">
+                            Cargando...
+                        </span>
+                    </div>
+                    
+                    <div class="w-full bg-blue-200 rounded-full h-2 mb-2">
+                        <div id="barraProgreso" class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                            style="width: 0%"></div>
+                    </div>
+                    
+                    <div class="space-y-1 text-xs text-blue-700">
+                        <p>✅ Máximo <strong>4 reservas por semana</strong></p>
+                        <p>✅ Máximo <strong>3 días de anticipación</strong></p>
+                        <p>✅ Las reservas se aprueban <strong>automáticamente</strong> si cumplen las reglas</p>
+                    </div>
+                    
+                    <!-- Mensaje de alerta si está cerca del límite -->
+                    <div id="alertaLimite" class="hidden mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                        <strong>⚠️ Atención:</strong> <span id="mensajeAlerta"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="bg-white rounded-lg shadow-sm p-6">
         <div class="flex items-center justify-between">
@@ -197,10 +237,154 @@
         justify-content: center;
         gap: 8px;
     }
+    .alerta-restriccion {
+        animation: pulso 2s infinite;
+    }
+    @keyframes pulso {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+        20%, 40%, 60%, 80% { transform: translateX(10px); }
+    }
+
+    .animate-shake {
+        animation: shake 0.5s;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+// Función para cargar info de restricciones
+async function cargarRestricciones() {
+    try {
+        const resp = await fetch('/profesor/reservas/api/restricciones/', {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        });
+        
+        const data = await resp.json();
+        
+        if (data.success) {
+            const total = data.total_semana;
+            const limite = data.limite_semana;
+            const restantes = data.reservas_restantes;
+            const porcentaje = (total / limite) * 100;
+            
+            // Actualizar interfaz
+            document.getElementById('reservasSemana').textContent = 
+                `${total} de ${limite} (${restantes} disponibles)`;
+            
+            document.getElementById('barraProgreso').style.width = `${porcentaje}%`;
+            
+            // Cambiar color según el nivel
+            const barra = document.getElementById('barraProgreso');
+            if (porcentaje >= 100) {
+                barra.classList.remove('bg-blue-600', 'bg-yellow-600');
+                barra.classList.add('bg-red-600');
+            } else if (porcentaje >= 75) {
+                barra.classList.remove('bg-blue-600', 'bg-red-600');
+                barra.classList.add('bg-yellow-600');
+            } else {
+                barra.classList.remove('bg-yellow-600', 'bg-red-600');
+                barra.classList.add('bg-blue-600');
+            }
+            
+            // Mostrar alerta si está cerca del límite
+            const alertaDiv = document.getElementById('alertaLimite');
+            const mensajeAlerta = document.getElementById('mensajeAlerta');
+            
+            if (restantes === 0) {
+                alertaDiv.classList.remove('hidden', 'bg-yellow-50', 'border-yellow-200', 'text-yellow-800');
+                alertaDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-800', 'alerta-restriccion');
+                mensajeAlerta.textContent = 
+                    'Has alcanzado el límite de 4 reservas semanales. No puedes crear más reservas hasta la próxima semana.';
+            } else if (restantes === 1) {
+                alertaDiv.classList.remove('hidden');
+                mensajeAlerta.textContent = 
+                    `Solo te queda ${restantes} reserva disponible esta semana.`;
+            } else if (restantes === 2) {
+                alertaDiv.classList.remove('hidden');
+                mensajeAlerta.textContent = 
+                    `Te quedan ${restantes} reservas disponibles esta semana.`;
+            } else {
+                alertaDiv.classList.add('hidden');
+            }
+            
+            // Mostrar detalle de reservas actuales
+            if (data.reservas_detalle && data.reservas_detalle.length > 0) {
+                console.log('📅 Tus reservas esta semana:', data.reservas_detalle);
+            }
+        }
+    } catch (err) {
+        console.error('Error cargando restricciones:', err);
+        document.getElementById('reservasSemana').textContent = 'Error al cargar';
+    }
+}
+
+// Cargar al iniciar la página
+document.addEventListener('DOMContentLoaded', cargarRestricciones);
+
+// Recargar después de crear/eliminar una reserva
+function actualizarRestricciones() {
+    cargarRestricciones();
+}
+
+// Validar antes de intentar reservar
+async function validarAntesDeReservar(fecha) {
+    try {
+        const resp = await fetch(`/profesor/reservas/api/restricciones/`, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        });
+        
+        const data = await resp.json();
+        
+        if (!data.success) {
+            return { valido: false, mensaje: data.error };
+        }
+        
+        // Validar límite semanal
+        if (data.reservas_restantes <= 0) {
+            return {
+                valido: false,
+                mensaje: 'Ya tienes 4 reservas esta semana. Límite alcanzado.'
+            };
+        }
+        
+        // Validar anticipación
+        const fechaReserva = new Date(fecha);
+        const hoy = new Date();
+        const diasAnticipacion = Math.floor((fechaReserva - hoy) / (1000 * 60 * 60 * 24));
+        
+        if (diasAnticipacion > data.max_dias_anticipacion) {
+            return {
+                valido: false,
+                mensaje: `Esta reserva es con ${diasAnticipacion} días de anticipación. El límite es ${data.max_dias_anticipacion} días.`
+            };
+        }
+        
+        if (diasAnticipacion < 0) {
+            return {
+                valido: false,
+                mensaje: 'No puedes reservar en fechas pasadas.'
+            };
+        }
+        
+        return { valido: true };
+        
+    } catch (err) {
+        console.error('Error validando restricciones:', err);
+        return {
+            valido: false,
+            mensaje: 'Error al validar restricciones. Intenta de nuevo.'
+        };
+    }
+}
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         if (window.lucide) { lucide.createIcons(); }
@@ -430,18 +614,32 @@
                     "X-CSRFToken": getCSRF(),
                 },
                 credentials: "same-origin",
-                body: JSON.stringify({ resource_code: resourceCode, date, slot })
+                body: JSON.stringify({ 
+                    resource_code: resourceCode, 
+                    date, 
+                    slot,
+                    purpose: `Reserva de ${resourceCode} - ${slot}` // Propósito automático
+                })
             });
 
             let json = null;
-            try { json = await res.json(); } catch (_) { /* noop */ }
+            try { 
+                json = await res.json(); 
+            } catch (_) { /* noop */ }
 
             if (res.status === 201) {
                 return { ok: true, id: json?.id || null };
             }
+            
             if (res.status === 409) {
                 throw new Error(json?.error || "Conflicto: ya está ocupado.");
             }
+            
+            // Errores de restricciones (400)
+            if (res.status === 400) {
+                throw new Error(json?.error || "Restricciones no cumplidas.");
+            }
+            
             throw new Error(json?.error || `Error ${res.status}`);
         }
 
@@ -462,13 +660,124 @@
             throw new Error(json?.error || `Error ${res.status}`);
         }
 
+        function mostrarAlertaRestriccion(mensaje) {
+            const alertaDiv = document.createElement('div');
+            alertaDiv.className = 'fixed top-4 right-4 z-50 max-w-md p-4 bg-red-50 border-2 border-red-500 rounded-lg shadow-lg animate-shake';
+            alertaDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <h3 class="text-sm font-bold text-red-900">
+                            ⚠️ Restricción de Reserva
+                        </h3>
+                        <p class="mt-1 text-sm text-red-800">
+                            ${mensaje}
+                        </p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                        class="ml-4 flex-shrink-0 text-red-400 hover:text-red-600">
+                        <span class="text-2xl">&times;</span>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(alertaDiv);
+            
+            // Auto-remover después de 8 segundos
+            setTimeout(() => {
+                alertaDiv.style.transition = 'opacity 0.5s';
+                alertaDiv.style.opacity = '0';
+                setTimeout(() => alertaDiv.remove(), 500);
+            }, 8000);
+        }
+
+        function mostrarAlertaExito(mensaje) {
+            const alertaDiv = document.createElement('div');
+            alertaDiv.className = 'fixed top-4 right-4 z-50 max-w-md p-4 bg-green-50 border-2 border-green-500 rounded-lg shadow-lg';
+            alertaDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <h3 class="text-sm font-bold text-green-900">
+                            Éxito
+                        </h3>
+                        <p class="mt-1 text-sm text-green-800">
+                            ${mensaje}
+                        </p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                        class="ml-4 flex-shrink-0 text-green-400 hover:text-green-600">
+                        <span class="text-2xl">&times;</span>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(alertaDiv);
+            
+            setTimeout(() => {
+                alertaDiv.style.transition = 'opacity 0.5s';
+                alertaDiv.style.opacity = '0';
+                setTimeout(() => alertaDiv.remove(), 500);
+            }, 5000);
+        }
+
+        function mostrarAlertaError(mensaje) {
+            const alertaDiv = document.createElement('div');
+            alertaDiv.className = 'fixed top-4 right-4 z-50 max-w-md p-4 bg-red-50 border border-red-200 rounded-lg shadow-lg';
+            alertaDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <h3 class="text-sm font-bold text-red-900">
+                            Error
+                        </h3>
+                        <p class="mt-1 text-sm text-red-800">
+                            ${mensaje}
+                        </p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                        class="ml-4 flex-shrink-0 text-red-400 hover:text-red-600">
+                        <span class="text-2xl">&times;</span>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(alertaDiv);
+            
+            setTimeout(() => {
+                alertaDiv.style.transition = 'opacity 0.5s';
+                alertaDiv.style.opacity = '0';
+                setTimeout(() => alertaDiv.remove(), 500);
+            }, 6000);
+        }
+
+
         // ==========================
         // Interacción (toggle)
         // ==========================
         async function onToggle(code, div) {
             const date = fechaInput.value;
             const { slot, start, end } = selectedTimes();
-            if (!date || !start || !end) { alert('Seleccione fecha y hora.'); return; }
+            
+            if (!date || !start || !end) {
+                alert('Seleccione fecha y hora.');
+                return;
+            }
 
             // Bloqueado por clase u otra reserva → no permitir
             if (div.dataset.locked === '1') {
@@ -479,20 +788,46 @@
             try {
                 // Si ya es "mía", cancelar
                 if (div.dataset.reservationId) {
+                    const confirmar = confirm('¿Deseas cancelar esta reserva?');
+                    if (!confirmar) return;
+                    
                     await eliminarReserva(div.dataset.reservationId);
                     await cargarEstado();
+                    await actualizarRestricciones(); // Actualizar widget
                     alert('Reserva eliminada 🗑️');
                     return;
                 }
 
-                // Crear nueva
+                // === VALIDACIONES ANTES DE CREAR ===
+                
+                // 1. Validar restricciones (límite semanal + anticipación)
+                const validacion = await validarAntesDeReservar(date);
+                
+                if (!validacion.valido) {
+                    mostrarAlertaRestriccion(validacion.mensaje);
+                    return;
+                }
+
+                // 2. Confirmar la reserva
+                const confirmar = confirm(
+                    `¿Confirmas la reserva del aula ${code}?\n\n` +
+                    `📅 Fecha: ${date}\n` +
+                    `🕐 Hora: ${slot}\n\n` +
+                    `✅ Esta reserva será aprobada automáticamente.`
+                );
+                
+                if (!confirmar) return;
+
+                // 3. Crear nueva reserva
                 await crearReserva(code, date, slot);
                 await cargarEstado();
-                alert('Reserva creada ✅');
+                await actualizarRestricciones(); // Actualizar widget
+                
+                mostrarAlertaExito('✅ Reserva creada y aprobada automáticamente');
 
             } catch (err) {
                 console.error(err);
-                alert(err.message || 'No se pudo procesar la reserva.');
+                mostrarAlertaError(err.message || 'No se pudo procesar la reserva.');
             }
         }
         

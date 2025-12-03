@@ -1,360 +1,558 @@
 {% extends 'base_admin.html' %}
 {% load static %}
-
-{% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .resource-card {
-        transition: all 0.3s ease;
-    }
-
-    .resource-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    }
-
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.375rem;
-        font-weight: 600;
-    }
-
-    .conflict-alert {
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-
-        0%,
-        100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.7;
-        }
-    }
-</style>
-{% endblock %}
+{% load custom_filters %}
+{% block title %}Dashboard de Reservas{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header con métricas resumen -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ page_title }}</h1>
-                <p class="text-gray-600 mt-1">Monitoreo y gestión de laboratorios y recursos</p>
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- En el template, después del título -->
+<div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex items-center">
+        <svg class="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+            <p class="text-sm text-blue-800">
+                Mostrando <span class="font-bold">{{ reservas|length }}</span> reservas del 
+                <span class="font-bold">{{ filtros.fecha_inicio|date:"d/m/Y" }}</span> al 
+                <span class="font-bold">{{ filtros.fecha_fin|date:"d/m/Y" }}</span>
+            </p>
+            <p class="text-xs text-blue-600 mt-1">
+                <a href="?fecha_inicio={{ filtros.hoy|date:'Y-m-d' }}&fecha_fin={{ filtros.hoy|date:'Y-m-d' }}" 
+                   class="underline hover:text-blue-800">Ver solo hoy</a> • 
+                <a href="?fecha_inicio={{ filtros.hoy|date:'Y-m-d' }}&fecha_fin={{ filtros.hoy|date:'Y-m-d'|add:'7 days' }}" 
+                   class="underline hover:text-blue-800">Próximos 7 días</a> • 
+                <a href="?fecha_inicio={{ filtros.hoy|date:'Y-m-d'|add:'-30 days' }}&fecha_fin={{ filtros.hoy|date:'Y-m-d'|add:'7 days' }}" 
+                   class="underline hover:text-blue-800">Ver todo</a>
+            </p>
+        </div>
+    </div>
+</div>
+
+        <!-- TÍTULO Y FILTROS -->
+        <div class="mb-10">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Dashboard de Reservas</h1>
+                    <p class="mt-2 text-gray-600">Estadísticas del uso de aulas y actividad de docentes.</p>
+                </div>
+                
+                <!-- FILTROS -->
+                <div class="flex flex-wrap gap-4">
+                    <!-- Filtro por rango de fechas -->
+                    <div>
+                        <label for="fecha_inicio" class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
+                        <input type="date" id="fecha_inicio" class="border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="fecha_fin" class="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
+                        <input type="date" id="fecha_fin" class="border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    
+                    <!-- Filtro por docente -->
+                    <div>
+                        <label for="filtro_docente" class="block text-sm font-medium text-gray-700 mb-1">Docente</label>
+                        <select id="filtro_docente" class="border rounded-lg px-3 py-2 text-sm w-full md:w-48">
+                            <option value="">Todos los docentes</option>
+                            {% for docente, count in estadisticas.reservas_por_docente.items %}
+                            <option value="{{ docente }}">{{ docente }} ({{ count }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro por aula -->
+                    <div>
+                        <label for="filtro_aula" class="block text-sm font-medium text-gray-700 mb-1">Aula</label>
+                        <select id="filtro_aula" class="border rounded-lg px-3 py-2 text-sm w-full md:w-48">
+                            <option value="">Todas las aulas</option>
+                            {% for aula, count in estadisticas.reservas_por_aula.items %}
+                            <option value="{{ aula }}">{{ aula }} ({{ count }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Botones de acción -->
+                    <div class="flex items-end">
+                        <button id="aplicar_filtros" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                            Aplicar filtros
+                        </button>
+                        <button id="limpiar_filtros" class="ml-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm">
+                            Limpiar
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="flex items-center space-x-2">
-                {% if tiene_conflictos %}
-                <span
-                    class="conflict-alert inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 mr-1"></i>
-                    Conflictos Detectados
-                </span>
-                {% endif %}
-                <button onclick="location.reload()"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                    <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-                    Actualizar
+            
+            <!-- Selector de vista -->
+            <div class="mt-6 flex space-x-4 border-b">
+                <button class="vista-btn active px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600" data-vista="global">
+                    Vista Global
+                </button>
+                <button class="vista-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700" data-vista="docentes">
+                    Por Docentes
+                </button>
+                <button class="vista-btn px-4 py-2 font-medium text-gray-500 hover:text-gray-700" data-vista="aulas">
+                    Por Aulas
                 </button>
             </div>
         </div>
 
-        <!-- Métricas resumen -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-blue-50 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-blue-600">Total Laboratorios</p>
-                        <p class="text-2xl font-bold text-blue-900">{{ metricas_resumen.total_laboratorios }}</p>
-                    </div>
-                    <div class="p-3 bg-blue-100 rounded-full">
-                        <i data-lucide="building" class="w-6 h-6 text-blue-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-green-50 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-green-600">Reservas Aprobadas</p>
-                        <p class="text-2xl font-bold text-green-900">{{ metricas_resumen.reservas_aprobadas }}</p>
-                    </div>
-                    <div class="p-3 bg-green-100 rounded-full">
-                        <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-yellow-50 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-yellow-600">Reservas Pendientes</p>
-                        <p class="text-2xl font-bold text-yellow-900">{{ metricas_resumen.reservas_pendientes }}</p>
-                    </div>
-                    <div class="p-3 bg-yellow-100 rounded-full">
-                        <i data-lucide="clock" class="w-6 h-6 text-yellow-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-purple-50 rounded-lg p-4">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-purple-600">Tasa Utilización</p>
-                        <p class="text-2xl font-bold text-purple-900">{{ metricas_resumen.tasa_utilizacion }}%</p>
-                    </div>
-                    <div class="p-3 bg-purple-100 rounded-full">
-                        <i data-lucide="trending-up" class="w-6 h-6 text-purple-600"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Alertas de recursos -->
-    {% if alertas_recursos %}
-    <div class="space-y-3">
-        {% for alerta in alertas_recursos %}
-        <div
-            class="rounded-lg p-4 {% if alerta.tipo == 'error' %}bg-red-50 border border-red-200{% elif alerta.tipo == 'warning' %}bg-yellow-50 border border-yellow-200{% else %}bg-blue-50 border border-blue-200{% endif %}">
-            <div class="flex items-start">
-                <div class="flex-shrink-0">
-                    {% if alerta.tipo == 'error' %}
-                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-400"></i>
-                    {% elif alerta.tipo == 'warning' %}
-                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-400"></i>
-                    {% else %}
-                    <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
-                    {% endif %}
-                </div>
-                <div class="ml-3 flex-1">
-                    <h3
-                        class="text-sm font-medium {% if alerta.tipo == 'error' %}text-red-800{% elif alerta.tipo == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
-                        {{ alerta.titulo }}
-                    </h3>
-                    <p
-                        class="mt-1 text-sm {% if alerta.tipo == 'error' %}text-red-700{% elif alerta.tipo == 'warning' %}text-yellow-700{% else %}text-blue-700{% endif %}">
-                        {{ alerta.descripcion }}
+        <!-- VISTA GLOBAL (default) -->
+        <div id="vista-global" class="vista-contenido">
+            <!-- MÉTRICAS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <!-- TOTAL RESERVAS -->
+                <div class="bg-white border rounded-xl p-6 shadow-sm">
+                    <h3 class="text-sm text-gray-500">Total de Reservas</h3>
+                    <p class="text-3xl font-bold text-gray-900 mt-1" id="total-reservas">
+                        {{ estadisticas.total_reservas }}
                     </p>
-                    {% if alerta.accion %}
-                    <p
-                        class="mt-2 text-sm font-medium {% if alerta.tipo == 'error' %}text-red-800{% elif alerta.tipo == 'warning' %}text-yellow-800{% else %}text-blue-800{% endif %}">
-                        Acción recomendada: {{ alerta.accion }}
-                    </p>
-                    {% endif %}
                 </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Lista de Laboratorios -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Laboratorios Activos</h2>
-                <p class="text-sm text-gray-600">Estado y disponibilidad de laboratorios</p>
-            </div>
-            <div class="p-6">
-                {% if laboratorios %}
-                <div class="space-y-4">
-                    {% for laboratorio in laboratorios %}
-                    <div class="resource-card border border-gray-200 rounded-lg p-4 hover:border-blue-300">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center space-x-2">
-                                    <h3 class="font-semibold text-gray-900">{{ laboratorio.nombre }}</h3>
-                                    <span class="status-badge bg-gray-100 text-gray-800">{{ laboratorio.codigo }}</span>
-                                    <span class="status-badge bg-blue-100 text-blue-800">{{ laboratorio.get_tipo_display
-                                        }}</span>
-                                </div>
-                                <p class="text-sm text-gray-600 mt-1">
-                                    <i data-lucide="users" class="w-4 h-4 inline mr-1"></i>
-                                    Capacidad: {{ laboratorio.capacidad }} personas
-                                </p>
-                                <p class="text-sm text-gray-600">
-                                    <i data-lucide="map-pin" class="w-4 h-4 inline mr-1"></i>
-                                    {{ laboratorio.ubicacion }}
-                                </p>
-                                {% if laboratorio.equipamiento %}
-                                <p class="text-sm text-gray-500 mt-2">{{ laboratorio.equipamiento|truncatechars:100 }}
-                                </p>
-                                {% endif %}
-                            </div>
-                            <div class="text-right ml-4">
-                                <div class="flex flex-col space-y-1">
-                                    <span class="status-badge bg-green-100 text-green-800">
-                                        {{ laboratorio.reservas_aprobadas }} aprobadas
-                                    </span>
-                                    {% if laboratorio.reservas_pendientes > 0 %}
-                                    <span class="status-badge bg-yellow-100 text-yellow-800">
-                                        {{ laboratorio.reservas_pendientes }} pendientes
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <div class="text-center py-8">
-                    <i data-lucide="building" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                    <p class="text-gray-500">No hay laboratorios registrados</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Reservas Recientes y Conflictos -->
-        <div class="space-y-6">
-            <!-- Conflictos Activos -->
-            {% if conflictos_activos %}
-            <div class="bg-white rounded-lg shadow-sm border border-red-200">
-                <div class="px-6 py-4 border-b border-red-200 bg-red-50">
-                    <h2 class="text-lg font-semibold text-red-900 flex items-center">
-                        <i data-lucide="alert-triangle" class="w-5 h-5 mr-2"></i>
-                        Conflictos Detectados
-                    </h2>
-                    <p class="text-sm text-red-700">Reservas con conflictos de horario</p>
-                </div>
-                <div class="p-6">
-                    <div class="space-y-3">
-                        {% for conflicto in conflictos_activos %}
-                        <div class="border border-red-200 rounded-lg p-3 bg-red-50">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <p class="font-medium text-red-900">{{ conflicto.laboratorio.nombre }}</p>
-                                    <p class="text-sm text-red-700">
-                                        {{ conflicto.fecha_reserva }} | {{ conflicto.hora_inicio }} - {{
-                                        conflicto.hora_fin }}
-                                    </p>
-                                    <p class="text-sm text-red-600">Docente: {{ conflicto.docente.nombre }} {{
-                                        conflicto.docente.apellido }}</p>
-                                </div>
-                                <span class="status-badge bg-red-100 text-red-800">{{ conflicto.get_estado_display
-                                    }}</span>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Reservas Recientes -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="px-6 py-4 border-b border-gray-200">
-                    <h2 class="text-lg font-semibold text-gray-900">Reservas Recientes</h2>
-                    <p class="text-sm text-gray-600">Últimas reservas registradas</p>
-                </div>
-                <div class="p-6">
-                    {% if reservas_recientes %}
-                    <div class="space-y-3">
-                        {% for reserva in reservas_recientes %}
-                        <div class="border border-gray-200 rounded-lg p-3">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ reserva.laboratorio.nombre }}</p>
-                                    <p class="text-sm text-gray-600">
-                                        {{ reserva.fecha_reserva }} | {{ reserva.hora_inicio }} - {{ reserva.hora_fin }}
-                                    </p>
-                                    <p class="text-sm text-gray-500">{{ reserva.docente.nombre }} {{
-                                        reserva.docente.apellido }}</p>
-                                    <p class="text-sm text-gray-500">{{ reserva.proposito|truncatechars:50 }}</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="status-badge 
-                                        {% if reserva.estado == 'APROBADA' or reserva.estado == 'APROBADA_MANUAL' %}bg-green-100 text-green-800
-                                        {% elif reserva.estado == 'PENDIENTE' %}bg-yellow-100 text-yellow-800
-                                        {% elif reserva.estado == 'RECHAZADA' %}bg-red-100 text-red-800
-                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                        {{ reserva.get_estado_display }}
-                                    </span>
-                                    {% if reserva.aprobada_automaticamente %}
-                                    <p class="text-xs text-green-600 mt-1">Auto-aprobada</p>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
+                <!-- DOCENTE TOP -->
+                <div class="bg-white border rounded-xl p-6 shadow-sm">
+                    <h3 class="text-sm text-gray-500">Docente con más reservas</h3>
+                    {% if estadisticas.reservas_por_docente %}
+                        {% with estadisticas.reservas_por_docente|dict_items|first as top %}
+                            <p class="font-semibold text-gray-900" id="top-docente-nombre">{{ top.0 }}</p>
+                            <p class="text-xl font-bold text-gray-900" id="top-docente-count">{{ top.1 }}</p>
+                        {% endwith %}
                     {% else %}
-                    <div class="text-center py-8">
-                        <i data-lucide="calendar" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
-                        <p class="text-gray-500">No hay reservas recientes</p>
-                    </div>
+                        <p class="text-gray-600 mt-2">No hay datos.</p>
+                    {% endif %}
+                </div>
+
+                <!-- AULA TOP -->
+                <div class="bg-white border rounded-xl p-6 shadow-sm">
+                    <h3 class="text-sm text-gray-500">Aula más usada</h3>
+                    {% if estadisticas.reservas_por_aula %}
+                        {% with estadisticas.reservas_por_aula|dict_items|first as top_aula %}
+                            <p class="font-semibold text-gray-900" id="top-aula-nombre">{{ top_aula.0 }}</p>
+                            <p class="text-xl font-bold text-gray-900" id="top-aula-count">{{ top_aula.1 }}</p>
+                        {% endwith %}
+                    {% else %}
+                        <p class="text-gray-600 mt-2">No hay datos.</p>
                     {% endif %}
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Estadísticas de Uso -->
-    {% if estadisticas %}
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Estadísticas de Uso</h2>
-            <p class="text-sm text-gray-600">Análisis de utilización de laboratorios (últimos 30 días)</p>
-        </div>
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="text-center">
-                    <p class="text-2xl font-bold text-blue-600">{{ estadisticas.total_reservas }}</p>
-                    <p class="text-sm text-gray-600">Total Reservas</p>
+            <!-- GRÁFICOS GLOBALES -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                <!-- GRAFICO DOCENTE -->
+                <div class="bg-white border rounded-xl p-6 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Reservas por Docente</h2>
+                    <canvas id="chartDocentes" class="w-full h-64"></canvas>
                 </div>
-                <div class="text-center">
-                    <p class="text-2xl font-bold text-green-600">{{ estadisticas.promedio_duracion|floatformat:1 }}h</p>
-                    <p class="text-sm text-gray-600">Duración Promedio</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-2xl font-bold text-purple-600">{{ metricas_resumen.tasa_aprobacion_automatica }}%</p>
-                    <p class="text-sm text-gray-600">Aprobación Automática</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-2xl font-bold text-orange-600">{{ metricas_resumen.conflictos_detectados }}</p>
-                    <p class="text-sm text-gray-600">Conflictos Detectados</p>
+
+                <!-- GRAFICO AULA -->
+                <div class="bg-white border rounded-xl p-6 shadow-sm">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Reservas por Aula</h2>
+                    <canvas id="chartAulas" class="w-full h-64"></canvas>
                 </div>
             </div>
 
-            {% if estadisticas.reservas_por_tipo %}
-            <div class="mt-8">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Reservas por Tipo de Laboratorio</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {% for tipo, cantidad in estadisticas.reservas_por_tipo.items %}
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <p class="font-medium text-gray-900">{{ tipo }}</p>
-                        <p class="text-2xl font-bold text-blue-600">{{ cantidad }}</p>
-                        <p class="text-sm text-gray-600">reservas</p>
-                    </div>
+            <!-- GRAFICO POR FECHA -->
+            <div class="bg-white border rounded-xl p-6 shadow-sm mb-12">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Reservas por Día</h2>
+                <canvas id="chartFechas" class="w-full h-64"></canvas>
+            </div>
+        </div>
+
+        <!-- VISTA POR DOCENTES -->
+        <div id="vista-docentes" class="vista-contenido hidden">
+            <div class="bg-white border rounded-xl p-6 shadow-sm mb-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Detalle por Docente</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-gray-800">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2">Docente</th>
+                                <th class="px-3 py-2">Total Reservas</th>
+                                <th class="px-3 py-2">Aula más usada</th>
+                                <th class="px-3 py-2">Última reserva</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-docentes">
+                            {% for docente, count in estadisticas.reservas_por_docente.items %}
+                            <tr class="border-t">
+                                <td class="px-3 py-2">{{ docente }}</td>
+                                <td class="px-3 py-2 font-semibold">{{ count }}</td>
+                                <td class="px-3 py-2">-</td>
+                                <td class="px-3 py-2">-</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-3 py-2 text-gray-600">No hay datos de docentes.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Gráfico específico de docente seleccionado -->
+            <div class="bg-white border rounded-xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Reservas del Docente</h2>
+                <div class="mb-4">
+                    <select id="select-docente-detalle" class="border rounded-lg px-3 py-2 text-sm w-full md:w-64">
+                        <option value="">Seleccione un docente</option>
+                        {% for docente, count in estadisticas.reservas_por_docente.items %}
+                        <option value="{{ docente }}">{{ docente }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <canvas id="chartDocenteDetalle" class="w-full h-64"></canvas>
+            </div>
+        </div>
+
+        <!-- VISTA POR AULAS -->
+        <div id="vista-aulas" class="vista-contenido hidden">
+            <div class="bg-white border rounded-xl p-6 shadow-sm mb-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Detalle por Aula</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-gray-800">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2">Aula</th>
+                                <th class="px-3 py-2">Total Reservas</th>
+                                <th class="px-3 py-2">Docente más frecuente</th>
+                                <th class="px-3 py-2">Horario más usado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-aulas">
+                            {% for aula, count in estadisticas.reservas_por_aula.items %}
+                            <tr class="border-t">
+                                <td class="px-3 py-2">{{ aula }}</td>
+                                <td class="px-3 py-2 font-semibold">{{ count }}</td>
+                                <td class="px-3 py-2">-</td>
+                                <td class="px-3 py-2">-</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-3 py-2 text-gray-600">No hay datos de aulas.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Gráfico específico de aula seleccionada -->
+            <div class="bg-white border rounded-xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Uso de Aula por Día</h2>
+                <div class="mb-4">
+                    <select id="select-aula-detalle" class="border rounded-lg px-3 py-2 text-sm w-full md:w-64">
+                        <option value="">Seleccione un aula</option>
+                        {% for aula, count in estadisticas.reservas_por_aula.items %}
+                        <option value="{{ aula }}">{{ aula }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <canvas id="chartAulaDetalle" class="w-full h-64"></canvas>
+            </div>
+        </div>
+
+        <!-- LISTA DE RESERVAS -->
+        <div class="bg-white border rounded-xl p-6 shadow-sm mt-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-900">Últimas Reservas</h2>
+                <button id="toggle-reservas" class="text-sm text-blue-600 hover:text-blue-800">
+                    Ver todas
+                </button>
+            </div>
+
+            {% if reservas %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-gray-800">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-2">Fecha</th>
+                            <th class="px-3 py-2">Horario</th>
+                            <th class="px-3 py-2">Aula</th>
+                            <th class="px-3 py-2">Docente</th>
+                            <th class="px-3 py-2">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-reservas">
+                        {% for r in reservas|slice:":10" %}
+                        <tr class="border-t">
+                            <td class="px-3 py-2">{{ r.date }}</td>
+                            <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
+                            <td class="px-3 py-2">{{ r.classroom.code }}</td>
+                            <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
+                            <td class="px-3 py-2">
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    Confirmada
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div id="mas-reservas" class="hidden">
+                    {% for r in reservas|slice:"10:" %}
+                    <tr class="border-t">
+                        <td class="px-3 py-2">{{ r.date }}</td>
+                        <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
+                        <td class="px-3 py-2">{{ r.classroom.code }}</td>
+                        <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
+                        <td class="px-3 py-2">
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                Confirmada
+                            </span>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </div>
             </div>
+            {% else %}
+                <p class="text-gray-600">No hay reservas registradas.</p>
             {% endif %}
         </div>
+
     </div>
-    {% endif %}
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- CHART.JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Auto-refresh cada 5 minutos
-        setTimeout(function () {
-            location.reload();
-        }, 300000);
+    // Variables globales para los gráficos
+    let chartDocentes, chartAulas, chartFechas, chartDocenteDetalle, chartAulaDetalle;
+    
+    // Datos iniciales
+    const datosIniciales = {
+        totalReservas: {{ estadisticas.total_reservas }},
+        reservasPorDocente: {% if estadisticas.reservas_por_docente %}{{ estadisticas.reservas_por_docente|safe }}{% else %}{}{% endif %},
+        reservasPorAula: {% if estadisticas.reservas_por_aula %}{{ estadisticas.reservas_por_aula|safe }}{% else %}{}{% endif %},
+        reservasPorFecha: {% if estadisticas.reservas_por_fecha %}{{ estadisticas.reservas_por_fecha|safe }}{% else %}{}{% endif %}
+    };
+    // Inicializar gráficos
+    function inicializarGraficos() {
+        // Datos para gráficos globales
+        const docenteLabels = Object.keys(datosIniciales.reservasPorDocente);
+        const docenteData = Object.values(datosIniciales.reservasPorDocente);
+        const aulaLabels = Object.keys(datosIniciales.reservasPorAula);
+        const aulaData = Object.values(datosIniciales.reservasPorAula);
+        const fechaLabels = Object.keys(datosIniciales.reservasPorFecha);
+        const fechaData = Object.values(datosIniciales.reservasPorFecha);
 
-        // Inicializar iconos de Lucide
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
+        // === GRAFICO DOCENTES ===
+        if (chartDocentes) chartDocentes.destroy();
+        chartDocentes = new Chart(document.getElementById("chartDocentes"), {
+            type: 'bar',
+            data: {
+                labels: docenteLabels,
+                datasets: [{
+                    label: "Reservas",
+                    data: docenteData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // === GRAFICO AULAS ===
+        if (chartAulas) chartAulas.destroy();
+        chartAulas = new Chart(document.getElementById("chartAulas"), {
+            type: 'bar',
+            data: {
+                labels: aulaLabels,
+                datasets: [{
+                    label: "Reservas",
+                    data: aulaData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // === GRAFICO FECHAS ===
+        if (chartFechas) chartFechas.destroy();
+        chartFechas = new Chart(document.getElementById("chartFechas"), {
+            type: 'line',
+            data: {
+                labels: fechaLabels,
+                datasets: [{
+                    label: "Reservas por día",
+                    data: fechaData,
+                    fill: true,
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    borderColor: 'rgb(139, 92, 246)',
+                    tension: 0.4
+                }]
+            },
+            options: { 
+                responsive: true,
+                plugins: { legend: { display: true } }
+            }
+        });
+    }
+
+    // Cambiar vista
+    document.querySelectorAll('.vista-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Actualizar botones activos
+            document.querySelectorAll('.vista-btn').forEach(b => {
+                b.classList.remove('active', 'text-blue-600', 'border-blue-600');
+                b.classList.add('text-gray-500');
+            });
+            this.classList.add('active', 'text-blue-600', 'border-blue-600');
+            this.classList.remove('text-gray-500');
+            
+            // Mostrar vista correspondiente
+            const vista = this.dataset.vista;
+            document.querySelectorAll('.vista-contenido').forEach(div => {
+                div.classList.add('hidden');
+            });
+            document.getElementById(`vista-${vista}`).classList.remove('hidden');
+        });
+    });
+
+    // Aplicar filtros
+    document.getElementById('aplicar_filtros').addEventListener('click', function() {
+        const fechaInicio = document.getElementById('fecha_inicio').value;
+        const fechaFin = document.getElementById('fecha_fin').value;
+        const docente = document.getElementById('filtro_docente').value;
+        const aula = document.getElementById('filtro_aula').value;
+        
+        // Aquí deberías hacer una petición AJAX para obtener datos filtrados
+        // Por ahora simularemos un filtro en el cliente
+        console.log('Filtros aplicados:', { fechaInicio, fechaFin, docente, aula });
+        
+        // Mostrar mensaje de que se están aplicando filtros
+        alert('Función de filtrado - En una implementación real se haría una petición AJAX al servidor');
+    });
+
+    // Limpiar filtros
+    document.getElementById('limpiar_filtros').addEventListener('click', function() {
+        document.getElementById('fecha_inicio').value = '';
+        document.getElementById('fecha_fin').value = '';
+        document.getElementById('filtro_docente').value = '';
+        document.getElementById('filtro_aula').value = '';
+        
+        // Restaurar datos iniciales
+        inicializarGraficos();
+    });
+
+    // Toggle para mostrar más reservas
+    document.getElementById('toggle-reservas').addEventListener('click', function() {
+        const masReservas = document.getElementById('mas-reservas');
+        const tablaReservas = document.getElementById('tabla-reservas');
+        
+        if (masReservas.classList.contains('hidden')) {
+            masReservas.classList.remove('hidden');
+            masReservas.querySelectorAll('tr').forEach(tr => {
+                tablaReservas.appendChild(tr.cloneNode(true));
+            });
+            this.textContent = 'Ver menos';
+        } else {
+            // Remover las reservas adicionales
+            const rows = tablaReservas.querySelectorAll('tr');
+            for (let i = 10; i < rows.length; i++) {
+                rows[i].remove();
+            }
+            masReservas.classList.add('hidden');
+            this.textContent = 'Ver todas';
         }
     });
+
+    // Inicializar gráfico de detalle de docente
+    document.getElementById('select-docente-detalle').addEventListener('change', function() {
+        const docente = this.value;
+        if (!docente) return;
+        
+        // Simular datos de detalle (en real sería AJAX)
+        const datosSimulados = [5, 8, 3, 6, 9, 4, 7, 2, 5, 8];
+        
+        if (chartDocenteDetalle) chartDocenteDetalle.destroy();
+        chartDocenteDetalle = new Chart(document.getElementById("chartDocenteDetalle"), {
+            type: 'line',
+            data: {
+                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom', 'Lun', 'Mar', 'Mié'],
+                datasets: [{
+                    label: `Reservas de ${docente}`,
+                    data: datosSimulados,
+                    fill: true,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true }
+        });
+    });
+
+    // Inicializar gráfico de detalle de aula
+    document.getElementById('select-aula-detalle').addEventListener('change', function() {
+        const aula = this.value;
+        if (!aula) return;
+        
+        // Simular datos de detalle (en real sería AJAX)
+        const datosSimulados = [3, 5, 2, 4, 6, 3, 4, 2, 5, 3];
+        
+        if (chartAulaDetalle) chartAulaDetalle.destroy();
+        chartAulaDetalle = new Chart(document.getElementById("chartAulaDetalle"), {
+            type: 'bar',
+            data: {
+                labels: ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+                datasets: [{
+                    label: `Uso de ${aula}`,
+                    data: datosSimulados,
+                    backgroundColor: 'rgba(16, 185, 129, 0.5)',
+                    borderColor: 'rgb(16, 185, 129)',
+                    borderWidth: 1
+                }]
+            },
+            options: { 
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+    });
+
+    // Inicializar al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        inicializarGraficos();
+    });
 </script>
+
+<style>
+.vista-btn {
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.vista-btn.active {
+    border-bottom-color: #2563eb;
+}
+
+.vista-contenido {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Estilos para tablas responsive */
+@media (max-width: 768px) {
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+</style>
+
 {% endblock %}

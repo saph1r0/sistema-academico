@@ -4,6 +4,7 @@ URLs para el módulo de secretarios
 from django.urls import path
 from . import views
 from django.urls import path
+from . import views_reservas
 from .views_exam_accreditation import (
     SecretaryExamAccreditationView,
     ExamAccreditationDownloadView
@@ -34,4 +35,11 @@ urlpatterns = [
         ExamAccreditationDownloadView.as_view(),
         name='exam_accreditation_download'
     ),
+
+    #reservas
+    path('reservas/', views_reservas.dashboard_reservas, name='reservas_dashboard'),
+    path('reservas/api/dia/', views_reservas.api_reservas_del_dia, name='api_reservas_dia'),
+    path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
+    path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
+    path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
 ]

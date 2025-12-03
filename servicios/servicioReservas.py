@@ -1,18 +1,15 @@
 # servicios/servicioReservas.py
 
 import logging
-from datetime import time, datetime
-from typing import List, Dict
+from datetime import time, datetime, timedelta
+from typing import List, Dict, Tuple
+from django.utils import timezone
+from django.db.models import Q, Count
 
-from django.db.models import Q
-
-# Ajusta este import según tu proyecto
 from repositorio.postgres_repository.models import (
     Reservation, Teacher, Classroom, Course,
     Horario, Aula
 )
-
-# Configurar logger
 logger = logging.getLogger(__name__)
 
 # Mapeo de slots a horas reales
@@ -34,23 +31,22 @@ SLOTS = {
     "19:20/20:10": (time(19, 20), time(20, 10)),
 }
 
-# weekday(): lunes=0 ... domingo=6
 DIAS_NUM_A_STR = {
-    0: "lunes",
-    1: "martes",
-    2: "miercoles",   # ajusta si en tu BD usas "miércoles"
-    3: "jueves",
-    4: "viernes",
-    5: "sabado",
-    6: "domingo",
+    0: "lunes", 1: "martes", 2: "miercoles",
+    3: "jueves", 4: "viernes", 5: "sabado", 6: "domingo",
 }
+
+# === CONSTANTES DE RESTRICCIONES ===
+MAX_RESERVAS_SEMANALES = 4  # Máximo de reservas por semana por profesor
+MAX_DIAS_ANTICIPACION = 3   # Máximo de días de anticipación para reservar
 
 
 class ServicioReservaAmbientes:
     """
-    Usa:
-      - Horario + Aula -> ocupación por clases
-      - Reservation    -> ocupación por reservas (tu modelo)
+    Servicio mejorado con validaciones automáticas:
+    - Máximo 4 reservas por semana por profesor
+    - Máximo 3 días de anticipación
+    - Aprobación automática si cumple las reglas
     """
 
     def __init__(self):
@@ -69,16 +65,112 @@ class ServicioReservaAmbientes:
         return DIAS_NUM_A_STR[date.weekday()]
 
     # ==========================
+    # VALIDACIONES DE RESTRICCIONES
+    # ==========================
+    
+    def validar_restricciones(self, user, fecha_reserva) -> Tuple[bool, List[str]]:
+        """
+        Valida si el profesor puede hacer una reserva según las restricciones
+        
+        Returns:
+            Tuple[bool, List[str]]: (puede_reservar, lista_de_errores)
+        """
+        try:
+            teacher = Teacher.objects.get(user=user)
+        except Teacher.DoesNotExist:
+            return False, ["No se encontró un docente asociado al usuario."]
+        
+        errores = []
+        
+        # VALIDACIÓN 1: Máximo 4 reservas por semana
+        inicio_semana = fecha_reserva - timedelta(days=fecha_reserva.weekday())
+        fin_semana = inicio_semana + timedelta(days=6)
+        
+        reservas_semana = Reservation.objects.filter(
+            teacher=teacher,
+            date__gte=inicio_semana,
+            date__lte=fin_semana,
+            status__in=['approved', 'pending']
+        ).count()
+        
+        self.logger.info(f"Profesor {teacher.id} tiene {reservas_semana} reservas esta semana")
+        
+        if reservas_semana >= MAX_RESERVAS_SEMANALES:
+            errores.append(
+                f"Ya tienes {reservas_semana} reservas esta semana. "
+                f"El límite es {MAX_RESERVAS_SEMANALES} reservas por semana."
+            )
+        
+        # VALIDACIÓN 2: Máximo 3 días de anticipación
+        hoy = timezone.now().date()
+        dias_anticipacion = (fecha_reserva - hoy).days
+        
+        self.logger.info(f"Reserva con {dias_anticipacion} días de anticipación")
+        
+        if dias_anticipacion > MAX_DIAS_ANTICIPACION:
+            errores.append(
+                f"Esta reserva es con {dias_anticipacion} días de anticipación. "
+                f"El límite es {MAX_DIAS_ANTICIPACION} días."
+            )
+        
+        if dias_anticipacion < 0:
+            errores.append("No puedes reservar en fechas pasadas.")
+        
+        puede_reservar = len(errores) == 0
+        
+        return puede_reservar, errores
+
+    def obtener_info_restricciones(self, user) -> Dict:
+        """
+        Devuelve información sobre las restricciones del profesor
+        Útil para mostrar en el frontend
+        """
+        try:
+            teacher = Teacher.objects.get(user=user)
+        except Teacher.DoesNotExist:
+            return {
+                'success': False,
+                'error': 'No se encontró un docente asociado.'
+            }
+        
+        hoy = timezone.now().date()
+        inicio_semana = hoy - timedelta(days=hoy.weekday())
+        fin_semana = inicio_semana + timedelta(days=6)
+        
+        reservas_semana = Reservation.objects.filter(
+            teacher=teacher,
+            date__gte=inicio_semana,
+            date__lte=fin_semana,
+            status__in=['approved', 'pending']
+        )
+        
+        total_semana = reservas_semana.count()
+        reservas_restantes = max(0, MAX_RESERVAS_SEMANALES - total_semana)
+        
+        return {
+            'success': True,
+            'total_semana': total_semana,
+            'limite_semana': MAX_RESERVAS_SEMANALES,
+            'reservas_restantes': reservas_restantes,
+            'max_dias_anticipacion': MAX_DIAS_ANTICIPACION,
+            'puede_reservar': reservas_restantes > 0,
+            'reservas_detalle': [
+                {
+                    'fecha': r.date.strftime('%Y-%m-%d'),
+                    'aula': r.classroom.code if r.classroom else 'N/A',
+                    'hora': f"{r.start_time.strftime('%H:%M')}-{r.end_time.strftime('%H:%M')}"
+                }
+                for r in reservas_semana.order_by('date', 'start_time')
+            ]
+        }
+
+    # ==========================
     # ESTADO (ocupado/libre)
     # ==========================
+    
     def obtener_estado(self, date, slot: str, user) -> List[Dict]:
         """
-        Devuelve lista de ocupación:
-        [
-          { "code": "A-101", "reason": "class", "label": "Álgebra Lineal" },
-          { "code": "A-201", "reason": "reservation", "id": "...", "mine": true },
-          ...
-        ]
+        Devuelve lista de ocupación con información de restricciones
         """
         try:
             start_time, end_time = self._slot_to_times(slot)
@@ -99,7 +191,6 @@ class ServicioReservaAmbientes:
             for h in horarios:
                 if not h.aula:
                     continue
-                # IMPORTANTE: usa el campo que coincida con el ID del front
                 code = getattr(h.aula, 'codigo', None) or getattr(h.aula, 'name', None)
                 if not code:
                     continue
@@ -137,7 +228,7 @@ class ServicioReservaAmbientes:
                 ocupados.append({
                     "code": code,
                     "reason": "reservation",
-                    "id": str(r.id),   # UUID a string para el front
+                    "id": str(r.id),
                     "mine": mine,
                     "label": r.purpose[:40] if r.purpose else "",
                 })
@@ -150,20 +241,24 @@ class ServicioReservaAmbientes:
             raise
 
     # ==========================
-    # CREAR RESERVA
+    # CREAR RESERVA (con validaciones automáticas)
     # ==========================
-    def crear_reserva(self, user, resource_code: str, date, slot: str):
+    
+    def crear_reserva(self, user, resource_code: str, date, slot: str, purpose: str = None):
         """
-        Crea una reserva simple para el docente logueado.
-        Por ahora:
-          - Usa el primer Course existente (luego lo puedes afinar).
-          - status = 'approved' directamente.
+        Crea una reserva CON VALIDACIONES AUTOMÁTICAS
+        - Valida restricciones de semana y anticipación
+        - Aprobación automática si cumple las reglas
+        - Rechaza automáticamente si no cumple
         """
         try:
             start_time, end_time = self._slot_to_times(slot)
             dia_nombre = self._dia_nombre(date)
 
-            self.logger.info(f"Creando reserva - Usuario: {user.id}, Ambiente: {resource_code}, Fecha: {date}, Slot: {slot}")
+            self.logger.info(
+                f"Creando reserva - Usuario: {user.id}, "
+                f"Ambiente: {resource_code}, Fecha: {date}, Slot: {slot}"
+            )
 
             # 1) Localizar al docente
             try:
@@ -174,12 +269,18 @@ class ServicioReservaAmbientes:
                 self.logger.error(error_msg)
                 raise ValueError(error_msg)
 
-            # 2) Localizar el aula
-            # Usa el campo que tengas: code, codigo, name...
-            classroom = Classroom.objects.filter(code__icontains=resource_code).first()
-            if not classroom:
-                classroom = Classroom.objects.filter(name__icontains=resource_code).first()
+            # 2) VALIDAR RESTRICCIONES
+            puede_reservar, errores = self.validar_restricciones(user, date)
+            
+            if not puede_reservar:
+                error_msg = " ".join(errores)
+                self.logger.warning(f"Restricciones no cumplidas: {error_msg}")
+                raise ValueError(error_msg)
 
+            # 3) Localizar el aula
+            classroom = Classroom.objects.filter(code=resource_code).first()
+            if not classroom:
+                classroom = Classroom.objects.filter(name=resource_code).first()
             if not classroom:
                 error_msg = f"No se encontró el ambiente '{resource_code}'."
                 self.logger.error(error_msg)
@@ -187,7 +288,7 @@ class ServicioReservaAmbientes:
 
             self.logger.debug(f"Ambiente encontrado: {classroom.id} - {classroom.code}")
 
-            # 3) Elegir un curso (versión simple)
+            # 4) Elegir un curso
             course = Course.objects.first()
             if not course:
                 error_msg = "No hay cursos registrados para asociar la reserva."
@@ -196,18 +297,18 @@ class ServicioReservaAmbientes:
 
             self.logger.debug(f"Curso asignado: {course.id} - {course.name}")
 
-            # 4) Verificar conflictos con HORARIO
+            # 5) Verificar conflictos con HORARIO
             if Horario.objects.filter(
                 dia_semana__iexact=dia_nombre,
                 hora_inicio=start_time,
                 hora_fin=end_time,
-                aula__codigo=resource_code   # ajusta si es aula__name, etc.
+                aula__codigo=resource_code
             ).exists():
                 error_msg = "El ambiente está ocupado por una clase en ese horario."
                 self.logger.warning(error_msg)
                 raise ValueError(error_msg)
 
-            # 5) Verificar conflictos con otras RESERVAS
+            # 6) Verificar conflictos con otras RESERVAS
             if Reservation.objects.filter(
                 classroom=classroom,
                 date=date,
@@ -220,7 +321,7 @@ class ServicioReservaAmbientes:
                 self.logger.warning(error_msg)
                 raise ValueError(error_msg)
 
-            # 6) Crear la reserva (simple)
+            # 7) CREAR LA RESERVA CON APROBACIÓN AUTOMÁTICA
             reserva = Reservation.objects.create(
                 teacher=teacher,
                 classroom=classroom,
@@ -228,12 +329,15 @@ class ServicioReservaAmbientes:
                 date=date,
                 start_time=start_time,
                 end_time=end_time,
-                status='approved',      # así ya cuenta como ocupada
-                purpose='Reserva rápida de aula',  # luego lo puedes pedir en el formulario
+                status='approved',  # ✅ Aprobación automática
+                purpose=purpose or 'Reserva de ambiente',
                 approved_by=None,
             )
 
-            self.logger.info(f"Reserva creada exitosamente: {reserva.id}")
+            self.logger.info(
+                f"✅ Reserva creada y aprobada automáticamente: {reserva.id}"
+            )
+            
             return reserva
 
         except Exception as e:
@@ -243,6 +347,7 @@ class ServicioReservaAmbientes:
     # ==========================
     # ELIMINAR RESERVA
     # ==========================
+    
     def eliminar_reserva(self, user, reserva_id):
         """
         Elimina solo reservas creadas por el mismo docente.
@@ -260,7 +365,10 @@ class ServicioReservaAmbientes:
 
             if not reserva.teacher or reserva.teacher.user_id != user.id:
                 error_msg = "No puedes eliminar esta reserva."
-                self.logger.warning(f"Intento de eliminar reserva no propia - Usuario: {user.id}, Dueño real: {reserva.teacher.user_id if reserva.teacher else 'None'}")
+                self.logger.warning(
+                    f"Intento de eliminar reserva no propia - "
+                    f"Usuario: {user.id}, Dueño: {reserva.teacher.user_id if reserva.teacher else 'None'}"
+                )
                 raise PermissionError(error_msg)
 
             reserva.delete()
@@ -273,7 +381,7 @@ class ServicioReservaAmbientes:
 
     def obtener_reservas_profesor(self, user):
         """
-        Devuelve TODAS las reservas del profesor (sin filtrar por fecha ni hora).
+        Devuelve TODAS las reservas del profesor
         """
         teacher = getattr(user, "teacher", None)
         if teacher is None:
@@ -285,6 +393,58 @@ class ServicioReservaAmbientes:
             .select_related("classroom", "course")
             .order_by("-date", "start_time")
         )
+
+    # ==========================
+    # REPORTES Y ESTADÍSTICAS
+    # ==========================
+    
+    def obtener_reporte_semanal(self, fecha_inicio=None) -> Dict:
+        """
+        Genera un reporte de reservas de la semana
+        """
+        if not fecha_inicio:
+            fecha_inicio = timezone.now().date()
         
-# Instancia global para usar en vistas
+        inicio_semana = fecha_inicio - timedelta(days=fecha_inicio.weekday())
+        fin_semana = inicio_semana + timedelta(days=6)
+        
+        reservas = Reservation.objects.filter(
+            date__gte=inicio_semana,
+            date__lte=fin_semana
+        ).select_related('teacher__user', 'classroom')
+        
+        total = reservas.count()
+        aprobadas = reservas.filter(status='approved').count()
+        rechazadas = reservas.filter(status='rejected').count()
+        
+        # Profesores con más reservas
+        top_profesores = reservas.values(
+            'teacher__user__first_name',
+            'teacher__user__last_name'
+        ).annotate(
+            total=Count('id')
+        ).order_by('-total')[:5]
+        
+        # Aulas más usadas
+        top_aulas = reservas.filter(
+            status='approved'
+        ).values(
+            'classroom__code',
+            'classroom__name'
+        ).annotate(
+            total=Count('id')
+        ).order_by('-total')[:5]
+        
+        return {
+            'periodo': f"{inicio_semana.strftime('%d/%m/%Y')} - {fin_semana.strftime('%d/%m/%Y')}",
+            'total_reservas': total,
+            'aprobadas': aprobadas,
+            'rechazadas': rechazadas,
+            'tasa_aprobacion': round((aprobadas / total * 100), 1) if total > 0 else 0,
+            'top_profesores': list(top_profesores),
+            'top_aulas': list(top_aulas),
+        }
+
+
+# Instancia global
 servicio_reservas = ServicioReservaAmbientes()

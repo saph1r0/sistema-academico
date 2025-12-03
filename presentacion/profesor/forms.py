@@ -5,6 +5,7 @@ from django import forms
 from django.core.validators import FileExtensionValidator
 from django.core.exceptions import ValidationError
 
+
 class SubirNotasForm(forms.Form):
     """Formulario para subir archivo de notas"""
     curso_id = forms.UUIDField(widget=forms.HiddenInput())

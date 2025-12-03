@@ -62,6 +62,10 @@ urlpatterns = [
     path('reservas/api/<uuid:pk>/', views_reservas.reserva_api_detail, name='reservas_eliminar'),
     path('reservas/mis/', views_reservas.reservas_mis, name='reservas_mis'),
 
+    path('reservas/api/restricciones/', views_reservas.api_restricciones_profesor, name='api_restricciones'),
+    path('reservas/api/validar/', views_reservas.api_validar_reserva_profesor,  name='api_validar_reserva'),
+    path('reservas/api/reporte-semanal/', views_reservas.api_reporte_semanal_profesor, name='api_reporte_semanal'),
+
     
     # Debug y herramientas
     path('debug/data/', views_simple.ProfesorDebugDataView.as_view(), name='debug_data'),

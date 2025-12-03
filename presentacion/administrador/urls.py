@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_reservas
 
 app_name = 'admin'
 
@@ -16,7 +17,14 @@ urlpatterns = [
     path('reportes/', views.AdminReportesView.as_view(), name='reportes'),
     
     # Recursos y laboratorios
-    path('recursos/', views.AdminRecursosView.as_view(), name='recursos'),
+    #path('recursos/', views.AdminRecursosView.as_view(), name='recursos'),
+
+     # RESERVAS
+    path('reservas/', views_reservas.dashboard_reservas, name='reservas_dashboard'),
+    path('reservas/api/dia/', views_reservas.api_reservas_del_dia, name='api_reservas_dia'),
+    path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
+    path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
+    path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
     
     # Sistema de monitoreo y supervisión
     path('monitoreo/', views.AdminMonitoreoView.as_view(), name='monitoreo'),

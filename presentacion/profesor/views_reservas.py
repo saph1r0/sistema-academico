@@ -130,3 +130,110 @@ def reservas_mis(request):
         })
 
     return JsonResponse({"reservas": reservas})
+
+@login_required
+@require_http_methods(["GET"])
+def api_restricciones_profesor(request):
+    """
+    GET /profesor/reservas/api/restricciones/
+    
+    Devuelve información sobre las restricciones del profesor actual:
+    - Cuántas reservas tiene esta semana
+    - Cuántas le quedan disponibles
+    - Límites configurados
+    - Detalle de sus reservas actuales
+    """
+    try:
+        info = servicio_reservas.obtener_info_restricciones(request.user)
+        return JsonResponse(info)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_validar_reserva_profesor(request):
+    """
+    POST /profesor/reservas/api/validar/
+    Body: { "fecha": "2025-12-10" }
+    
+    Valida si el profesor puede hacer una reserva en la fecha indicada
+    Verifica:
+    - Límite semanal (4 reservas)
+    - Límite de anticipación (3 días)
+    """
+    import json
+    from datetime import datetime
+    
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        fecha_str = data.get('fecha')
+        
+        if not fecha_str:
+            return JsonResponse({
+                'success': False,
+                'error': 'Fecha requerida'
+            }, status=400)
+        
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Formato de fecha inválido (usar YYYY-MM-DD)'
+            }, status=400)
+        
+        # Validar restricciones
+        puede_reservar, errores = servicio_reservas.validar_restricciones(
+            request.user, fecha
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'puede_reservar': puede_reservar,
+            'errores': errores,
+            'mensaje': errores[0] if errores else 'Puedes reservar en esta fecha'
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_reporte_semanal_profesor(request):
+    """
+    GET /profesor/reservas/api/reporte-semanal/
+    
+    Devuelve un reporte de todas las reservas de la semana actual
+    (no solo del profesor actual, sino de todos)
+    """
+    from datetime import datetime
+    
+    try:
+        fecha_str = request.GET.get('fecha')
+        
+        if fecha_str:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        else:
+            fecha = None
+        
+        reporte = servicio_reservas.obtener_reporte_semanal(fecha)
+        
+        return JsonResponse({
+            'success': True,
+            'reporte': reporte
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

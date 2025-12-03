@@ -19,3 +19,21 @@ def get_item(dictionary, key):
 
 register = template.Library()
 
+@register.filter
+def dict_keys(value):
+    """Obtiene las keys de un diccionario como lista"""
+    return list(value.keys())
+
+@register.filter
+def dict_values(value):
+    """Obtiene los values de un diccionario como lista"""
+    return list(value.values())
+@register.filter
+def to_list(value):
+    """Convierte un iterable a lista"""
+    return list(value)
+
+@register.filter
+def dict_items(value):
+    """Convierte dict.items() a lista de tuplas"""
+    return list(value.items())

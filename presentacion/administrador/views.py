@@ -434,8 +434,8 @@ class AdminRecursosView(AdminRequiredMixin, TemplateView):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        from servicios.servicioReservas import ServicioReservas
-        self.servicio_reservas = ServicioReservas()
+        from servicios.servicioReservas import ServicioReservaAmbientes
+        self.servicio_reservas = ServicioReservaAmbientes()
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -31,7 +31,8 @@ urlpatterns = [
     #path('cursos/', views.cursos, name='cursos'),
     
     # Laboratorios - Vista principal con POST para matrícula/desmatrícula
-    path('laboratorios/', EstudianteLaboratoriosView.as_view(), name='laboratorios'),
+    #path('laboratorios/', EstudianteLaboratoriosView.as_view(), name='laboratorios'),
+    path('laboratorios/', views.EstudianteLaboratoriosView.as_view(), name='laboratorios'),
     path('laboratorios/<uuid:laboratorio_id>/detalle/', laboratorio_detalle, name='laboratorio_detalle'),
     
     # APIs de laboratorios

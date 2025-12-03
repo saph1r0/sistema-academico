@@ -288,13 +288,16 @@ def crear_reserva(request):
     # 4) Crear registro
     r = ReservationDyn.objects.create(
         resource_id=resource.id,
-        requested_by=request.user.id,
+        requested_by = UUID(str(request.user.id)),
+        
         reservation_date=fecha,
         start_time=start_t,
         end_time=end_t,
         status="approved",
         purpose=data.get("purpose") or ""
     )
+    print("USER ID:", request.user.id)
+    print("IS AUTH:", request.user.is_authenticated)
 
     return JsonResponse({"ok": True, "id": str(r.id)}, status=201)
 
