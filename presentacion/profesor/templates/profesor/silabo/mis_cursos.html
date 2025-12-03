@@ -1,0 +1,139 @@
+{% extends 'base_profesor.html' %}
+
+{% block title %}Mis Cursos - Profesor{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Mis Cursos</h1>
+                <p class="text-gray-600 mt-1">Gestiona el temario de todos tus cursos asignados</p>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex items-center">
+            <i data-lucide="alert-circle" class="h-5 w-5 text-red-600 mr-3"></i>
+            <p class="text-red-800">{{ error }}</p>
+        </div>
+    </div>
+    {% elif not courses_info %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+        <i data-lucide="book-x" class="h-12 w-12 text-yellow-600 mx-auto mb-4"></i>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">No tienes cursos asignados</h3>
+        <p class="text-gray-600">Contacta con la administración para que te asignen cursos.</p>
+    </div>
+    {% else %}
+    <!-- Lista de Cursos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {% for info in courses_info %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div class="p-6">
+                <!-- Header del Curso -->
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">{{ info.course.name }}</h3>
+                        <p class="text-sm text-gray-600">{{ info.course.code }} - Grupo {{ info.course_group.group_code }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ info.course_group.academic_period.name }}</p>
+                    </div>
+                    {% if info.has_syllabus %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
+                        Con Temario
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <i data-lucide="clock" class="h-3 w-3 mr-1"></i>
+                        Sin Temario
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Información del Curso -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-600 mb-1">Créditos</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ info.course.credits }}</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs text-gray-600 mb-1">Estudiantes</p>
+                        <p class="text-sm font-semibold text-gray-900">{{ info.course_group.enrolled_students }}</p>
+                    </div>
+                </div>
+
+                <!-- Progreso del Temario -->
+                {% if info.has_syllabus %}
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-700">Progreso del temario</span>
+                        <span class="text-gray-600">{{ info.progress_info.progress_percentage|floatformat:1 }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                            style="width: {{ info.progress_info.progress_percentage }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{ info.progress_info.completed_topics }} de {{ info.progress_info.total_topics }} temas completados
+                    </p>
+                </div>
+                {% else %}
+                <div class="mb-4 bg-blue-50 rounded-lg p-3 text-center">
+                    <i data-lucide="upload" class="h-8 w-8 text-blue-600 mx-auto mb-1"></i>
+                    <p class="text-xs text-blue-800">Sube el temario de este curso</p>
+                </div>
+                {% endif %}
+
+                <!-- Acciones -->
+                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                    {% if info.has_syllabus %}
+                    <a href="{% url 'profesor:silabo' info.course_group.id %}"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
+                        <i data-lucide="book-open" class="h-4 w-4 mr-2"></i>
+                        Ver Temario
+                    </a>
+                    <a href="{% url 'profesor:editar_silabo' info.course_group.id %}"
+                        class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Editar temario">
+                        <i data-lucide="edit" class="h-4 w-4"></i>
+                    </a>
+                    {% else %}
+                    <a href="{% url 'profesor:subir_silabo' info.course_group.id %}"
+                        class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm transition-colors">
+                        <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
+                        Subir Temario
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Información adicional -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <i data-lucide="info" class="h-5 w-5 text-blue-600 mr-3 mt-0.5"></i>
+            <div class="flex-1">
+                <h4 class="text-sm font-semibold text-blue-900 mb-1">Información sobre el temario</h4>
+                <ul class="text-sm text-blue-800 space-y-1">
+                    <li>• El temario se sube una sola vez por curso al inicio del semestre</li>
+                    <li>• El progreso se actualiza automáticamente cada semana</li>
+                    <li>• Los estudiantes pueden ver el temario y seguir el progreso del curso</li>
+                    <li>• Puedes editar el temario en cualquier momento si lo necesitas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    lucide.createIcons();
+});
+</script>
+{% endblock %}
