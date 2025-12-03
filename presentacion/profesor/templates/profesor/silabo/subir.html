@@ -36,7 +36,7 @@
     </div>
 
     <!-- Formulario -->
-    <form method="post" action="{% url 'profesor:subir_silabo' %}" id="silaboForm" class="space-y-6">
+    <form method="post" action="{% url 'profesor:subir_silabo' course_group.id %}" id="silaboForm" class="space-y-6">
         {% csrf_token %}
         
         <!-- Configuración del Semestre -->

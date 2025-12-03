@@ -17,6 +17,8 @@ from .views_silabo import (
     ProfesorSilaboView,
     SubirSilaboView,
     EditarSilaboView,
+    ProfesorMisCursosView,
+    EliminarSilaboView,
 )
 
 app_name = 'profesor'
@@ -69,9 +71,12 @@ urlpatterns = [
     # path('api/cursos/', api_views.ProfesorCursosAPIView.as_view(), name='api_cursos'),
     # path('api/estadisticas/', api_views.ProfesorEstadisticasAPIView.as_view(), name='api_estadisticas'),
 
-     path('silabo/', ProfesorSilaboView.as_view(), name='silabo'),
-    path('silabo/subir/', SubirSilaboView.as_view(), name='subir_silabo'),
-    path('silabo/editar/', EditarSilaboView.as_view(), name='editar_silabo'), 
+
+    path('mis-cursos/', ProfesorMisCursosView.as_view(), name='mis_cursos'),
+    path("silabo/<uuid:course_group_id>/", ProfesorSilaboView.as_view(), name="silabo"),
+    path('silabo/<uuid:course_group_id>/subir/', SubirSilaboView.as_view(), name='subir_silabo'),
+    path('silabo/<uuid:course_group_id>/editar/', EditarSilaboView.as_view(), name='editar_silabo'),
+    path('silabo/<uuid:course_group_id>/eliminar/', EliminarSilaboView.as_view(), name='eliminar_silabo'),
 
     #acreditacion examenes
     path('exam-accreditation/',TeacherExamAccreditationView.as_view(),name='exam_accreditation' ),

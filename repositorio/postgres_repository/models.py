@@ -221,6 +221,12 @@ class CourseGroup(models.Model):
     
     def __str__(self):
         return f"{self.course.code} - {self.group_code} ({self.academic_period.name})"
+    @property
+    def enrolled_students(self):
+        return Enrollment.objects.filter(
+            course_group=self,
+            status='active'
+        ).count()
 
 
 class Laboratory(models.Model):
