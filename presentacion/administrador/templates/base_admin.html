@@ -123,6 +123,11 @@ Panel de administración con navegación completa y diseño responsive
                         <i data-lucide="file-text" class="w-5 h-5 flex-shrink-0"></i>
                         <span>Asistencia estudiantes</span>
                     </a>
+                    <a  href="{% url 'administrador:notas_estudiantes' %}" 
+                        class="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 {% if 'notas-estudiantes' in request.path %}bg-blue-700{% endif %}">
+                        <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                        <span class="ml-3">Notas Estudiantes</span>
+                    </a>
 
                     <!-- Recursos -->
                     <a href="{% url 'admin:reservas_dashboard' %}"
