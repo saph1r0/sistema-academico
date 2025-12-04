@@ -6,7 +6,7 @@ from django.http import JsonResponse
 import json
 
 class AdminNotasAlumnosAPIView(AdminRequiredMixin, View):
-    """API para obtener alumnos de un curso dinámicamente"""
+
     
     def get(self, request, *args, **kwargs):
         curso_id = request.GET.get('curso_id')
