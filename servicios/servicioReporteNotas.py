@@ -10,7 +10,6 @@ class ServicioReporteNotas:
     def obtener_dashboard_admin(self, filtros=None):
      
         try:
-            # 1. Query Base
             notas_qs = PhaseGrade.objects.all().select_related(
                 'student__user', 
                 'course_group__course'
@@ -99,7 +98,7 @@ class ServicioReporteNotas:
             return self._retornar_vacio()
 
     def _retornar_vacio(self):
-        """Estructura por defecto si no hay datos o hay error"""
+        
         return {
             'promedio_global': 0.0,
             'total_evaluados': 0,
@@ -110,10 +109,7 @@ class ServicioReporteNotas:
         }
 
     def obtener_lista_alumnos_curso(self, curso_id):
-        """
-        Devuelve una lista simple de alumnos matriculados en un curso
-        para llenar el select del frontend via AJAX.
-        """
+       
         try:
             matriculas = Enrollment.objects.filter(
                 course_group_id=curso_id, 
