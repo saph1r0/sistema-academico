@@ -4,6 +4,7 @@ from . import views_reservas
 from . import views_asistencia_estudiantes
 from .views_asistencia_profesor_admin import AdminAsistenciaProfesorView
 
+from . import views_notas_estudiantes
 app_name = 'admin'
 
 urlpatterns = [
@@ -17,6 +18,10 @@ urlpatterns = [
     
     # Reportes
     path('reportes/', views.AdminReportesView.as_view(), name='reportes'),
+
+    #NotasWa
+    path('notas-estudiantes/', views_notas_estudiantes.AdminNotasEstudiantesView.as_view(), name='notas_estudiantes'),
+    path('api/notas-estudiantes/alumnos/', views_notas_estudiantes.AdminNotasAlumnosAPIView.as_view(), name='api_notas_alumnos'),
     
     # Recursos y laboratorios
     #path('recursos/', views.AdminRecursosView.as_view(), name='recursos'),

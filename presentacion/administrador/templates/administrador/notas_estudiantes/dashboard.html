@@ -1,0 +1,307 @@
+{% extends 'base_admin.html' %}
+
+{% block title %}Monitor de Notas Académicas{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Monitor de Rendimiento Académico</h1>
+            <p class="text-gray-500 mt-1">Análisis en tiempo real de calificaciones y estudiantes en riesgo.</p>
+        </div>
+        <div class="flex gap-2">
+            <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm transition-colors">
+                <i data-lucide="download" class="w-4 h-4 inline mr-2"></i> Exportar Data
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Promedio Ponderado</p>
+                    <h3 class="text-3xl font-bold text-blue-600 mt-2">{{ stats.promedio_global }}</h3>
+                </div>
+                <div class="p-3 bg-blue-50 rounded-lg">
+                    <i data-lucide="trending-up" class="w-6 h-6 text-blue-600"></i>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Promedio general de la facultad</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Tasa de Aprobación</p>
+                    <h3 class="text-3xl font-bold text-green-600 mt-2">{{ stats.tasa_aprobacion }}%</h3>
+                </div>
+                <div class="p-3 bg-green-50 rounded-lg">
+                    <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+                </div>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5 mt-4">
+                <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ stats.tasa_aprobacion }}%"></div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-bold text-red-600">Estudiantes en Riesgo</p>
+                    <h3 class="text-3xl font-bold text-red-700 mt-2">{{ stats.cantidad_riesgo }}</h3>
+                </div>
+                <div class="p-3 bg-red-50 rounded-lg">
+                    <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600"></i>
+                </div>
+            </div>
+            <p class="text-xs text-red-500 mt-2 font-medium">Notas menores a 10.5</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Evaluados</p>
+                    <h3 class="text-3xl font-bold text-purple-600 mt-2">{{ stats.total_evaluados }}</h3>
+                </div>
+                <div class="p-3 bg-purple-50 rounded-lg">
+                    <i data-lucide="users" class="w-6 h-6 text-purple-600"></i>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Registros procesados</p>
+        </div>
+    </div>
+
+    {% if stats.cantidad_riesgo > 0 %}
+    <div class="bg-red-50 border border-red-200 rounded-xl p-6 animate-pulse-slow">
+        <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-red-100 rounded-full">
+                    <i data-lucide="siren" class="w-6 h-6 text-red-600"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-red-900">{{ stats.cantidad_riesgo }} Estudiantes Requieren Atención</h3>
+                    <p class="text-sm text-red-700">Se han detectado notas críticas (menores a 10.5). Se recomienda notificar a los tutores.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg border border-red-100 overflow-hidden shadow-sm max-h-80 overflow-y-auto">
+            <table class="min-w-full divide-y divide-red-100">
+                <thead class="bg-red-50 sticky top-0">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-red-800 uppercase tracking-wider">Estudiante</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-red-800 uppercase tracking-wider">Código</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-red-800 uppercase tracking-wider">Cursos Críticos</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-red-800 uppercase tracking-wider">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-red-50 bg-white">
+                    {% for alumno in stats.estudiantes_riesgo %}
+                    <tr class="hover:bg-red-50 transition-colors">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900 align-top">
+                            {{ alumno.nombre }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600 align-top">
+                            {{ alumno.codigo }}
+                        </td>
+                        
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            <ul class="space-y-1">
+                                {% for curso in alumno.cursos %}
+                                <li class="flex items-center justify-between text-xs">
+                                    <span>{{ curso.nombre }}</span>
+                                    <span class="font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded ml-2">
+                                        {{ curso.nota|floatformat:1 }}
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+
+                        <td class="px-6 py-4 text-center align-top">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                                {{ alumno.cursos|length }} Cursos
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900">Consulta Detallada de Notas</h3>
+                <p class="text-sm text-gray-500">Busca calificaciones específicas por curso o estudiante.</p>
+            </div>
+        </div>
+
+        <div class="p-6 border-b border-gray-100">
+            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">1. Seleccionar Curso</label>
+                    <select name="curso_id" id="select_curso" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm" required>
+                        <option value="">-- Selecciona un curso primero --</option>
+                        {% for c in lista_cursos %}
+                        <option value="{{ c.id }}" {% if filtros_activos.curso_id == c.id|stringformat:"s" %}selected{% endif %}>
+                            {{ c.course.name }} ({{ c.group_code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="md:col-span-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">2. Seleccionar Estudiante</label>
+                    <div class="relative">
+                        <select name="busqueda" id="select_estudiante" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm disabled:bg-gray-100 disabled:text-gray-400" disabled>
+                            <option value="">-- Todos los estudiantes --</option>
+                        </select>
+                        <div id="loading_spinner" class="absolute right-3 top-2.5 hidden">
+                            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        Consultar Notas
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estudiante</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUI</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Curso / Grupo</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fase Eval.</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Nota</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% if resultados_busqueda %}
+                        {% for res in resultados_busqueda %}
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ res.estudiante }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ res.codigo }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                {{ res.curso }} <span class="text-xs bg-gray-100 px-2 py-0.5 rounded ml-1 text-gray-600">{{ res.grupo }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ res.fase }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="text-sm font-bold {% if res.color == 'red' %}text-red-600{% else %}text-green-600{% endif %}">
+                                    {{ res.nota|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if res.color == 'red' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ res.estado }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                <div class="flex flex-col items-center justify-center">
+                                    <i data-lucide="search-x" class="h-12 w-12 text-gray-300 mb-3"></i>
+                                    <p class="text-base font-medium text-gray-900">No hay resultados para mostrar</p>
+                                    <p class="text-sm text-gray-500 mt-1">Utiliza los filtros de arriba para buscar notas específicas.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+
+        const cursoSelect = document.getElementById('select_curso');
+        const estudianteSelect = document.getElementById('select_estudiante');
+        const spinner = document.getElementById('loading_spinner');
+        const estudiantePrevio = "{{ filtros_activos.busqueda|default:'' }}";
+
+        // Función para cargar estudiantes
+        async function cargarEstudiantes(cursoId) {
+            if (!cursoId) {
+                estudianteSelect.innerHTML = '<option value="">-- Todos los estudiantes --</option>';
+                estudianteSelect.disabled = true;
+                return;
+            }
+
+            // UI
+            estudianteSelect.disabled = true;
+            spinner.classList.remove('hidden');
+            estudianteSelect.innerHTML = '<option>Cargando...</option>';
+
+            try {
+                
+                const url = "{% url 'admin:api_notas_alumnos' %}"; 
+                
+                const response = await fetch(`${url}?curso_id=${cursoId}`);
+                
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+
+                // Limpiar y llenar
+                estudianteSelect.innerHTML = '<option value="">-- Todos los estudiantes --</option>';
+                
+                data.alumnos.forEach(alumno => {
+                    const option = document.createElement('option');
+                    option.value = alumno.cui;
+                    option.textContent = `${alumno.nombre_completo} (${alumno.cui})`;
+                    
+                    // Pre-seleccionar
+                    if (alumno.cui === estudiantePrevio) {
+                        option.selected = true;
+                    }
+                    estudianteSelect.appendChild(option);
+                });
+
+                estudianteSelect.disabled = false;
+
+            } catch (error) {
+                console.error('Error cargando estudiantes:', error);
+                estudianteSelect.innerHTML = '<option value="">Error al cargar</option>';
+            } finally {
+                spinner.classList.add('hidden');
+            }
+        }
+
+        // Evento al cambiar curso
+        cursoSelect.addEventListener('change', function() {
+            cargarEstudiantes(this.value);
+        });
+
+        // Carga inicial 
+        if (cursoSelect.value) {
+            cargarEstudiantes(cursoSelect.value);
+        }
+    });
+</script>
+{% endblock %}
