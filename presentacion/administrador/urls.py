@@ -5,6 +5,8 @@ from . import views_asistencia_estudiantes
 from .views_asistencia_profesor_admin import AdminAsistenciaProfesorView
 
 from . import views_notas_estudiantes
+from . import views_export_asistestudiante
+from . import views_export_asistestudiantespdffiltro
 app_name = 'admin'
 
 urlpatterns = [
@@ -39,6 +41,15 @@ urlpatterns = [
     path('asistencia/curso/<uuid:curso_id>/', views_asistencia_estudiantes.reporte_por_curso, name='reporte_curso'),
     path('asistencia/estudiante/<uuid:estudiante_id>/', views_asistencia_estudiantes.reporte_por_estudiante, name='reporte_estudiante'),
     path('asistencia/riesgo/', views_asistencia_estudiantes.estudiantes_en_riesgo, name='estudiantes_riesgo'),
+
+        ##EXPORTACIONES ASISTENCIA ESTUDIANTES
+    path('asistencia/exportar/dashboard/excel/', views_export_asistestudiante.exportar_dashboard_excel, name='exportar_dashboard_excel'),
+    path('asistencia/exportar/curso/<uuid:curso_id>/excel/', views_export_asistestudiante.exportar_curso_excel, name='exportar_curso_excel'),
+    path('asistencia/exportar/estudiante/<uuid:estudiante_id>/excel/', views_export_asistestudiante.exportar_estudiante_excel, name='exportar_estudiante_excel'),
+
+    path('asistencia/exportar/dashboard/pdf/', views_export_asistestudiantespdffiltro.exportar_dashboard_pdf,  name='exportar_dashboard_pdf'),
+    path('asistencia/exportar/curso/<uuid:curso_id>/pdf/', views_export_asistestudiantespdffiltro.exportar_curso_pdf, name='exportar_curso_pdf'),
+    path('asistencia/exportar/estudiante/<uuid:estudiante_id>/pdf/', views_export_asistestudiantespdffiltro.exportar_estudiante_pdf, name='exportar_estudiante_pdf'),
     
     # Sistema de monitoreo y supervisión
     path('monitoreo/', views.AdminMonitoreoView.as_view(), name='monitoreo'),
