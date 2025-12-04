@@ -13,8 +13,7 @@
             <select name="curso" class="w-full border rounded-md px-3 py-2 text-sm">
                 <option value="">-- Selecciona un curso --</option>
                 {% for c in cursos %}
-                    <option value="{{ c.id }}"
-                        {% if curso_seleccionado and c.id == curso_seleccionado.id %}selected{% endif %}>
+                    <option value="{{ c.id }}" {% if curso_seleccionado and c.id == curso_seleccionado.id %}selected{% endif %}>
                         {{ c.course.code }} - {{ c.course.name }} (Grupo {{ c.group_code }})
                     </option>
                 {% endfor %}
@@ -23,72 +22,70 @@
 
         <div class="pt-6">
             <button type="submit"
-                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
                 Ver Asistencia
             </button>
         </div>
     </form>
 
     {% if curso_seleccionado %}
-        <div class="bg-white rounded-lg shadow-sm p-4">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">
-                Historial de asistencia – {{ curso_seleccionado.course.code }} - {{ curso_seleccionado.course.name }}
-                (Grupo {{ curso_seleccionado.group_code }})
-            </h2>
+    <div class="bg-white rounded-lg shadow-sm p-4">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">
+            Historial – {{ curso_seleccionado.course.code }} - {{ curso_seleccionado.course.name }}
+            (Grupo {{ curso_seleccionado.group_code }})
+        </h2>
 
-            {% if fechas_clase %}
-            <table class="min-w-full text-sm">
-                <thead class="bg-gray-100 text-gray-700">
-                    <tr>
-                        <th class="px-4 py-2 text-left">Fecha de clase</th>
-                        <th class="px-4 py-2 text-left">Aula</th>
-                        <th class="px-4 py-2 text-left">Estado</th>
-                        <th class="px-4 py-2 text-left">IP</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    {% for f in fechas_clase %}
-                    <tr>
-                        <td class="px-4 py-2">{{ f.fecha|date:"d/m/Y" }}</td>
+        {% if fechas_clase %}
+        <table class="min-w-full text-sm">
+            <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2 text-left">Fecha</th>
+                    <th class="px-4 py-2 text-left">Tema</th>
+                    <th class="px-4 py-2 text-left">Subtema</th>
+                    <th class="px-4 py-2 text-left">Estado</th>
+                    <th class="px-4 py-2 text-left">IP</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for f in fechas_clase %}
+                <tr>
+                    <td class="px-4 py-2">{{ f.fecha_mostrar }}</td>
 
-                        <td class="px-4 py-2">
-                            {{ f.aula }}
-                        </td>
+                    <td class="px-4 py-2 font-semibold">
+                        {{ f.tema }}
+                    </td>
 
+                    <td class="px-4 py-2">
+                        {% if f.subtema %}
+                            {{ f.subtema }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
 
+                    <td class="px-4 py-2">
+                        {% if f.asistio %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✔ Asistió
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            ✖ Falta
+                        </span>
+                        {% endif %}
+                    </td>
 
-                        <td class="px-4 py-2">
-                            {% if f.asistio %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    ✔ Asistió
-                                </span>
-                            {% else %}
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    ✖ Falta
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-4 py-2">
-                            {% if f.asistio %}
-                                {{ f.ip }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-                <p class="text-gray-500 text-sm">
-                    No se encontraron fechas de clase para este curso.
-                </p>
-            {% endif %}
-        </div>
-    {% else %}
-        <div class="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500 text-sm">
-            Selecciona un curso para ver tu historial de asistencia.
-        </div>
+                    <td class="px-4 py-2">
+                        {{ f.ip }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p class="text-gray-500 text-sm">No hay clases registradas.</p>
+        {% endif %}
+    </div>
     {% endif %}
 </div>
 {% endblock %}

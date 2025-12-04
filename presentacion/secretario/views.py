@@ -315,7 +315,7 @@ def cargar_cursos_docentes(request):
 
     # Patrón flexible para capturar: Nro Codigo Asignatura Ciclo Grupo Alum Docente Email
     PATTERN = r'^\s*(\d+)\s+(\d+)\s+(.+?)\s+([A-F])\s+([A-F])\s+(\d+)\s+(.+?)\s+([\w\-]+@unsa\.edu\.pe)'
-    DEFAULT_PERIOD_NAME = "2025-I"
+    DEFAULT_PERIOD_NAME = "2025-II"
 
     grupos_creados = 0
     profesores_nuevos = 0
@@ -333,8 +333,8 @@ def cargar_cursos_docentes(request):
                 name=DEFAULT_PERIOD_NAME,
                 defaults={
                     "is_active": True,
-                    "start_date": "2025-03-01",
-                    "end_date": "2025-07-30"
+                    "start_date": "2025-09-01",
+                    "end_date": "2025-12-31"
                 }
             )
 
@@ -444,7 +444,7 @@ def cargar_horarios(request):
     horarios_creados = 0
     aulas_creadas = 0
     redirect_url = redirect('secretario:cargar_documentos')
-    DEFAULT_PERIOD_NAME = "2025-I"
+    DEFAULT_PERIOD_NAME = "2025-II"
 
     def _limpiar_texto_local(txt: str) -> str:
         """Limpia caracteres dañados, tildes y convierte a mayúsculas uniformes"""
@@ -573,7 +573,7 @@ def cargar_estudiantes(request):
     estudiantes_creados = 0
     matriculas_creadas = 0
     redirect_url = redirect('secretario:cargar_documentos')
-    DEFAULT_PERIOD_NAME = "2025-I"
+    DEFAULT_PERIOD_NAME = "2025-II"
 
     try:
         with transaction.atomic():

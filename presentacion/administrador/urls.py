@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 from . import views_reservas
 from . import views_asistencia_estudiantes
+from .views_asistencia_profesor_admin import AdminAsistenciaProfesorView
+
 app_name = 'admin'
 
 urlpatterns = [
@@ -26,6 +28,7 @@ urlpatterns = [
     path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
     path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
 
+    path("asistencia-profesor/", AdminAsistenciaProfesorView.as_view(), name="asistencia_profesor"),
     #ASISTENCIA ESTUDIANTES
     path('asistencia/', views_asistencia_estudiantes.dashboard_asistencia, name='dashboard_asistencia'),
     path('asistencia/curso/<uuid:curso_id>/', views_asistencia_estudiantes.reporte_por_curso, name='reporte_curso'),

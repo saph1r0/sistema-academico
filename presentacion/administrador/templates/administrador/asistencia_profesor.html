@@ -1,0 +1,199 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}Asistencia y Avance Docente{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-input:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .user-actions button:hover {
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="space-y-6">
+
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Historial de Asistencia y Avance Docente</h1>
+            <p class="mt-1 text-sm text-gray-600">
+                Consulta la trazabilidad de la asistencia del profesor y el progreso semanal del sílabo.
+            </p>
+        </div>
+        
+        {% if porcentaje is not None %}
+        <div class="mt-4 sm:mt-0 flex space-x-4">
+            <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg shadow-sm">
+                <p class="text-xs font-medium text-blue-700">Clases Registradas (Hasta Hoy)</p>
+                <p class="text-lg font-semibold text-blue-900">{{ total_clases }}</p>
+            </div>
+            <div class="bg-green-50 border border-green-200 p-3 rounded-lg shadow-sm">
+                <p class="text-xs font-medium text-green-700">Asistencia</p>
+                <p class="text-lg font-semibold text-green-900">{{ porcentaje }}%</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+
+        <form method="GET" id="filter-form" class="space-y-4 sm:space-y-0 sm:flex sm:items-end sm:space-x-4">
+            {% csrf_token %}
+            <div class="flex-1">
+                <label for="profesor" class="block text-sm font-medium text-gray-700 mb-1">
+                    Seleccionar Profesor
+                </label>
+                <select id="profesor" name="profesor"
+                    class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 rounded-md 
+                           focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Selecciona --</option>
+                    {% for prof in profesores %}
+                    <option value="{{ prof.id }}"
+                        {% if request.GET.profesor == prof.id|stringformat:"s" %} selected {% endif %}>
+                        {{ prof.user.last_name }} {{ prof.user.first_name }} — {{ prof.user.institutional_email }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {% if cursos %}
+            <div class="flex-1">
+                <label for="curso" class="block text-sm font-medium text-gray-700 mb-1">
+                    Seleccionar Curso
+                </label>
+                <select id="curso" name="curso"
+                    class="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 rounded-md
+                           focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">-- Selecciona --</option>
+                    {% for c in cursos %}
+                    <option value="{{ c.id }}"
+                        {% if request.GET.curso == c.id|stringformat:"s" %} selected {% endif %}>
+                        {{ c.course.code }} — {{ c.course.name }} (Grupo {{ c.group_code }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="flex space-x-2">
+                <button type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium 
+                           rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="search" class="h-4 w-4 mr-2"></i> Buscar Historial
+                </button>
+
+                <a href="{% url 'administrador:asistencia_profesor' %}"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm 
+                           font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="x" class="h-4 w-4 mr-2"></i> Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    {% if porcentaje is not None %}
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-3">
+        <h2 class="text-xl font-bold text-gray-900">Trazabilidad del Avance</h2>
+        
+        <div class="flex items-center justify-between">
+             <p class="text-sm font-medium text-gray-700">Avance de clases registradas (Hasta la fecha de hoy)</p>
+             <p class="text-lg font-semibold text-gray-900">{{ porcentaje }}%</p>
+        </div>
+
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out" 
+                 style="width: {{ porcentaje }}%;"></div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+        
+        <h2 class="text-lg font-semibold text-gray-900 p-6 border-b border-gray-200">
+            Detalle de Clases Registradas
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha (Día)</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tema Principal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subtema Cubierto</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Asistencia</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP de Registro</th>
+                    </tr>
+                </thead>
+
+                <tbody class="bg-white divide-y divide-gray-200">
+
+                    {% for item in fechas_info %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                            {{ item.fecha_mostrar }}
+                        </td>
+
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ item.tema }}</td>
+
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ item.subtema }}</td>
+
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if item.asistio %}
+                            <span class="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i> Asistió
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
+                                <i data-lucide="x-circle" class="h-3 w-3 mr-1"></i> Falta
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <td class="px-6 py-4 text-sm text-gray-500">
+                            {% if item.ip %}
+                                {{ item.ip }}
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+        <i data-lucide="list-checks" class="mx-auto h-12 w-12 text-gray-400"></i>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Selecciona un Profesor y un Curso</h3>
+        <p class="mt-1 text-sm text-gray-500">
+            Utiliza los filtros de arriba para ver el historial de asistencia y avance del sílabo.
+        </p>
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+
+    document.getElementById('profesor').addEventListener('change', function() {
+        document.getElementById('filter-form').submit();
+    });
+</script>
+{% endblock %}
