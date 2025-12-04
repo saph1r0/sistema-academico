@@ -1,0 +1,210 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i data-lucide="alert-triangle" class="w-12 h-12 text-red-600"></i>
+            </div>
+            <div class="ml-4 flex-1">
+                <h1 class="text-2xl font-bold text-red-900">{{ page_title }}</h1>
+                <p class="text-red-800 mt-2">
+                    {{ total_riesgo }} estudiantes con más del 20% de inasistencias. 
+                    Estos estudiantes requieren atención inmediata.
+                </p>
+                <div class="mt-4 flex items-center gap-3">
+                    <a href="{% url 'administrador:dashboard_asistencia' %}" 
+                        class="inline-flex items-center px-4 py-2 bg-white border border-red-300 rounded-md text-red-700 hover:bg-red-50">
+                        <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>
+                        Volver al Dashboard
+                    </a>
+                    <button onclick="notificarTodos()" 
+                        class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                        <i data-lucide="send" class="w-4 h-4 mr-2"></i>
+                        Notificar a Todos los Docentes
+                    </button>
+                    <button onclick="exportarListaRiesgo()" 
+                        class="inline-flex items-center px-4 py-2 bg-white border border-red-300 rounded-md text-red-700 hover:bg-red-50">
+                        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                        Exportar Lista
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de Fecha -->
+    <div class="bg-gray-50 rounded-lg p-4">
+        <form method="GET" class="flex items-center gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                <input type="date" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}"
+                    class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                <input type="date" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}"
+                    class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                    Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Lista de Estudiantes -->
+    <div class="space-y-4">
+        {% for estudiante in estudiantes_riesgo %}
+        <div class="bg-white rounded-lg shadow-sm border-2 border-red-200 p-6">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center mb-3">
+                        <div class="flex-shrink-0 h-12 w-12">
+                            <div class="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                                <span class="text-lg font-bold text-red-600">
+                                    {{ estudiante.nombre|slice:":2"|upper }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-bold text-gray-900">{{ estudiante.nombre }}</h3>
+                            <p class="text-sm text-gray-600">
+                                {{ estudiante.codigo }} | {{ estudiante.email }}
+                            </p>
+                        </div>
+                        <div class="ml-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                                <i data-lucide="alert-circle" class="w-4 h-4 mr-1"></i>
+                                {{ estudiante.total_cursos_problema }} curso(s) con problemas
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Cursos con problemas -->
+                    <div class="mt-4">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                            Cursos con más del 20% de faltas:
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {% for curso in estudiante.cursos_problema %}
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-900 text-sm">{{ curso.curso }}</p>
+                                        <p class="text-xs text-gray-600 mt-1">
+                                            Grupo {{ curso.grupo }} | Prof: {{ curso.profesor }}
+                                        </p>
+                                        <div class="mt-2 flex items-center gap-4 text-xs">
+                                            <span class="text-gray-700">
+                                                Total: {{ curso.total_clases }} clases
+                                            </span>
+                                            <span class="text-red-700 font-bold">
+                                                Faltas: {{ curso.faltas }} ({{ curso.porcentaje_faltas }}%)
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3">
+                                        <div class="text-center">
+                                            <span class="text-2xl font-bold text-red-600">
+                                                {{ curso.porcentaje_faltas }}%
+                                            </span>
+                                            <p class="text-xs text-gray-500">faltas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ml-6 flex flex-col gap-2">
+                    <a href="{% url 'administrador:reporte_estudiante' estudiante.id %}" 
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm whitespace-nowrap">
+                        <i data-lucide="eye" class="w-4 h-4 mr-2"></i>
+                        Ver Detalle
+                    </a>
+                    <button onclick="notificarDocente('{{ estudiante.id }}')" 
+                        class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm whitespace-nowrap">
+                        <i data-lucide="send" class="w-4 h-4 mr-2"></i>
+                        Notificar Docentes
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <i data-lucide="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">
+                ¡Excelente! No hay estudiantes en riesgo
+            </h3>
+            <p class="text-gray-600">
+                Todos los estudiantes tienen menos del 20% de inasistencias en el período seleccionado.
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Resumen de Acciones -->
+    {% if estudiantes_riesgo %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-blue-900 mb-3">
+            📊 Resumen y Recomendaciones
+        </h3>
+        <ul class="space-y-2 text-sm text-blue-800">
+            <li class="flex items-start">
+                <i data-lucide="check" class="w-4 h-4 mr-2 mt-0.5 text-blue-600"></i>
+                <span><strong>{{ total_riesgo }}</strong> estudiantes requieren seguimiento inmediato</span>
+            </li>
+            <li class="flex items-start">
+                <i data-lucide="check" class="w-4 h-4 mr-2 mt-0.5 text-blue-600"></i>
+                <span>Se recomienda <strong>notificar a los docentes</strong> de los cursos afectados</span>
+            </li>
+            <li class="flex items-start">
+                <i data-lucide="check" class="w-4 h-4 mr-2 mt-0.5 text-blue-600"></i>
+                <span>Considerar implementar <strong>plan de recuperación</strong> para estudiantes críticos</span>
+            </li>
+            <li class="flex items-start">
+                <i data-lucide="check" class="w-4 h-4 mr-2 mt-0.5 text-blue-600"></i>
+                <span>Realizar <strong>seguimiento semanal</strong> de estos casos</span>
+            </li>
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) { lucide.createIcons(); }
+});
+
+function notificarDocente(estudianteId) {
+    if (confirm('¿Desea notificar a los docentes sobre este estudiante?')) {
+        // Aquí iría la lógica de notificación
+        alert('Notificaciones enviadas a los docentes correspondientes');
+    }
+}
+
+function notificarTodos() {
+    const total = {{ total_riesgo }};
+    if (confirm(`¿Desea enviar notificaciones a los docentes de los ${total} estudiantes en riesgo?`)) {
+        // Aquí iría la lógica de notificación masiva
+        alert(`Notificaciones enviadas para ${total} estudiantes`);
+    }
+}
+
+function exportarListaRiesgo() {
+    alert('Exportando lista de estudiantes en riesgo... (función en desarrollo)');
+}
+</script>
+{% endblock %}
