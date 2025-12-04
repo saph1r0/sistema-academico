@@ -117,6 +117,13 @@ Panel de administración con navegación completa y diseño responsive
                         <span>Reportes</span>
                     </a>
 
+                    <!-- Asistencia estudiantes -->
+                    <a href="{% url 'admin:dashboard_asistencia' %}"
+                        class="nav-link flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-primary-light hover:text-white {% if request.resolver_match.url_name == 'dashboard_asistencia' %}bg-primary-light text-white{% endif %}">
+                        <i data-lucide="file-text" class="w-5 h-5 flex-shrink-0"></i>
+                        <span>Asistencia estudiantes</span>
+                    </a>
+
                     <!-- Recursos -->
                     <a href="{% url 'admin:reservas_dashboard' %}"
                         class="nav-link flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-primary-light hover:text-white {% if request.resolver_match.url_name == 'reservas_dashboard' %}bg-primary-light text-white{% endif %}">

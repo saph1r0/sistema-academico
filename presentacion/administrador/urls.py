@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_reservas
-
+from . import views_asistencia_estudiantes
 app_name = 'admin'
 
 urlpatterns = [
@@ -25,6 +25,12 @@ urlpatterns = [
     path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
     path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
     path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
+
+    #ASISTENCIA ESTUDIANTES
+    path('asistencia/', views_asistencia_estudiantes.dashboard_asistencia, name='dashboard_asistencia'),
+    path('asistencia/curso/<uuid:curso_id>/', views_asistencia_estudiantes.reporte_por_curso, name='reporte_curso'),
+    path('asistencia/estudiante/<uuid:estudiante_id>/', views_asistencia_estudiantes.reporte_por_estudiante, name='reporte_estudiante'),
+    path('asistencia/riesgo/', views_asistencia_estudiantes.estudiantes_en_riesgo, name='estudiantes_riesgo'),
     
     # Sistema de monitoreo y supervisión
     path('monitoreo/', views.AdminMonitoreoView.as_view(), name='monitoreo'),
