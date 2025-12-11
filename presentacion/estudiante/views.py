@@ -26,6 +26,8 @@ from servicios.servicioReservas import servicio_reservas
 from servicios.servicioNotas import ServicioNotas, servicio_notas
 from servicios.servicioHorario import ServicioHorario
 from servicios.servicioEstudianteData import ServicioEstudianteData
+from servicios.servicioMatriculaLaboratorio import servicio_matricula_laboratorio
+
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
@@ -40,7 +42,8 @@ from repositorio.postgres_repository.models import (
     Student, 
     AcademicPeriod, 
     Enrollment, 
-    Horario
+    Horario,
+    LaboratoryEnrollment
 )
 
 logger = logging.getLogger(__name__)
@@ -157,104 +160,63 @@ class EstudianteLaboratoriosView(EstudianteRequiredMixin, TemplateView):
     template_name = 'estudiante/laboratorios/index.html'
 
     def get_context_data(self, **kwargs):
-        from repositorio.postgres_repository.models import Enrollment
-        from servicios.servicioMatricula import ServicioMatricula
-
         context = super().get_context_data(**kwargs)
 
-        # Obtener estudiante logueado
+        # 1) Obtener estudiante logueado
         try:
-            estudiante = self.request.user.student
-            estudiante_id = estudiante.id
+            student = self.request.user.student
         except AttributeError:
-            estudiante = None
-            estudiante_id = self.request.user.id
+            # Si algo raro pasa
+            student = None
 
-        # Obtener cursos matriculados
-        enrollments = Enrollment.objects.filter(student=estudiante).select_related(
-            "course_group__course", "academic_period"
+        if not student:
+            context.update({
+                "plazo_matricula_activo": False,
+                "laboratorios_disponibles": [],
+                "matriculas_actuales": [],
+            })
+            return context
+
+        # 2) Usar el servicio NUEVO de laboratorios
+        data = servicio_matricula_laboratorio.obtener_laboratorios_disponibles(student.id)
+
+        laboratorios_disponibles = data.get("laboratorios", [])
+        en_periodo = data.get("en_periodo_matricula", False)
+
+        # 3) Mis laboratorios actuales (matrículas reales en la BD)
+        matriculas_qs = LaboratoryEnrollment.objects.filter(
+            student=student,
+            status='active'
+        ).select_related(
+            'laboratory__course_group__course',
+            'laboratory__teacher__user'
         )
 
-        servicio = ServicioMatricula(repo=None)
-        cursos_context = servicio.preparar_contexto_enrollments(self.request, enrollments)
-
-        # Laboratorios disponibles (todos los labs A y B de cada curso)
-        laboratorios_disponibles = []
-        for c in cursos_context:
-            curso_id = c['enrollment_id']
-            for key, lab in c['labs'].items():
-                # Verificar si ya matriculado en este lab
-                asignado = c['asignado']
-                ya_matriculado = asignado and asignado.get('lab_codigo') == lab['codigo']
-
-                # Verificar cupos usados
-                matriculas = self.request.session.get('matriculas_labs', {})
-                inscritos = sum(1 for m in matriculas.values() if m.get('lab_codigo') == lab['codigo'])
-                porcentaje_ocupacion = int((inscritos / lab['capacidad']) * 100)
-
-    
-                # luego en tu código:
-                curso_start = parse_hora(c['horario_curso']['start'])
-                curso_end = parse_hora(c['horario_curso']['end'])
-                from datetime import datetime, time
-
-
-                # y cuando se usa:
-                lab_start = parse_time(lab['horario']['start'])
-                lab_end = parse_time(lab['horario']['end'])
-
-                
-                conflicto = (lab_start < curso_end) and (curso_start < lab_end)
-
-                laboratorios_disponibles.append({
-                    'id': f"{curso_id}-{key}",
-                    'curso_id': curso_id,
-                    'curso_nombre': c['curso_nombre'],
-                    'laboratorio_codigo': lab['codigo'],
-                    'profesor_nombre': "Asignar",
-                    'aula': "Lab " + key,
-                    'horario': f"{lab_start.strftime('%H:%M')} - {lab_end.strftime('%H:%M')}",
-                    'capacidad': lab['capacidad'],
-                    'estudiantes_matriculados': inscritos,
-                    'porcentaje_ocupacion': porcentaje_ocupacion,
-                    'ya_matriculado': ya_matriculado,
-                    'tiene_cupos': inscritos < lab['capacidad'],
-                    'conflicto_horario': conflicto,
-                    'conflicto_con': c['curso_nombre'] if conflicto else None,
-                    'duracion_horas': 2,
-                    'equipos_disponibles': None,
-                    'requisitos': None,
-                })
-
-        # Mis laboratorios actuales
-        matriculas = self.request.session.get('matriculas_labs', {})
         mis_labs = []
-        for m in matriculas.values():
-            for c in cursos_context:
-                if str(c['enrollment_id']) == str(m['enrollment_id']) or m.get('lab_codigo') in [l['codigo'] for l in c['labs'].values()]:
-                    mis_labs.append({
-                        'curso_nombre': c['curso_nombre'],
-                        'laboratorio_codigo': m['lab_codigo'],
-                        'profesor_nombre': "Asignar",
-                        'aula': "Lab " + m['lab_key'],
-                        'horario': f"{c['labs'][m['lab_key']]['horario']['start'][:5]} - {c['labs'][m['lab_key']]['horario']['end'][:5]}",
-                        'estudiantes_matriculados': 1,
-                        'capacidad': 20,
-                        'fecha_matricula': datetime.parse_time(m['fecha_matricula']),
-                        'laboratorio_id': m['lab_codigo'],
-                    })
+        for m in matriculas_qs:
+            lab = m.laboratory
+            cg = lab.course_group
+            mis_labs.append({
+                "curso_nombre": cg.course.name,
+                "curso_codigo": cg.course.code,
+                "grupo": cg.group_code,
+                "laboratorio_codigo": lab.lab_code,
+                "laboratorio_id": str(lab.id),
+                "aula": lab.lab_room or "Por asignar",
+                "profesor_nombre": lab.teacher.user.get_full_name() if lab.teacher else "Por asignar",
+                "fecha_matricula": m.enrollment_date,
+            })
 
+        # 4) Enviar todo al template
         context.update({
-            'plazo_matricula_activo': True,
-            'laboratorios_disponibles': laboratorios_disponibles,
-            'matriculas_actuales': mis_labs,
-            'cursos_con_laboratorio': [{'id': c['enrollment_id'], 'nombre': c['curso_nombre']} for c in cursos_context],
+            "plazo_matricula_activo": en_periodo,
+            "laboratorios_disponibles": laboratorios_disponibles,
+            "matriculas_actuales": mis_labs,
         })
         return context
-
+    
     def post(self, request, *args, **kwargs):
         """Matricular o desmatricular en laboratorio"""
-        from servicios.servicioMatricula import ServicioMatricula
 
         accion = request.POST.get('accion')
         laboratorio_id = request.POST.get('laboratorio_id')
@@ -265,7 +227,7 @@ class EstudianteLaboratoriosView(EstudianteRequiredMixin, TemplateView):
         except AttributeError:
             estudiante_id = request.user.id
 
-        servicio = ServicioMatricula(repo=None)
+        servicio = servicio_matricula_laboratorio
 
         # Laboratorio_id viene como "<enrollment_id>-A" o "<enrollment_id>-B"
         try:
@@ -410,7 +372,7 @@ def matricular_lab(request):
     except AttributeError:
         estudiante_id = request.user.id
 
-    servicio = ServicioMatricula(repo=None)
+    servicio = servicio_matricula_laboratorio
 
     if accion == 'matricular':
         ok, msg = servicio.matricular_laboratorio(request, estudiante_id, enrollment_id, opcion_lab)

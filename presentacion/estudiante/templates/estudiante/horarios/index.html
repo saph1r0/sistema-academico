@@ -241,13 +241,24 @@ function inicializarCalendario(events) {
 function llenarListaClases(events) {
     const container = document.getElementById('lista-clases');
     const clases = events.filter(e => e.extendedProps.type === 'clase');
-    
-    if (clases.length === 0) {
+
+    // 🔹 Agrupar por curso+grupo para que no se repitan
+    const clasesPorCurso = {};
+    clases.forEach(e => {
+        const key = `${e.extendedProps.codigo}-${e.extendedProps.grupo}`;
+        if (!clasesPorCurso[key]) {
+            clasesPorCurso[key] = e;  // usamos el primero como "representante"
+        }
+    });
+
+    const clasesUnicas = Object.values(clasesPorCurso);
+
+    if (clasesUnicas.length === 0) {
         container.innerHTML = '<p class="p-6 text-center text-gray-500">No hay clases registradas</p>';
         return;
     }
-    
-    container.innerHTML = clases.map(clase => `
+
+    container.innerHTML = clasesUnicas.map(clase => `
         <div class="p-4 hover:bg-gray-50 transition-colors">
             <div class="flex items-start">
                 <div class="flex-shrink-0">
@@ -280,13 +291,24 @@ function llenarListaClases(events) {
 function llenarListaLaboratorios(events) {
     const container = document.getElementById('lista-laboratorios');
     const labs = events.filter(e => e.extendedProps.type === 'laboratorio');
-    
-    if (labs.length === 0) {
+
+    // 🔹 Agrupar por código de laboratorio para no repetirlo
+    const labsPorCodigo = {};
+    labs.forEach(e => {
+        const key = e.extendedProps.codigo;   // lab_code
+        if (!labsPorCodigo[key]) {
+            labsPorCodigo[key] = e;
+        }
+    });
+
+    const labsUnicos = Object.values(labsPorCodigo);
+
+    if (labsUnicos.length === 0) {
         container.innerHTML = '<p class="p-6 text-center text-gray-500">No hay laboratorios matriculados</p>';
         return;
     }
-    
-    container.innerHTML = labs.map(lab => `
+
+    container.innerHTML = labsUnicos.map(lab => `
         <div class="p-4 hover:bg-gray-50 transition-colors">
             <div class="flex items-start">
                 <div class="flex-shrink-0">

@@ -154,9 +154,9 @@ class ServicioMatriculaLaboratorio:
                         'dia': h.dia_semana.capitalize(),
                         'hora_inicio': parse_time(h.hora_inicio).strftime('%H:%M'),
                         'hora_fin': parse_time(h.hora_fin).strftime('%H:%M'),
-                        'aula': h.aula.codigo if h.aula else lab.lab_room or 'Por asignar'
+                        # 👇 PRIORIDAD: lab.lab_room, y si está vacío recurre a h.aula
+                        'aula': lab.lab_room or (h.aula.codigo if h.aula else 'Por asignar'),
                     })
-                
                 # Determinar estado de matrícula
                 ya_matriculado = matricula_actual and matricula_actual.laboratory.id == lab.id
                 puede_matricularse = (
@@ -261,7 +261,9 @@ class ServicioMatriculaLaboratorio:
         for enrollment in enrollments:
             horarios_curso = Horario.objects.filter(
                 course_group=enrollment.course_group,
-                dia_semana__iexact=lab_dia
+                dia_semana__iexact=lab_dia,
+                laboratory__isnull=True   # 👈 SOLO teoría, no laboratorios
+
             )
             
             for h in horarios_curso:
@@ -269,8 +271,10 @@ class ServicioMatriculaLaboratorio:
                 h_fin = parse_time(h.hora_fin)
                 
                 if intervals_conflict(lab_inicio, lab_fin, h_inicio, h_fin):
-                    return True, f"Conflicto con {enrollment.course_group.course.name} ({h_inicio.strftime('%H:%M')}-{h_fin.strftime('%H:%M')})"
-        
+                    return True, (
+                        f"Conflicto con {enrollment.course_group.course.name} "
+                        f"({h_inicio.strftime('%H:%M')}-{h_fin.strftime('%H:%M')})"
+                    )
         # 2. Verificar conflictos con otros laboratorios
         lab_enrollments = LaboratoryEnrollment.objects.filter(
             student=student,

@@ -121,7 +121,9 @@ class ServicioHorario:
         ).prefetch_related(
             Prefetch(
                 'course_group__horarios',
-                queryset=Horario.objects.select_related('aula')
+                queryset=Horario.objects
+                    .filter(laboratory__isnull=True)       # 👈 SOLO teoría
+                    .select_related('aula')
             )
         )
         
