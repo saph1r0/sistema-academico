@@ -401,8 +401,9 @@ class ServicioMatriculaLaboratorio:
         
         # 2. Retirar matrícula
         laboratory = enrollment.laboratory
-        enrollment.status = 'withdrawn'
-        enrollment.save()
+        enrollment.delete()
+        #enrollment.status = 'withdrawn'
+        #enrollment.save()
         
         # 3. Actualizar contador
         active_count = LaboratoryEnrollment.objects.filter(
