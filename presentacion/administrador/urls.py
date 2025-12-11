@@ -24,6 +24,7 @@ urlpatterns = [
     #NotasWa
     path('notas-estudiantes/', views_notas_estudiantes.AdminNotasEstudiantesView.as_view(), name='notas_estudiantes'),
     path('api/notas-estudiantes/alumnos/', views_notas_estudiantes.AdminNotasAlumnosAPIView.as_view(), name='api_notas_alumnos'),
+    path('notas-estudiantes/exportar-csv/', views_notas_estudiantes.ExportarNotasCSVView.as_view(), name='exportar_notas_csv'),
     
     # Recursos y laboratorios
     #path('recursos/', views.AdminRecursosView.as_view(), name='recursos'),

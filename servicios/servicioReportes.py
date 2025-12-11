@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+class ReporteGeneracionException(Exception):
+    pass
 
 class ServicioReportes:
     def __init__(self):

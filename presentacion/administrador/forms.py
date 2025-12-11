@@ -1,7 +1,7 @@
 from django import forms
 from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import datetime, date
-from repositorio.postgres_repository.models import UsuarioModel
+from repositorio.postgres_repository.models import UsuarioModel, AcademicPeriod
 
 
 class ConfiguracionSistemaForm(forms.Form):
@@ -69,7 +69,7 @@ class ConfiguracionSistemaForm(forms.Form):
 
 
 class ReporteAsistenciaForm(forms.Form):
-    """Formulario para generar reportes de asistencia"""
+  
     
     FORMATO_CHOICES = [
         ('pdf', 'PDF'),
@@ -131,14 +131,7 @@ class ReporteAsistenciaForm(forms.Form):
 
 
 class ReporteNotasForm(forms.Form):
-    """Formulario para generar reportes de notas"""
-    
-    FORMATO_CHOICES = [
-        ('pdf', 'PDF'),
-        ('excel', 'Excel'),
-    ]
-    
-    TIPO_CHOICES = [
+    TIPOS = [
         ('global', 'Reporte Global'),
         ('por_curso', 'Por Curso'),
         ('por_docente', 'Por Docente'),
@@ -146,82 +139,57 @@ class ReporteNotasForm(forms.Form):
     
     tipo_reporte = forms.ChoiceField(
         label='Tipo de reporte',
-        choices=TIPO_CHOICES,
-        widget=forms.Select(attrs={
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        })
+        choices=TIPOS,
+        widget=forms.Select(attrs={'class': 'w-full border-gray-300 rounded-lg'})
     )
     
-    ciclo = forms.CharField(
+    ciclo = forms.ModelChoiceField(
+        queryset=AcademicPeriod.objects.all().order_by('-name'),
         label='Ciclo académico',
-        max_length=10,
-        widget=forms.TextInput(attrs={
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
-            'placeholder': '2024-1'
-        }),
-        help_text='Formato: YYYY-N (ej: 2024-1)'
+        empty_label=None, 
+        widget=forms.Select(attrs={'class': 'w-full border-gray-300 rounded-lg'})
     )
     
     curso_codigo = forms.CharField(
-        label='Código del curso (opcional)',
-        max_length=20,
+        label='Código del curso',
         required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
-            'placeholder': 'Dejar vacío para todos los cursos'
-        }),
-        help_text='Solo para reportes por curso específico'
+        widget=forms.TextInput(attrs={'class': 'w-full border-gray-300 rounded-lg', 'placeholder': 'Ej: 1703240'})
     )
     
     docente_email = forms.EmailField(
-        label='Email del docente (opcional)',
+        label='Email del docente',
         required=False,
-        widget=forms.EmailInput(attrs={
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500',
-            'placeholder': 'Dejar vacío para todos los docentes'
-        }),
-        help_text='Solo para reportes por docente específico'
+        widget=forms.TextInput(attrs={'class': 'w-full border-gray-300 rounded-lg', 'placeholder': 'docente@unsa.edu.pe'})
     )
     
     formato = forms.ChoiceField(
         label='Formato de exportación',
-        choices=FORMATO_CHOICES,
-        widget=forms.Select(attrs={
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        })
+        choices=[('pdf', 'PDF')], 
+        widget=forms.Select(attrs={'class': 'w-full border-gray-300 rounded-lg'})
     )
     
     incluir_estadisticas = forms.BooleanField(
         label='Incluir estadísticas',
         required=False,
         initial=True,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        }),
-        help_text='Incluir promedios, desviación estándar, etc.'
+        widget=forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600'})
     )
-    
+
     def clean(self):
         cleaned_data = super().clean()
-        tipo_reporte = cleaned_data.get('tipo_reporte')
-        curso_codigo = cleaned_data.get('curso_codigo')
-        docente_email = cleaned_data.get('docente_email')
+        tipo = cleaned_data.get('tipo_reporte')
         
-        if tipo_reporte == 'por_curso' and not curso_codigo:
-            raise forms.ValidationError(
-                'Debe especificar el código del curso para este tipo de reporte.'
-            )
+        if tipo == 'por_curso' and not cleaned_data.get('curso_codigo'):
+            self.add_error('curso_codigo', 'Este campo es obligatorio para reportes por curso.')
         
-        if tipo_reporte == 'por_docente' and not docente_email:
-            raise forms.ValidationError(
-                'Debe especificar el email del docente para este tipo de reporte.'
-            )
-        
+        if tipo == 'por_docente' and not cleaned_data.get('docente_email'):
+            self.add_error('docente_email', 'El email es obligatorio para reportes por docente.')
+            
         return cleaned_data
 
 
 class ReporteEstadisticasForm(forms.Form):
-    """Formulario para generar reportes de estadísticas generales"""
+   
     
     FORMATO_CHOICES = [
         ('pdf', 'PDF'),

@@ -2,8 +2,10 @@ from django.views.generic import TemplateView, View
 from .mixins import AdminRequiredMixin
 from servicios.servicioReporteNotas import ServicioReporteNotas 
 from repositorio.postgres_repository.models import CourseGroup
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import json
+import csv
+from datetime import datetime
 
 class AdminNotasAlumnosAPIView(AdminRequiredMixin, View):
 
@@ -40,3 +42,24 @@ class AdminNotasEstudiantesView(AdminRequiredMixin, TemplateView):
         context['filtros_activos'] = {'curso_id': curso_id, 'busqueda': busqueda}
         
         return context
+
+class ExportarNotasCSVView(AdminRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        servicio = ServicioReporteNotas()
+        stats = servicio.obtener_dashboard_admin()
+        response = HttpResponse(content_type='text/csv')
+        nombre_archivo = f"Resumen__Notas_{datetime.now().strftime('%Y%m%d_%H%M')}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        writer = csv.writer(response)
+        writer.writerow(['REPORTE DE NOTAS - RESUMEN GENERAL'])
+        writer.writerow(['Fecha:', datetime.now().strftime("%d/%m/%Y %H:%M")])
+        writer.writerow([]) 
+        writer.writerow(['METRICAS GENERALES DEL SEMESTRE'])
+        writer.writerow(['Indicador', 'Valor'])
+        writer.writerow(['Promedio Ponderado Global', stats['promedio_global']])
+        writer.writerow(['Tasa de Aprobación Global', f"{stats['tasa_aprobacion']}%"])
+        writer.writerow(['Total Estudiantes Evaluados ', stats['total_evaluados']])
+        writer.writerow(['Cantidad Estudiantes en Riesgo', stats['cantidad_riesgo']])
+        writer.writerow([])
+
+        return response
