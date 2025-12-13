@@ -1,11 +1,13 @@
 from django.views.generic import TemplateView, ListView, FormView
 from django.shortcuts import redirect
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 from django.core.paginator import Paginator
+from django.template.loader import get_template
+from xhtml2pdf import pisa
 from .mixins import AdminRequiredMixin, SecretariaOrAdminMixin
 from servicios.servicioMetricas import ServicioMetricas
 from servicios.servicioMonitoreo import ServicioMonitoreo
@@ -327,19 +329,59 @@ class AdminReportesView(AdminRequiredMixin, TemplateView):
         })
         return context
     
+    def _render_pdf(self, template_src, context_dict, filename='reporte.pdf'):
+        """Función auxiliar para generar PDF"""
+        template = get_template(template_src)
+        html = template.render(context_dict)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        # Crear PDF
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        
+        if pisa_status.err:
+            return HttpResponse(f'Ocurrió un error generando el PDF: {pisa_status.err}')
+            
+        return response
+    
     def post(self, request, *args, **kwargs):
         """Maneja la generación de reportes según el tipo solicitado"""
         from .forms import ReporteAsistenciaForm, ReporteNotasForm, ReporteEstadisticasForm
         from servicios.servicioReportes import ReporteGeneracionException
         
-        tipo_reporte = request.POST.get('tipo_reporte')
+        categoria = request.POST.get('categoria_reporte')
         
         try:
-            if tipo_reporte == 'asistencia':
+            if categoria == 'asistencia':
                 return self._generar_reporte_asistencia(request)
-            elif tipo_reporte == 'notas':
-                return self._generar_reporte_notas(request)
-            elif tipo_reporte == 'estadisticas':
+            elif categoria == 'notas':
+                from .forms import ReporteNotasForm  # Importación local
+                from servicios.servicioReporteNotas import ServicioReporteNotas
+            
+                form = ReporteNotasForm(request.POST)
+
+                if form.is_valid():
+                    filtros = form.cleaned_data
+                    servicio = ServicioReporteNotas()
+                
+                    data_pdf = servicio.generar_data_reporte_oficial(filtros)
+                
+                    if not data_pdf or not data_pdf.get('tablas'):
+                        messages.warning(request, "No se encontraron registros con los filtros seleccionados.")
+                        return redirect('administrador:reportes')
+
+                    return self._render_pdf('administrador/reportes/acta_notas.html', {
+                    'reporte': data_pdf,
+                    'headers': ['CUI', 'ALUMNO', 'NOTA FINAL', 'ESTADO']
+                }, filename=f"Reporte_Notas_{filtros['tipo_reporte']}.pdf")
+            
+                else:
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+                    return redirect('administrador:reportes')
+            
+            elif categoria == 'estadisticas':
                 return self._generar_reporte_estadisticas(request)
             else:
                 messages.error(request, 'Tipo de reporte no válido.')
@@ -350,7 +392,7 @@ class AdminReportesView(AdminRequiredMixin, TemplateView):
             return redirect('admin:reportes')
         except Exception as e:
             messages.error(request, f'Error inesperado: {str(e)}')
-            return redirect('admin:reportes')
+            return redirect('administrador:reportes')
     
     def _generar_reporte_asistencia(self, request):
         """Genera reporte de asistencia"""

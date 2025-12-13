@@ -1,6 +1,7 @@
 from django.db.models import Avg, Q
-from repositorio.postgres_repository.models import PhaseGrade, Enrollment
 import logging
+from repositorio.postgres_repository.models import PhaseGrade, Enrollment, CourseGroup
+from datetime import datetime 
 
 logger = logging.getLogger(__name__)
 
@@ -171,3 +172,101 @@ class ServicioReporteNotas:
         except Exception as e:
             logger.error(f"Error buscando notas: {str(e)}")
             return []
+        
+    def generar_data_reporte_oficial(self, filtros):
+   
+        try:
+            tipo = filtros.get('tipo_reporte')
+            ciclo = filtros.get('ciclo')
+            incluir_stats = filtros.get('incluir_estadisticas')
+            
+            data_reporte = {
+                'titulo': 'REPORTE OFICIAL DE NOTAS',
+                'subtitulo': f'Periodo Académico: {ciclo.name}',
+                'fecha_generacion': datetime.now().strftime("%d/%m/%Y %H:%M"),
+                'tablas': [] 
+            }
+
+            grupos = CourseGroup.objects.filter(academic_period=ciclo).select_related('course', 'teacher__user')
+
+            if tipo == 'por_curso':
+                code = filtros.get('curso_codigo')
+                if code: grupos = grupos.filter(course__code=code)
+                data_reporte['titulo'] = f"ACTA DE NOTAS - CURSO: {code}"
+            elif tipo == 'por_docente':
+                email = filtros.get('docente_email')
+                if email: 
+                    grupos = grupos.filter(
+                        Q(teacher__user__email__icontains=email) | 
+                        Q(teacher__user__institutional_email__icontains=email)
+                    )
+                    data_reporte['subtitulo'] += f" | Docente: {email}"
+
+            for grupo in grupos:
+                registros = PhaseGrade.objects.filter(course_group=grupo).select_related('student__user').order_by('student__user__last_name')
+                
+                alumnos_map = {}
+                fases_presentes = set()
+
+                for reg in registros:
+                    cui = reg.student.student_code
+                    
+                    if cui not in alumnos_map:
+                        alumnos_map[cui] = {
+                            'cui': cui,
+                            'alumno': f"{reg.student.user.last_name}, {reg.student.user.first_name}",
+                            'notas_fase': {}, 
+                            'promedio_final': 0.0,
+                            'estado': '---'
+                        }
+                    
+                    fase_key = reg.phase.name if hasattr(reg.phase, 'name') else str(reg.phase)
+                    
+                    val = reg.final_phase_grade if reg.final_phase_grade is not None else reg.partial_grade
+                    nota = float(val) if val else 0.0
+                    
+                    alumnos_map[cui]['notas_fase'][fase_key] = nota
+                    fases_presentes.add(fase_key)
+                filas = []
+                lista_fases = sorted(list(fases_presentes)) 
+                
+                for cui, datos in alumnos_map.items():
+                    notas = datos['notas_fase'].values()
+                    if notas:
+                        promedio = sum(notas) / len(notas)
+                        datos['promedio_final'] = f"{promedio:.2f}"
+                        datos['estado'] = 'APROBADO' if promedio >= 10.5 else 'DESAPROBADO'
+                    else:
+                        datos['promedio_final'] = "0.00"
+                        datos['estado'] = 'DESAPROBADO'
+                    
+                    filas.append(datos)
+
+                stats_grupo = None
+                if incluir_stats and filas:
+                    total = len(filas)
+                    valores_finales = [float(a['promedio_final']) for a in filas]
+                    
+                    aprobados = sum(1 for v in valores_finales if v >= 10.5)
+                    promedio_grupo = sum(valores_finales) / total
+                    
+                    stats_grupo = {
+                        'promedio': f"{promedio_grupo:.2f}",
+                        'tasa_aprobacion': f"{(aprobados / total * 100):.1f}%",
+                        'total': total
+                    }
+
+                if filas:
+                    data_reporte['tablas'].append({
+                        'nombre_curso': f"{grupo.course.name} (G{grupo.group_code})",
+                        'docente': f"{grupo.teacher.user.get_full_name() if grupo.teacher else 'Vacante'}",
+                        'filas': filas,
+                        'columnas_fases': lista_fases,
+                        'estadisticas': stats_grupo
+                    })
+
+            return data_reporte
+
+        except Exception as e:
+            logger.error(f"Error generando reporte: {str(e)}")
+            return None
