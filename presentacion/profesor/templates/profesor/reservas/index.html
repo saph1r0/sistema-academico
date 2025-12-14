@@ -35,8 +35,7 @@
                     </div>
                     
                     <div class="space-y-1 text-xs text-blue-700">
-                        <p>✅ Máximo <strong>4 reservas por semana</strong></p>
-                        <p>✅ Máximo <strong>3 días de anticipación</strong></p>
+                        <p>✅ Máximo <strong>10 reservas por semana</strong></p>
                         <p>✅ Las reservas se aprueban <strong>automáticamente</strong> si cumplen las reglas</p>
                     </div>
                     
@@ -301,7 +300,7 @@ async function cargarRestricciones() {
                 alertaDiv.classList.remove('hidden', 'bg-yellow-50', 'border-yellow-200', 'text-yellow-800');
                 alertaDiv.classList.add('bg-red-50', 'border-red-200', 'text-red-800', 'alerta-restriccion');
                 mensajeAlerta.textContent = 
-                    'Has alcanzado el límite de 4 reservas semanales. No puedes crear más reservas hasta la próxima semana.';
+                    'Has alcanzado el límite de 10 reservas semanales. No puedes crear más reservas hasta la próxima semana.';
             } else if (restantes === 1) {
                 alertaDiv.classList.remove('hidden');
                 mensajeAlerta.textContent = 
@@ -351,23 +350,15 @@ async function validarAntesDeReservar(fecha) {
         if (data.reservas_restantes <= 0) {
             return {
                 valido: false,
-                mensaje: 'Ya tienes 4 reservas esta semana. Límite alcanzado.'
+                mensaje: 'Ya tienes 10 reservas esta semana. Límite alcanzado.'
             };
         }
         
-        // Validar anticipación
-        const fechaReserva = new Date(fecha);
+        const fechaReserva = new Date(fecha + 'T00:00:00');
         const hoy = new Date();
-        const diasAnticipacion = Math.floor((fechaReserva - hoy) / (1000 * 60 * 60 * 24));
+        hoy.setHours(0, 0, 0, 0); 
         
-        if (diasAnticipacion > data.max_dias_anticipacion) {
-            return {
-                valido: false,
-                mensaje: `Esta reserva es con ${diasAnticipacion} días de anticipación. El límite es ${data.max_dias_anticipacion} días.`
-            };
-        }
-        
-        if (diasAnticipacion < 0) {
+        if (fechaReserva < hoy) {
             return {
                 valido: false,
                 mensaje: 'No puedes reservar en fechas pasadas.'

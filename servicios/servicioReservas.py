@@ -36,11 +36,7 @@ DIAS_NUM_A_STR = {
     3: "jueves", 4: "viernes", 5: "sabado", 6: "domingo",
 }
 
-# === CONSTANTES DE RESTRICCIONES ===
-MAX_RESERVAS_SEMANALES = 4  # Máximo de reservas por semana por profesor
-MAX_DIAS_ANTICIPACION = 3   # Máximo de días de anticipación para reservar
-
-
+MAX_RESERVAS_SEMANALES = 10  # Máximo de reservas por semana por profesor
 class ServicioReservaAmbientes:
     """
     Servicio mejorado con validaciones automáticas:
@@ -101,18 +97,10 @@ class ServicioReservaAmbientes:
                 f"El límite es {MAX_RESERVAS_SEMANALES} reservas por semana."
             )
         
-        # VALIDACIÓN 2: Máximo 3 días de anticipación
+        # VALIDACIÓN 2: Máximo 3 días de 
         hoy = timezone.now().date()
         dias_anticipacion = (fecha_reserva - hoy).days
-        
-        self.logger.info(f"Reserva con {dias_anticipacion} días de anticipación")
-        
-        if dias_anticipacion > MAX_DIAS_ANTICIPACION:
-            errores.append(
-                f"Esta reserva es con {dias_anticipacion} días de anticipación. "
-                f"El límite es {MAX_DIAS_ANTICIPACION} días."
-            )
-        
+
         if dias_anticipacion < 0:
             errores.append("No puedes reservar en fechas pasadas.")
         
@@ -152,7 +140,6 @@ class ServicioReservaAmbientes:
             'total_semana': total_semana,
             'limite_semana': MAX_RESERVAS_SEMANALES,
             'reservas_restantes': reservas_restantes,
-            'max_dias_anticipacion': MAX_DIAS_ANTICIPACION,
             'puede_reservar': reservas_restantes > 0,
             'reservas_detalle': [
                 {
