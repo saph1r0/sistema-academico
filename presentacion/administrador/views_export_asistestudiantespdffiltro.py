@@ -28,7 +28,10 @@ from repositorio.postgres_repository.models import (
     Enrollment, AcademicPeriod
 )
 
-
+COLOR_HEADER = colors.lightgrey
+COLOR_GRID = colors.black
+COLOR_TEXT = colors.black
+COLOR_BG = colors.white
 def es_admin_o_secretaria(user):
     return user.is_staff or user.groups.filter(name__in=['Secretaria', 'Administrador']).exists()
 
@@ -82,7 +85,7 @@ def exportar_dashboard_pdf(request):
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=24,
-        textColor=colors.HexColor('#1F4E78'),
+        textColor=colors.black,
         spaceAfter=30,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
@@ -92,7 +95,7 @@ def exportar_dashboard_pdf(request):
         'CustomHeading',
         parent=styles['Heading2'],
         fontSize=14,
-        textColor=colors.HexColor('#1F4E78'),
+        textColor=colors.black,
         spaceAfter=12,
         fontName='Helvetica-Bold'
     )
@@ -142,17 +145,16 @@ def exportar_dashboard_pdf(request):
     
     metricas_table = Table(metricas_data, colWidths=[4*inch, 2*inch])
     metricas_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E78')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('BACKGROUND', (0, 0), (-1, 0), COLOR_HEADER),
+        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_TEXT),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 10),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+
+        ('GRID', (0, 0), (-1, -1), 0.8, COLOR_GRID),
     ]))
     
     elements.append(metricas_table)
@@ -203,14 +205,13 @@ def exportar_dashboard_pdf(request):
         
         riesgo_table = Table(riesgo_data, colWidths=[1*inch, 3*inch, 1*inch, 1*inch, 1*inch])
         riesgo_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#C00000')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('BACKGROUND', (0, 0), (-1, 0), COLOR_HEADER),
+            ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_TEXT),
+            ('GRID', (0, 0), (-1, -1), 0.8, COLOR_GRID),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 10),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#FFC7CE')),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 9),
         ]))
@@ -265,17 +266,16 @@ def exportar_dashboard_pdf(request):
         
         cursos_table = Table(cursos_data, colWidths=[1*inch, 3.5*inch, 0.8*inch, 1*inch, 1*inch])
         cursos_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E78')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ALIGN', (3, 0), (4, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+                ('BACKGROUND', (0, 0), (-1, 0), COLOR_HEADER),
+                ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_TEXT),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+
+                ('GRID', (0, 0), (-1, -1), 0.8, COLOR_GRID),
         ]))
         
         elements.append(cursos_table)
@@ -342,7 +342,7 @@ def exportar_curso_pdf(request, curso_id):
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=20,
-        textColor=colors.HexColor('#1F4E78'),
+        textColor=colors.black,
         spaceAfter=20,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
@@ -407,16 +407,16 @@ def exportar_curso_pdf(request, curso_id):
     # Tabla de estudiantes
     table = Table(estudiantes_data, colWidths=[0.8*inch, 2*inch, 2*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.8*inch, 0.8*inch])
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E78')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, 0), COLOR_HEADER),
+        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_TEXT),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 7),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+
+        ('GRID', (0, 0), (-1, -1), 0.8, COLOR_GRID),
     ]))
     
     elements.append(table)
@@ -472,7 +472,7 @@ def exportar_estudiante_pdf(request, estudiante_id):
         'CustomTitle',
         parent=styles['Heading1'],
         fontSize=18,
-        textColor=colors.HexColor('#1F4E78'),
+        textColor=colors.black,
         spaceAfter=20,
         alignment=TA_CENTER,
         fontName='Helvetica-Bold'
@@ -537,14 +537,16 @@ def exportar_estudiante_pdf(request, estudiante_id):
     # Tabla
     table = Table(cursos_data, colWidths=[2.5*inch, 2*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.8*inch, 0.9*inch])
     table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F4E78')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, 0), COLOR_HEADER),
+        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_TEXT),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 1), (-1, -1), 8),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+
+        ('GRID', (0, 0), (-1, -1), 0.8, COLOR_GRID),
     ]))
     
     elements.append(table)

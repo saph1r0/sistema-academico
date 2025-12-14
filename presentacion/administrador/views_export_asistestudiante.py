@@ -34,6 +34,20 @@ from repositorio.postgres_repository.models import (
     Enrollment, AcademicPeriod
 )
 
+TH_FILL = PatternFill("solid", fgColor="EEEEEE")   # gris claro
+TH_FONT = Font(bold=True, size=10)
+TD_FONT = Font(size=9)
+
+CENTER = Alignment(horizontal="center", vertical="center")
+LEFT = Alignment(horizontal="left", vertical="center")
+
+BORDER = Border(
+    left=Side(style="thin"),
+    right=Side(style="thin"),
+    top=Side(style="thin"),
+    bottom=Side(style="thin"),
+)
+
 def es_admin_o_secretaria(user):
     """Verifica si el usuario es administrador o secretaria"""
     return user.is_staff or user.groups.filter(name__in=['Secretaria', 'Administrador']).exists()
@@ -133,11 +147,11 @@ def _crear_hoja_resumen_general(ws, fecha_inicio, fecha_fin, curso_id, estudiant
     
     headers = ['Métrica', 'Valor']
     for col, header in enumerate(headers, start=1):
-        header_fill = PatternFill(start_color="1E2125", end_color="1E2125", fill_type="solid")
-        cell = ws.cell(row=8, column=col)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
+        cell = ws.cell(row=8, column=col, value=header)
+        cell.fill = TH_FILL
+        cell.font = TH_FONT
+        cell.alignment = CENTER
+        cell.border = BORDER
     
     metricas = [
         ['Total de Registros', total_registros],
@@ -161,9 +175,9 @@ def _crear_hoja_estudiantes_riesgo(ws, fecha_inicio, fecha_fin):
     """Crea la hoja de estudiantes en riesgo"""
     
     # Estilos
-    header_fill = PatternFill(start_color="C00000", end_color="C00000", fill_type="solid")
+    header_fill = PatternFill( start_color="1E2125",end_color="1E2125", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
-    alert_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
+    alert_fill = PatternFill(start_color="FFFFFF",end_color="FFFFFF",fill_type="solid")
     
     # Título
     ws['A1'] = 'ESTUDIANTES EN RIESGO (>20% INASISTENCIAS)'
@@ -173,11 +187,11 @@ def _crear_hoja_estudiantes_riesgo(ws, fecha_inicio, fecha_fin):
     # Headers
     headers = ['Código', 'Nombre', 'Email', 'Total Clases', 'Faltas', '% Faltas', 'Cursos con Problema']
     for col, header in enumerate(headers, start=1):
-        header_fill = PatternFill(start_color="1E2125", end_color="1E2125", fill_type="solid")
-        cell = ws.cell(row=3, column=col)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
+        cell = ws.cell(row=8, column=col, value=header)
+        cell.fill = TH_FILL
+        cell.font = TH_FONT
+        cell.alignment = CENTER
+        cell.border = BORDER
     
     # Obtener estudiantes en riesgo
     estudiantes_riesgo = []
@@ -266,11 +280,11 @@ def _crear_hoja_top_cursos(ws, fecha_inicio, fecha_fin):
     # Headers
     headers = ['Código', 'Curso', 'Grupo', 'Profesor', 'Total Registros', '% Asistencia']
     for col, header in enumerate(headers, start=1):
-        header_fill = PatternFill(start_color="1E2125", end_color="1E2125", fill_type="solid")
-        cell = ws.cell(row=3, column=col)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
+        cell = ws.cell(row=8, column=col, value=header)
+        cell.fill = TH_FILL
+        cell.font = TH_FONT
+        cell.alignment = CENTER
+        cell.border = BORDER
     
     # Obtener datos
     cursos = CourseGroup.objects.select_related('course', 'teacher__user')
@@ -373,11 +387,11 @@ def exportar_curso_excel(request, curso_id):
     # Headers
     headers = ['Código', 'Estudiante', 'Email', 'Total Clases', 'Presentes', 'Faltas', '% Asistencia', 'Estado']
     for col, header in enumerate(headers, start=1):
-        header_fill = PatternFill(start_color="1E2125", end_color="1E2125", fill_type="solid")
-        cell = ws.cell(row=8, column=col)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
+        cell = ws.cell(row=8, column=col, value=header)
+        cell.fill = TH_FILL
+        cell.font = TH_FONT
+        cell.alignment = CENTER
+        cell.border = BORDER
     
     # Obtener estudiantes
     enrollments = Enrollment.objects.filter(
@@ -435,18 +449,16 @@ def exportar_curso_excel(request, curso_id):
         ws.cell(row=row, column=7, value=f"{est['porcentaje']:.1f}%")
         ws.cell(row=row, column=8, value=est['estado'])
         
-        # Color según estado
-        if est['estado'] == 'Crítico':
-            fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        elif est['estado'] == 'Riesgo':
-            fill = PatternFill(start_color="FFD9B3", end_color="FFD9B3", fill_type="solid")
-        elif est['estado'] == 'Alerta':
-            fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-        else:
-            fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        
+        fill = PatternFill(
+            start_color="FFFFFF",
+            end_color="FFFFFF",
+            fill_type="solid"
+        )
         for col in range(1, 9):
-            ws.cell(row=row, column=col).fill = fill
+            cell = ws.cell(row=row, column=col)
+            cell.font = TD_FONT
+            cell.alignment = CENTER
+            cell.border = BORDER
     
     # Ajustar anchos
     ws.column_dimensions['A'].width = 12
@@ -524,11 +536,11 @@ def exportar_estudiante_excel(request, estudiante_id):
     # Headers
     headers = ['Curso', 'Grupo', 'Profesor', 'Total Clases', 'Presentes', 'Faltas', '% Asistencia', 'Estado']
     for col, header in enumerate(headers, start=1):
-        header_fill = PatternFill(start_color="1E2125", end_color="1E2125", fill_type="solid")
-        cell = ws.cell(row=8, column=col)
-        cell.value = header
-        cell.fill = header_fill
-        cell.font = header_font
+        cell = ws.cell(row=8, column=col, value=header)
+        cell.fill = TH_FILL
+        cell.font = TH_FONT
+        cell.alignment = CENTER
+        cell.border = BORDER
     
     # Obtener cursos
     enrollments = Enrollment.objects.filter(
@@ -592,17 +604,16 @@ def exportar_estudiante_excel(request, estudiante_id):
         ws.cell(row=row, column=8, value=curso['estado'])
         
         # Color según estado
-        if curso['estado'] == 'Crítico':
-            fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-        elif curso['estado'] == 'Riesgo':
-            fill = PatternFill(start_color="FFD9B3", end_color="FFD9B3", fill_type="solid")
-        elif curso['estado'] == 'Alerta':
-            fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-        else:
-            fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-        
+        fill = PatternFill(
+            start_color="FFFFFF",
+            end_color="FFFFFF",
+            fill_type="solid"
+        )
         for col in range(1, 9):
-            ws.cell(row=row, column=col).fill = fill
+            cell = ws.cell(row=row, column=col)
+            cell.font = TD_FONT
+            cell.alignment = CENTER
+            cell.border = BORDER
     
     # Agregar fila de resumen global
     last_row = len(cursos_data) + 10
