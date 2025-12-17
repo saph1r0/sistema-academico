@@ -265,11 +265,24 @@ class ServicioReservaAmbientes:
                 raise ValueError(error_msg)
 
             # 3) Localizar el aula
-            classroom = Classroom.objects.filter(code=resource_code).first()
+           
+            resource_code = str(resource_code).strip()
+
+            classroom = (
+                Classroom.objects.filter(
+                    Q(code__iexact=resource_code) | Q(name__iexact=resource_code)
+                ).first()
+            )
+
             if not classroom:
-                classroom = Classroom.objects.filter(name=resource_code).first()
+                classroom = (
+                    Classroom.objects.filter(
+                        Q(code__icontains=resource_code) | Q(name__icontains=resource_code)
+                    ).first()
+                )
+
             if not classroom:
-                error_msg = f"No se encontró el ambiente '{resource_code}'."
+                error_msg = f"No se encontró el ambiente que contenga '{resource_code}'."
                 self.logger.error(error_msg)
                 raise ValueError(error_msg)
 
