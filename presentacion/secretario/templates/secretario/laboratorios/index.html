@@ -1,0 +1,142 @@
+{% extends 'base_secretario.html' %}
+
+{% block title %}Gestión de Laboratorios - Portal Secretaría{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-900">Gestión de Horarios de Laboratorio</h1>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-lg shadow-sm p-6 md:col-span-1">
+            <div class="text-center">
+                <div class="mx-auto w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mb-4">
+                    <i data-lucide="flask-conical" class="h-6 w-6 text-purple-600"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir Horarios de Laboratorio</h3>
+                <p class="text-sm text-gray-600 mb-4">PDF (Formato: DÍA HH:MM/HH:MM CURSO LAB X)</p>
+                <form method="post" action="{% url 'secretario:cargar_horarios_laboratorios' %}" enctype="multipart/form-data" id="form-horarios-lab">
+                    {% csrf_token %}
+                    <button type="button" onclick="document.getElementById('file-laboratorios').click()" 
+                            class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                        Seleccionar Archivo
+                    </button>
+                    <input type="file" id="file-laboratorios" name="pdf_file" accept=".pdf" class="hidden" onchange="this.form.submit()">
+                </form>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm p-6 md:col-span-2">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3">Estadísticas Rápidas</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                    <p class="text-xl font-bold text-blue-800">{{ estadisticas_ocupacion.total_laboratorios|default:0 }}</p>
+                    <p class="text-sm text-blue-600">Ambientes Físicos Registrados</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                    <p class="text-xl font-bold text-green-800">{{ estadisticas_ocupacion.porcentaje_ocupacion_promedio|default:'0' }}%</p>
+                    <p class="text-sm text-green-600">Ocupación Promedio (Matrícula)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm mt-6">
+    <div class="p-6 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-900">
+            Configuración – Alumnos por Laboratorio
+        </h2>
+        <p class="text-sm text-gray-600">
+            Este valor se aplicará a todos los grupos de laboratorio.
+        </p>
+    </div>
+
+    <form method="post" action="{% url 'secretario:configurar_cupo_global_laboratorio' %}">
+        {% csrf_token %}
+        <div class="p-6 flex items-center gap-4">
+            <label class="font-semibold text-gray-700">
+                Cupo máximo por laboratorio:
+            </label>
+
+            <input
+                type="number"
+                name="cupo_global"
+                min="0"
+                required
+                class="w-32 px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+            />
+
+            <span class="text-sm text-gray-500">
+                alumnos
+            </span>
+        </div>
+
+        <div class="px-6 pb-6">
+            <button
+                type="submit"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+                Guardar configuración
+            </button>
+        </div>
+    </form>
+</div>
+
+
+    {% if grupos_lab_resumidos %}
+    <div class="bg-white rounded-lg shadow-sm mt-6">
+        <div class="p-6 border-b border-gray-200 bg-gray-100">
+            <h2 class="text-xl font-bold text-gray-900">Horarios de Grupos de Laboratorio</h2>
+            <p class="text-sm text-gray-600">Visualización consolidada por Grupo Académico.</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CÓDIGO</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ASIGNATURA</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GRUPO LAB</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DOCENTE</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AULA FÍSICA</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HORARIOS</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MATRICULADOS</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CAP. GRUPO</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for g in grupos_lab_resumidos %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ g.codigo }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ g.curso_nombre }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">{{ g.lab_code }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ g.profesor }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ g.codigo_aula_fisica }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700 font-mono text-xs" style="line-height: 1.25;">
+                            {{ g.horarios|safe }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ g.matriculados }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ g.capacidad_grupo }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+        <div class="text-center py-12 bg-white rounded-lg shadow-sm">
+            <i data-lucide="inbox" class="h-12 w-12 text-gray-400 mx-auto mb-4"></i>
+            <p class="text-gray-500 mt-2">No se han cargado horarios de laboratorios. Utiliza el botón superior para empezar.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+</script>
+{% endblock %}

@@ -19,7 +19,7 @@ from datetime import time
 import logging
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .mixins import EstudianteRequiredMixin
-from servicios.servicioMatricula import ServicioMatricula
+from servicios.servicioMatriculaLaboratorio import ServicioMatriculaLaboratorio, servicio_matricula_laboratorio
 from servicios.servicioAsistencia import ServicioAsistencia
 from servicios.servicioAvance import ServicioAvance
 from servicios.servicioReservas import servicio_reservas
@@ -36,7 +36,6 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from repositorio.postgres_repository.models import Enrollment
-from servicios.servicioMatricula import ServicioMatricula
 from repositorio.postgres_repository.models import (
     User, 
     Student, 

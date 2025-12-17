@@ -28,7 +28,7 @@ from repositorio.postgres_repository.models import (
     User, Teacher, Course, CourseGroup, AcademicPeriod, Aula, Horario, Student, Enrollment,Classroom
 )
 from .mixins import SecretarioRequiredMixin
-from servicios.servicioMatricula import ServicioMatricula
+from servicios.servicioMatriculaLaboratorio import ServicioMatriculaLaboratorio, servicio_matricula_laboratorio
 from servicios.servicioReservas import servicio_reservas
 from servicios.servicioReportes import ServicioReportes
 from servicios.servicioMonitoreo import ServicioMonitoreo
@@ -58,72 +58,12 @@ class SecretarioDashboardView(SecretarioRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         context.update({
-            'resumen_inscripciones': ServicioMatricula.obtener_resumen_inscripciones(),
+            'resumen_inscripciones': {},
             #'laboratorios_ocupacion': ServicioReservas.obtener_ocupacion_laboratorios(),
             'alertas_sistema': ServicioMonitoreo.obtener_alertas_academicas(),
             'estadisticas_generales': ServicioReportes.obtener_estadisticas_generales()
         })
         return context
-
-
-class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
-    """Gestión de inscripciones de laboratorio"""
-    template_name = 'secretario/laboratorios/index.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-
-        # Filtros de búsqueda
-        curso_filtro = self.request.GET.get('curso')
-        laboratorio_filtro = self.request.GET.get('laboratorio')
-        estado_filtro = self.request.GET.get('estado')
-
-        context.update({
-            'inscripciones_laboratorio': ServicioMatricula.obtener_inscripciones_laboratorio(
-                curso=curso_filtro,
-                laboratorio=laboratorio_filtro,
-                estado=estado_filtro
-            ),
-            'cursos_disponibles': ServicioMatricula.obtener_cursos_con_laboratorio(),
-            'laboratorios_disponibles': ServicioReservas.obtener_todos_laboratorios(),
-            'estadisticas_ocupacion': ServicioReservas.obtener_estadisticas_ocupacion()
-        })
-        return context
-
-    def post(self, request, *args, **kwargs):
-        """Gestionar inscripciones de laboratorio"""
-        accion = request.POST.get('accion')
-        inscripcion_id = request.POST.get('inscripcion_id')
-        redirect_url = redirect('secretario:laboratorios')
-
-        if not inscripcion_id:
-            messages.error(request, 'Error: ID de inscripción no proporcionado.')
-            return redirect_url
-
-        try:
-            with transaction.atomic():
-                if accion == 'aprobar':
-                    ServicioMatricula.aprobar_inscripcion_laboratorio(inscripcion_id)
-                    messages.success(request, 'Inscripción aprobada exitosamente.')
-                elif accion == 'rechazar':
-                    motivo = request.POST.get('motivo', 'Sin motivo especificado')
-                    ServicioMatricula.rechazar_inscripcion_laboratorio(inscripcion_id, motivo)
-                    messages.success(request, 'Inscripción rechazada.')
-                elif accion == 'redistribuir':
-                    nuevo_laboratorio_id = request.POST.get('nuevo_laboratorio_id')
-                    if not nuevo_laboratorio_id:
-                        raise ValueError("Debe seleccionar un nuevo laboratorio para redistribuir.")
-                    ServicioMatricula.redistribuir_estudiante_laboratorio(inscripcion_id, nuevo_laboratorio_id)
-                    messages.success(request, 'Estudiante redistribuido exitosamente.')
-                else:
-                    messages.warning(request, f'Acción "{accion}" no reconocida.')
-
-        except ValueError as ve:
-            messages.error(request, f'Error de validación: {str(ve)}')
-        except Exception as e:
-            messages.error(request, f'Error al procesar la solicitud: {str(e)}')
-
-        return redirect_url
 
 
 class SecretarioReportesView(SecretarioRequiredMixin, TemplateView):
@@ -186,7 +126,7 @@ class SecretarioEstadisticasView(SecretarioRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         context.update({
-            'estadisticas_matricula': ServicioMatricula.obtener_estadisticas_matricula(),
+            'estadisticas_matricula': ServicioMatriculaLaboratorio.obtener_estadisticas_matricula(),
             'estadisticas_asistencia': ServicioReportes.obtener_estadisticas_asistencia(),
             'estadisticas_notas': ServicioReportes.obtener_estadisticas_notas(),
             'tendencias_academicas': ServicioReportes.obtener_tendencias_academicas(),
@@ -560,21 +500,49 @@ def cargar_horarios(request):
 @login_required
 @require_POST
 def cargar_estudiantes(request):
-    """Procesa Excel de estudiantes y los matricula"""
+    """
+    Procesa Excel de estudiantes. 
+    Identifica el CURSO por el CÓDIGO en el nombre del archivo.
+    Identifica el GRUPO en el contenido del archivo Excel.
+    """
     if not request.user.is_secretary():        
         messages.error(request, 'No tienes permisos.')
         return redirect('secretario:cargar_documentos')
 
     excel_file = request.FILES.get('excel_file')
-    if not excel_file or not excel_file.name.lower().endswith(('.xlsx', '.xls')):
-        messages.error(request, 'Debe seleccionar un archivo Excel válido.')
+    if not excel_file or not excel_file.name.lower().endswith(('.xlsx', '.xls', '.csv')):
+        messages.error(request, 'Debe seleccionar un archivo Excel o CSV válido.')
         return redirect('secretario:cargar_documentos')
 
     estudiantes_creados = 0
     matriculas_creadas = 0
     redirect_url = redirect('secretario:cargar_documentos')
     DEFAULT_PERIOD_NAME = "2025-II"
+    
+    # --------------------------------------------------------------------------
+    # PASO 1: EXTRACCIÓN DEL CÓDIGO DEL CURSO DESDE EL NOMBRE DEL ARCHIVO
+    # --------------------------------------------------------------------------
+    file_name = excel_file.name.upper()
+    
+    # Patrón para capturar el Código (6 o 7 dígitos)
+    # Buscamos la última secuencia de dígitos que podría ser el código, antes de la extensión.
+    PATTERN_CODIGO = r'(\d{6,7})[_\.]' 
+    
+    match_data = list(re.finditer(PATTERN_CODIGO, file_name))
+    
+    if not match_data:
+        messages.error(
+            request, 
+            f'Error: El nombre del archivo no contiene el CÓDIGO del curso (ej: 1705267).'
+        )
+        return redirect_url
 
+    # Usar la última coincidencia encontrada (la más cercana al final del nombre)
+    codigo_curso_file = match_data[-1].group(1)
+    
+    # Inicializar variables para el manejo de errores
+    grupo_cell = None 
+    
     try:
         with transaction.atomic():
             period = AcademicPeriod.objects.get(name=DEFAULT_PERIOD_NAME)
@@ -583,41 +551,49 @@ def cargar_estudiantes(request):
             wb = openpyxl.load_workbook(excel_file)
             ws = wb.active
 
-            # --- 1. DETECTAR ASIGNATURA Y GRUPO del Excel ---
-            asignatura_cell = None
-            grupo_cell = None
+            # --------------------------------------------------------------------------
+            # PASO 2: EXTRACCIÓN DEL GRUPO DESDE EL CONTENIDO DEL EXCEL
+            # --------------------------------------------------------------------------
             for row in ws.iter_rows(min_row=1, max_row=10, values_only=True):
                 row_text = ' '.join(str(cell) for cell in row if cell).upper()
-                if 'ASIGNATURA' in row_text:
-                    match_asig = re.search(r'ASIGNATURA\s*:\s*(.+)', row_text, re.IGNORECASE)
-                    if match_asig: asignatura_cell = match_asig.group(1).strip()
                 if 'GRUPO' in row_text:
                     match_grupo = re.search(r'GRUPO\s*:\s*([A-Z0-9])', row_text, re.IGNORECASE)
-                    if match_grupo: grupo_cell = match_grupo.group(1).strip().upper()
+                    if match_grupo: 
+                        grupo_cell = match_grupo.group(1).strip().upper()
+                        break # Salir del bucle una vez que el grupo es encontrado
 
-            if not asignatura_cell or not grupo_cell:
-                messages.error(request, 'No se pudo detectar la asignatura o grupo del Excel.')
+            if not grupo_cell:
+                messages.error(request, 'No se pudo detectar el Grupo del Excel. Asegúrese de que aparezca "GRUPO: [A|B|C]" en las primeras filas.')
+                return redirect_url
+            
+            # --------------------------------------------------------------------------
+            # PASO 3: BÚSQUEDA DEL CURSO Y GRUPO POR CÓDIGO (Infallible)
+            # --------------------------------------------------------------------------
+            try:
+                # 1. Buscar el Curso por el código extraído
+                course_excel = Course.objects.get(code=codigo_curso_file)
+            except Course.DoesNotExist:
+                messages.error(request, f'Error: Curso con código "{codigo_curso_file}" no encontrado en la BD.')
                 return redirect_url
 
-            course_excel = Course.objects.filter(name__icontains=asignatura_cell[:30]).first()
-            if not course_excel:
-                messages.error(request, f'Curso "{asignatura_cell}" no encontrado en el sistema.')
-                return redirect_url
-
-            group_excel = CourseGroup.objects.get(
-                course=course_excel, group_code=grupo_cell, academic_period=period
+            # 2. Buscar el CourseGroup
+            grupos_encontrados = CourseGroup.objects.filter(
+                course=course_excel, 
+                group_code=grupo_cell, 
+                academic_period=period
             )
 
-            profesor_excel = group_excel.teacher
-            if not profesor_excel:
-                messages.error(request, f'El grupo {grupo_cell} del curso {asignatura_cell} no tiene profesor asignado.')
+            if grupos_encontrados.count() == 1:
+                group_excel = grupos_encontrados.first()
+            else:
+                messages.error(
+                    request, 
+                    f'Error: El grupo {grupo_cell} para "{course_excel.name}" (Cód: {codigo_curso_file}) no fue encontrado en el período {period.name} (o hay duplicados).'
+                )
                 return redirect_url
+            # --------------------------------------------------------------------------
 
-            grupos_a_profesor = CourseGroup.objects.filter(
-                academic_period=period, group_code='A', teacher=profesor_excel
-            )
-
-            # --- 2. ENCONTRAR CABECERA DE DATOS ---
+            # --- 4. ENCONTRAR CABECERA DE DATOS (CUI, NOMBRES) ---
             header_row_index = None
             for idx, row in enumerate(ws.iter_rows(min_row=1, max_row=20, values_only=True), start=1):
                 row_text = ' '.join(str(cell).upper() for cell in row if cell)
@@ -629,9 +605,10 @@ def cargar_estudiantes(request):
                 messages.error(request, 'No se encontró el encabezado de datos (CUI, APELLIDOS, NOMBRES).')
                 return redirect_url
 
-            # --- 3. PROCESAR ESTUDIANTES ---
+            # --- 5. PROCESAR ESTUDIANTES ---
             for row in ws.iter_rows(min_row=header_row_index + 1, values_only=True):
                 try:
+                    # ... (Lógica de extracción de CUI, nombres, y creación de Usuario/Estudiante) ...
                     if len(row) < 3 or not row[1] or not row[2]: continue
 
                     cui = str(row[1]).strip()
@@ -651,7 +628,6 @@ def cargar_estudiantes(request):
                     email = f"{cui}@unsa.edu.pe"
                     password_default = cui
 
-                    # Crear Usuario
                     user, user_created = User.objects.get_or_create(
                         institutional_email=email,
                         defaults={
@@ -663,7 +639,6 @@ def cargar_estudiantes(request):
                         }
                     )
 
-                    # Crear Estudiante
                     student, student_created = Student.objects.get_or_create(
                         user=user,
                         defaults={
@@ -675,32 +650,22 @@ def cargar_estudiantes(request):
                     )
                     if student_created: estudiantes_creados += 1
 
-                    # 1. Matricular en el curso específico del Excel
+                    # Matricular en el curso específico del Excel 
                     _, created_excel = Enrollment.objects.get_or_create(
                         student=student, course_group=group_excel, academic_period=period,
                         defaults={'enrollment_type': 'regular', 'status': 'active'}
                     )
                     if created_excel: matriculas_creadas += 1
 
-                    # 2. Matricular en cursos grupo 'A' del mismo profesor
-                    for grupo_a in grupos_a_profesor:
-                        _, created_a = Enrollment.objects.get_or_create(
-                            student=student, course_group=grupo_a, academic_period=period,
-                            defaults={'enrollment_type': 'regular', 'status': 'active'}
-                        )
-                        if created_a: matriculas_creadas += 1
-
                 except Exception as e:
                     print(f"Error procesando estudiante (CUI: {cui if 'cui' in locals() else 'N/A'}): {e}")
                     continue
 
-        messages.success(request, f'{estudiantes_creados} estudiantes nuevos, {matriculas_creadas} matrículas')
+        messages.success(request, f'{estudiantes_creados} estudiantes nuevos, {matriculas_creadas} matrículas en {course_excel.name} - {group_excel.group_code}')
 
     except AcademicPeriod.DoesNotExist:
         messages.error(request, f"Error: El período '{DEFAULT_PERIOD_NAME}' no existe.")
-    except CourseGroup.DoesNotExist:
-        messages.error(request, f'Error: El grupo {grupo_cell} del curso {asignatura_cell} no fue encontrado.')
     except Exception as e:
-        messages.error(request, f'Error general en la carga de estudiantes: {e}')
+        messages.error(request, f'Error general en la carga de estudiantes: {str(e)}')
 
     return redirect_url

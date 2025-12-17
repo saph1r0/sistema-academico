@@ -236,7 +236,7 @@ class Laboratory(models.Model):
     course_group = models.ForeignKey(CourseGroup, on_delete=models.CASCADE)
     lab_code = models.CharField(max_length=10)  # 'L1', 'L2'
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
-    capacity = models.IntegerField()
+    capacity = models.IntegerField(null=True, blank=True)
     enrolled_students = models.IntegerField(default=0)
     schedule_info = models.JSONField()
     lab_room = models.CharField(max_length=50, null=True, blank=True)

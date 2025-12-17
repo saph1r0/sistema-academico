@@ -5,10 +5,13 @@ from django.urls import path
 from . import views
 from django.urls import path
 from . import views_reservas
+from . import views_lab
 from .views_exam_accreditation import (
     SecretaryExamAccreditationView,
     ExamAccreditationDownloadView
 )
+from .views_lab import configurar_cupo_global_laboratorio
+
 
 
 app_name = 'secretario'
@@ -16,8 +19,7 @@ app_name = 'secretario'
 urlpatterns = [
     path('dashboard/', views.SecretarioDashboardView.as_view(), name='dashboard'),
     #path('profesores/', views.SecretarioProfesoresView.as_view(), name='profesores'),
-    path('laboratorios/', views.SecretarioLaboratoriosView.as_view(), name='laboratorios'),
-    path('reportes/', views.SecretarioReportesView.as_view(), name='reportes'),
+    path('laboratorios/', views_lab.SecretarioLaboratoriosView.as_view(), name='laboratorios'),    path('reportes/', views.SecretarioReportesView.as_view(), name='reportes'),
     path('estadisticas/', views.SecretarioEstadisticasView.as_view(), name='estadisticas'),
     path('usuarios/', views.SecretarioUsuariosView.as_view(), name='usuarios'),
     path('recursos/', views.SecretarioRecursosView.as_view(), name='recursos'),
@@ -25,8 +27,9 @@ urlpatterns = [
     path('cargar-documentos/', views.CargarDocumentosView.as_view(), name='cargar_documentos'),
     path('cargar-cursos-docentes/', views.cargar_cursos_docentes, name='cargar_cursos_docentes'),
     path('cargar-horarios/', views.cargar_horarios, name='cargar_horarios'),
-        path('cargar-estudiantes/', views.cargar_estudiantes, name='cargar_estudiantes'),
-
+    path('cargar-estudiantes/', views.cargar_estudiantes, name='cargar_estudiantes'),
+    path('cargar-horarios-laboratorios/', views_lab.cargar_horarios_laboratorios, name='cargar_horarios_laboratorios'),
+    path('laboratorios/configurar-cupo-global/', configurar_cupo_global_laboratorio, name='configurar_cupo_global_laboratorio'),
 
 
     path('exam-accreditation/',SecretaryExamAccreditationView.as_view(),name='exam_accreditation'),

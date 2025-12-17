@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 import os
 
 from django.core.exceptions import ObjectDoesNotExist 
-from servicios.servicioMatricula import ServicioMatricula 
+from servicios.servicioMatriculaLaboratorio import ServicioMatriculaLaboratorio
 from repositorio.postgres_repository.estudiantePostgresRepository import EstudiantePostgresRepository 
 from presentacion.serializadores import EstudianteSerializer 
 from presentacion.permisos import IsSecretariaOrAdmin
@@ -21,8 +21,7 @@ class MatriculaAPIView(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.repo = EstudiantePostgresRepository() 
-        self.servicio_matricula = ServicioMatricula(repo=self.repo)
-
+        self.servicio_matricula = ServicioMatriculaLaboratorio(repo=self.repo)
     # -----------------------------------------------------------
     # Tarea 1: POST /api/matriculas/upload_excel/
     # -----------------------------------------------------------

@@ -15,7 +15,7 @@ from django.db.models import Count, Q
 
 from repositorio.postgres_repository.models import (
     Student, Laboratory, LaboratoryEnrollment, CourseGroup,
-    Enrollment, AcademicPeriod, Horario, Aula
+    Enrollment, AcademicPeriod, Horario, Aula , Course
 )
 from django.db.utils import ProgrammingError, OperationalError
 
@@ -74,140 +74,140 @@ class ServicioMatriculaLaboratorio:
         except (ProgrammingError, OperationalError):
             # Durante migrate u operaciones donde aún no existe la tabla
             return None
-
     
-    def obtener_laboratorios_disponibles(self, student_id: int) -> Dict:
+    def obtener_cursos_con_laboratorio(self):
         """
-        Obtiene todos los laboratorios disponibles para el estudiante
-        Incluye validaciones de conflictos y cupos
+        Obtiene la lista de cursos que tienen al menos un grupo de laboratorio asociado
+        (Se requiere esta lógica para la vista de Secretaría)
         """
+        # Encuentra IDs de cursos que tienen CourseGroups que a su vez tienen Laboratorios
+        course_ids_with_labs = Course.objects.filter(
+            coursegroup__laboratory__isnull=False
+        ).values_list('id', flat=True).distinct()
+        
+        # Retorna los objetos Course (o los datos necesarios para la UI)
+        return Course.objects.filter(id__in=course_ids_with_labs).order_by('name')
+
+    def obtener_laboratorios_disponibles(self, student_id):
+        from repositorio.postgres_repository.models import (
+            Enrollment,
+            Laboratory,
+            LaboratoryEnrollment,
+            Horario
+        )
+
         try:
-            student = Student.objects.get(id=student_id)
-        except Student.DoesNotExist:
-            return {
-                'success': False,
-                'error': 'Estudiante no encontrado',
-                'laboratorios': []
-            }
-        
-        if not self.periodo_activo:
-            return {
-                'success': False,
-                'error': 'No hay período académico activo',
-                'laboratorios': []
-            }
-        
-        # Verificar si está en período de matrícula
-        en_periodo = self._verificar_periodo_matricula()
-        
-        # Obtener cursos matriculados del estudiante
-        enrollments = Enrollment.objects.filter(
-            student=student,
-            academic_period=self.periodo_activo,
-            status='active'
-        ).select_related('course_group__course')
-        
-        laboratorios_disponibles = []
-        
-        for enrollment in enrollments:
-            course_group = enrollment.course_group
-            
-            # Buscar laboratorios para este grupo de curso
-            laboratories = Laboratory.objects.filter(
-                course_group=course_group,
-                is_active=True
-            ).select_related('teacher__user').prefetch_related(
-                'horarios_set__aula'
-            )
-            
-            if not laboratories.exists():
-                continue
-            
-            # Verificar si ya está matriculado en algún laboratorio de este curso
-            matricula_actual = LaboratoryEnrollment.objects.filter(
-                student=student,
-                laboratory__course_group=course_group,
+            # 1️⃣ Estudiante
+            enrollment_qs = Enrollment.objects.filter(
+                student_id=student_id,
                 status='active'
-            ).select_related('laboratory').first()
-            
+            ).select_related(
+                'course_group__course'
+            )
+
+            if not enrollment_qs.exists():
+                return {
+                    'success': True,
+                    'laboratorios': [],
+                    'total_disponibles': 0,
+                    'en_periodo_matricula': self._verificar_periodo_matricula(),
+                }
+
+            # 2️⃣ CURSOS donde el estudiante está matriculado (A/B/C/D no importa)
+            courses_ids = enrollment_qs.values_list(
+                'course_group__course_id',
+                flat=True
+            )
+
+            # 3️⃣ TODOS los LABs de esos cursos
+            laboratories = Laboratory.objects.filter(
+                course_group__course_id__in=courses_ids,  
+                capacity__isnull=False,
+                is_active=True
+            ).select_related(
+                'course_group__course',
+                'teacher__user'
+            )
+
+
+            resultados = []
+
             for lab in laboratories:
-                # Obtener horarios del laboratorio
-                lab_horarios = Horario.objects.filter(
+                # 4️⃣ Matrículas actuales
+                matriculados = LaboratoryEnrollment.objects.filter(
+                    laboratory=lab,
+                    status='active'
+                ).count()
+
+                cupos_disponibles = lab.capacity - matriculados
+                tiene_cupos = cupos_disponibles > 0
+
+                # 5️⃣ Ya matriculado en este LAB
+                ya_matriculado = LaboratoryEnrollment.objects.filter(
+                    laboratory=lab,
+                    student_id=student_id,
+                    status='active'
+                ).exists()
+
+                # 6️⃣ Horarios
+                horarios_qs = Horario.objects.filter(
                     laboratory=lab
                 ).select_related('aula')
-                
-                if not lab_horarios.exists():
-                    continue
-                
-                # Calcular disponibilidad
-                cupos_data = self._calcular_cupos(lab)
-                
-                # Verificar conflictos de horario
-                conflicto, mensaje_conflicto = self._verificar_conflicto_horario(
-                    student, lab_horarios.first() if lab_horarios else None
-                )
-                
-                # Construir información del laboratorio
-                horarios_info = []
-                for h in lab_horarios:
-                    horarios_info.append({
+
+                horarios = []
+                for h in horarios_qs:
+                    horarios.append({
                         'dia': h.dia_semana.capitalize(),
-                        'hora_inicio': parse_time(h.hora_inicio).strftime('%H:%M'),
-                        'hora_fin': parse_time(h.hora_fin).strftime('%H:%M'),
-                        # 👇 PRIORIDAD: lab.lab_room, y si está vacío recurre a h.aula
-                        'aula': lab.lab_room or (h.aula.codigo if h.aula else 'Por asignar'),
+                        'hora_inicio': h.hora_inicio.strftime('%H:%M'),
+                        'hora_fin': h.hora_fin.strftime('%H:%M'),
                     })
-                # Determinar estado de matrícula
-                ya_matriculado = matricula_actual and matricula_actual.laboratory.id == lab.id
-                puede_matricularse = (
-                    en_periodo and
-                    not conflicto and
-                    cupos_data['tiene_cupos'] and
-                    not matricula_actual
-                )
-                
-                # Información de matrícula actual si existe
-                info_matricula = None
-                puede_desmatricularse = False
-                if matricula_actual and matricula_actual.laboratory.id == lab.id:
-                    puede_desmatricularse = self._puede_desmatricularse(matricula_actual)
-                    info_matricula = {
-                        'fecha_matricula': matricula_actual.enrollment_date.strftime('%d/%m/%Y'),
-                        'puede_cambiar': puede_desmatricularse,
-                        'dias_restantes': self._calcular_dias_restantes(matricula_actual)
-                    }
-                
-                laboratorios_disponibles.append({
-                    'id': str(lab.id),
+
+                # 7️⃣ Conflictos
+                horario_principal = horarios_qs.first()
+                tiene_conflicto, mensaje_conflicto = self._verificar_conflicto_horario(
+                    student_id,
+                    horario_principal
+                ) if horario_principal else (False, '')
+
+                resultados.append({
+                    'id': lab.id,
                     'codigo': lab.lab_code,
-                    'curso_id': str(course_group.id),
-                    'curso_nombre': course_group.course.name,
-                    'curso_codigo': course_group.course.code,
-                    'grupo': course_group.group_code,
+                    'curso_nombre': lab.course_group.course.name,
+                    'curso_codigo': lab.course_group.course.code,
+                    'grupo': lab.course_group.group_code,
                     'profesor_nombre': lab.teacher.user.get_full_name() if lab.teacher else 'Por asignar',
-                    'horarios': horarios_info,
-                    'aula': horarios_info[0]['aula'] if horarios_info else 'Por asignar',
+                    'aula': lab.lab_room or 'Por asignar',
+                    'horarios': horarios,
                     'capacidad': lab.capacity,
-                    'matriculados': cupos_data['matriculados'],
-                    'cupos_disponibles': cupos_data['disponibles'],
-                    'porcentaje_ocupacion': cupos_data['porcentaje'],
-                    'tiene_cupos': cupos_data['tiene_cupos'],
-                    'tiene_conflicto': conflicto,
-                    'mensaje_conflicto': mensaje_conflicto,
+                    'matriculados': matriculados,
+                    'cupos_disponibles': cupos_disponibles,
+                    'tiene_cupos': tiene_cupos,
+                    'porcentaje_ocupacion': int((matriculados / lab.capacity) * 100) if lab.capacity else 0,
                     'ya_matriculado': ya_matriculado,
-                    'puede_matricularse': puede_matricularse,
-                    'puede_desmatricularse': puede_desmatricularse,
-                    'info_matricula': info_matricula,
-                    'en_periodo_matricula': en_periodo
+                    'tiene_conflicto': tiene_conflicto,
+                    'mensaje_conflicto': mensaje_conflicto,
+                    'puede_matricularse': (
+                        not ya_matriculado and
+                        tiene_cupos and
+                        not tiene_conflicto and
+                        self._verificar_periodo_matricula()
+                    )
                 })
-        
-        return {
-            'success': True,
-            'laboratorios': laboratorios_disponibles,
-            'en_periodo_matricula': en_periodo,
-            'total_disponibles': len(laboratorios_disponibles)
-        }
-    
+
+            return {
+                'success': True,
+                'laboratorios': resultados,
+                'total_disponibles': len(resultados),
+                'en_periodo_matricula': self._verificar_periodo_matricula(),
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+
     def _verificar_periodo_matricula(self) -> bool:
         """Verifica si estamos en período de matrícula de laboratorios"""
         if not self.periodo_activo:
@@ -330,10 +330,11 @@ class ServicioMatriculaLaboratorio:
         # 2. Verificar que esté matriculado en el curso
         enrollment = Enrollment.objects.filter(
             student=student,
-            course_group=laboratory.course_group,
+            course_group__course=laboratory.course_group.course, 
             academic_period=self.periodo_activo,
             status='active'
         ).first()
+
         
         if not enrollment:
             return False, "No estás matriculado en este curso"
@@ -341,10 +342,10 @@ class ServicioMatriculaLaboratorio:
         # 3. Verificar si ya está matriculado en algún lab del mismo curso
         existing = LaboratoryEnrollment.objects.filter(
             student=student,
-            laboratory__course_group=laboratory.course_group,
+            laboratory__course_group__course=laboratory.course_group.course,
             status='active'
         ).first()
-        
+
         if existing:
             return False, f"Ya estás matriculado en {existing.laboratory.lab_code}"
         
