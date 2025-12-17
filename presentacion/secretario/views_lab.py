@@ -215,11 +215,13 @@ def cargar_horarios_laboratorios(request):
                                 if not course: continue
 
                                 # 4️⃣ Encontrar/Crear CourseGroup Base 
-                                # Usar 'L' para el grupo base si es necesario, ya que la teoría no importa.
                                 cg, _ = CourseGroup.objects.get_or_create(
                                     course=course,
                                     academic_period=period,
-                                    group_code='L' 
+                                    group_code='L',
+                                    defaults={
+                                        "capacity": 0
+                                    }
                                 )
                                 
                                 # 5️⃣ Encontrar/Crear el GRUPO ACADÉMICO DE LABORATORIO (LAB A, LAB B, etc.)
@@ -227,7 +229,7 @@ def cargar_horarios_laboratorios(request):
                                     course_group=cg,
                                     lab_code=lab_code_academico,
                                     defaults={
-                                        "capacity": ambiente_fisico_actual.capacidad, 
+                                        "capacity": None, 
                                         "lab_room": ambiente_fisico_actual.codigo,   # <- VINCULO AL AMBIENTE FÍSICO
                                         "schedule_info": {"notes": "Horario cargado por archivo"},
                                         "is_active": True
