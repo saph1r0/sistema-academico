@@ -18,6 +18,11 @@ db.sqlite3
 /static_collected/
 *.py[cod]
 
+# LibreOffice / Excel locks
+.~lock.*
+~$*.xlsx
+*.xlsx#
+
 # Archivos temporales
 *.log
 *.sqlite3

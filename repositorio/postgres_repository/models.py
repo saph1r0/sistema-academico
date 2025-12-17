@@ -1037,8 +1037,13 @@ class Horario(models.Model):
         db_table = 'horarios'
         verbose_name = 'Horario'
         verbose_name_plural = 'Horarios'
-        unique_together = ['course_group', 'dia_semana', 'hora_inicio']
-    
+        unique_together = [
+            'course_group',
+            'laboratory',
+            'aula',
+            'dia_semana',
+            'hora_inicio'
+        ]
     def __str__(self):
         return f"{self.course_group} - {self.dia_semana} {self.hora_inicio}-{self.hora_fin}"
     
