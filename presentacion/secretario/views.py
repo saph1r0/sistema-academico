@@ -11,6 +11,7 @@ import PyPDF2
 import openpyxl
 import pdfplumber
 import difflib
+from xhtml2pdf import pisa
 
 # 3. Importaciones de Django
 from django.shortcuts import render, redirect
@@ -22,6 +23,7 @@ from django.contrib.auth.hashers import make_password
 from django.views.generic import TemplateView
 from django.db import transaction
 from django.db.models import Q
+from django.template.loader import get_template
 
 # 4. Importaciones de la Aplicación (Modelos y Servicios)
 from repositorio.postgres_repository.models import (
@@ -32,6 +34,9 @@ from servicios.servicioMatriculaLaboratorio import ServicioMatriculaLaboratorio,
 from servicios.servicioReservas import servicio_reservas
 from servicios.servicioReportes import ServicioReportes
 from servicios.servicioMonitoreo import ServicioMonitoreo
+# Servicios de Reportes Específicos
+from servicios.servicioReporteAsistencia import ServicioReporteAsistencia
+from servicios.servicioReporteNotas import ServicioReporteNotas
 
 # --- Funciones de Utilidad ---
 
@@ -67,55 +72,105 @@ class SecretarioDashboardView(SecretarioRequiredMixin, TemplateView):
 
 
 class SecretarioReportesView(SecretarioRequiredMixin, TemplateView):
-    """Generación de reportes académicos"""
+    """Generación de reportes académicos y actas"""
     template_name = 'secretario/reportes/index.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
+        # Importamos los formularios aquí para evitar referencias circulares
+        from .forms import ReporteAsistenciaForm, ReporteNotasForm, ReporteEstadisticasForm
+        
         context.update({
-            'tipos_reporte': [
-                ('asistencia_general', 'Reporte de Asistencia General'),
-                ('notas_por_curso', 'Reporte de Notas por Curso'),
-                ('estadisticas_periodo', 'Estadísticas por Período'),
-                ('ocupacion_laboratorios', 'Ocupación de Laboratorios'),
-                ('rendimiento_academico', 'Rendimiento Académico')
-            ],
-            'periodos_academicos': ServicioReportes.obtener_periodos_disponibles(),
-            'cursos_disponibles': ServicioReportes.obtener_cursos_disponibles(),
-            'reportes_generados': ServicioReportes.obtener_reportes_recientes()
+            'page_title': 'Generación de Reportes y Actas',
+            'form_asistencia': ReporteAsistenciaForm(),
+            'form_notas': ReporteNotasForm(),
+            'form_estadisticas': ReporteEstadisticasForm(),
         })
         return context
 
+    def _render_pdf(self, template_src, context_dict, filename='reporte.pdf'):
+        """Función auxiliar para generar PDF"""
+        template = get_template(template_src)
+        html = template.render(context_dict)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        if pisa_status.err:
+            return HttpResponse(f'Error generando PDF: {pisa_status.err}')
+        return response
+
     def post(self, request, *args, **kwargs):
-        """Generar reportes académicos"""
-        tipo_reporte = request.POST.get('tipo_reporte')
-        formato = request.POST.get('formato', 'pdf')
-        periodo_id = request.POST.get('periodo_id')
-        curso_id = request.POST.get('curso_id')
-        redirect_url = redirect('secretario:reportes')
-
+        from .forms import ReporteAsistenciaForm, ReporteNotasForm, ReporteEstadisticasForm
+        
+        categoria = request.POST.get('categoria_reporte')
+        
         try:
-            reporte_dispatch = {
-                'asistencia_general': lambda: ServicioReportes.generar_reporte_asistencia_general(periodo_id=periodo_id, formato=formato),
-                'notas_por_curso': lambda: ServicioReportes.generar_reporte_notas_curso(curso_id=curso_id, periodo_id=periodo_id, formato=formato),
-                'estadisticas_periodo': lambda: ServicioReportes.generar_estadisticas_periodo(periodo_id=periodo_id, formato=formato),
-                'ocupacion_laboratorios': lambda: ServicioReportes.generar_reporte_ocupacion_laboratorios(periodo_id=periodo_id, formato=formato),
-                'rendimiento_academico': lambda: ServicioReportes.generar_reporte_rendimiento_academico(periodo_id=periodo_id, formato=formato),
-            }
+            # 1. REPORTE DE ASISTENCIA
+            if categoria == 'asistencia':
+                form = ReporteAsistenciaForm(request.POST)
+                if form.is_valid():
+                    filtros = form.cleaned_data
+                    servicio = ServicioReporteAsistencia()
+                    data_pdf = servicio.generar_data_reporte(filtros)
+                    
+                    if not data_pdf or not data_pdf.get('tablas'):
+                        messages.warning(request, "No se encontraron registros de asistencia.")
+                        return redirect('secretario:reportes')
 
-            if tipo_reporte in reporte_dispatch:
-                response = reporte_dispatch[tipo_reporte]()
-                if isinstance(response, HttpResponse):
-                    return response
-                raise Exception("El servicio de reporte no devolvió una respuesta válida.")
+                    # Reutilizamos el template visual (asegúrate de que la ruta sea accesible)
+                    return self._render_pdf('administrador/reportes/reporte_asistencia.html', {
+                        'reporte': data_pdf
+                    }, filename=f"Reporte_Asistencia_{filtros['tipo_reporte']}.pdf")
+                else:
+                    self._mostrar_errores(request, form)
+
+            # 2. REPORTE DE NOTAS
+            elif categoria == 'notas':
+                form = ReporteNotasForm(request.POST)
+                if form.is_valid():
+                    filtros = form.cleaned_data
+                    servicio = ServicioReporteNotas()
+                    data_pdf = servicio.generar_data_reporte_oficial(filtros)
+                    
+                    if not data_pdf or not data_pdf.get('tablas'):
+                        messages.warning(request, "No se encontraron notas con esos filtros.")
+                        return redirect('secretario:reportes')
+
+                    return self._render_pdf('administrador/reportes/acta_notas.html', {
+                        'reporte': data_pdf,
+                        'headers': ['CUI', 'ALUMNO', 'NOTA FINAL', 'ESTADO']
+                    }, filename=f"Acta_Notas_{filtros['tipo_reporte']}.pdf")
+                else:
+                    self._mostrar_errores(request, form)
+
+            # 3. ESTADÍSTICAS
+            elif categoria == 'estadisticas':
+                form = ReporteEstadisticasForm(request.POST)
+                if form.is_valid():
+                    servicio = ServicioReportes()
+                    # Este servicio retorna el PDF response directamente
+                    return servicio.generar_reporte_estadisticas_global(
+                        periodo=form.cleaned_data['periodo'],
+                        fecha_inicio=form.cleaned_data['fecha_inicio'],
+                        fecha_fin=form.cleaned_data['fecha_fin'],
+                        formato='pdf',
+                        incluir_graficos=True
+                    )
+                else:
+                    self._mostrar_errores(request, form)
+
             else:
                 messages.error(request, 'Tipo de reporte no válido.')
-                return redirect_url
 
         except Exception as e:
             messages.error(request, f'Error al generar reporte: {str(e)}')
-            return redirect_url
+
+        return redirect('secretario:reportes')
+
+    def _mostrar_errores(self, request, form):
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, f"{field}: {error}")
 
 
 class SecretarioEstadisticasView(SecretarioRequiredMixin, TemplateView):

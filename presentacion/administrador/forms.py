@@ -69,66 +69,62 @@ class ConfiguracionSistemaForm(forms.Form):
 
 
 class ReporteAsistenciaForm(forms.Form):
-  
-    
-    FORMATO_CHOICES = [
-        ('pdf', 'PDF'),
-        ('excel', 'Excel'),
+    TIPOS = [
+        ('global', 'Global '),
+        ('por_curso', 'Por Curso Específico'),
+        ('por_estudiante', 'Por Estudiante '),
     ]
     
-    fecha_inicio = forms.DateField(
-        label='Fecha de inicio',
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        }),
-        help_text='Fecha de inicio del período a reportar'
+    tipo_reporte = forms.ChoiceField(
+        label='Tipo de reporte',
+        choices=TIPOS,
+        widget=forms.Select(attrs={'class': 'w-full border-gray-300 rounded-lg'})
     )
     
-    fecha_fin = forms.DateField(
-        label='Fecha de fin',
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        }),
-        help_text='Fecha de fin del período a reportar'
+    ciclo = forms.ModelChoiceField(
+        queryset=AcademicPeriod.objects.all().order_by('-name'),
+        label='Ciclo académico',
+        empty_label=None,
+        widget=forms.Select(attrs={'class': 'w-full border-gray-300 rounded-lg'})
     )
     
+    curso_codigo = forms.CharField(
+        label='Código del curso',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'w-full border-gray-300 rounded-lg', 'placeholder': 'Ej: 1703240'})
+    )
+    
+    estudiante_cui = forms.CharField(
+        label='CUI del Estudiante',
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'w-full border-gray-300 rounded-lg', 'placeholder': 'Ej: 20210680'})
+    )
+   
+
     formato = forms.ChoiceField(
-        label='Formato de exportación',
-        choices=FORMATO_CHOICES,
-        widget=forms.Select(attrs={
-            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        })
+        label='Formato',
+        choices=[('pdf', 'PDF')],
+        widget=forms.Select(attrs={'class': 'w-full border-gray-300 rounded-lg'})
     )
     
     incluir_detalle = forms.BooleanField(
-        label='Incluir detalle por estudiante',
+        label='Incluir detalle de sesiones',
         required=False,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500'
-        }),
-        help_text='Incluir información detallada de cada estudiante'
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'rounded border-gray-300 text-blue-600'})
     )
-    
+
     def clean(self):
         cleaned_data = super().clean()
-        fecha_inicio = cleaned_data.get('fecha_inicio')
-        fecha_fin = cleaned_data.get('fecha_fin')
+        tipo = cleaned_data.get('tipo_reporte')
         
-        if fecha_inicio and fecha_fin:
-            if fecha_inicio > fecha_fin:
-                raise forms.ValidationError(
-                    'La fecha de inicio no puede ser posterior a la fecha de fin.'
-                )
+        if tipo == 'por_curso' and not cleaned_data.get('curso_codigo'):
+            self.add_error('curso_codigo', 'Debe ingresar el código del curso.')
             
-            if fecha_fin > date.today():
-                raise forms.ValidationError(
-                    'La fecha de fin no puede ser futura.'
-                )
-        
+        if tipo == 'por_estudiante' and not cleaned_data.get('estudiante_cui'):
+            self.add_error('estudiante_cui', 'Debe ingresar el CUI del estudiante.')
+            
         return cleaned_data
-
 
 class ReporteNotasForm(forms.Form):
     TIPOS = [

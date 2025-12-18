@@ -25,9 +25,7 @@ def es_admin_o_secretaria(user):
     return user.is_staff or user.groups.filter(name__in=['Secretaria', 'Administrador']).exists()
 
 
-# =============================================================================
-# DASHBOARD PRINCIPAL DE ASISTENCIA
-# =============================================================================
+#dashXasist
 
 @login_required
 @user_passes_test(es_admin_o_secretaria)
@@ -73,39 +71,27 @@ def dashboard_asistencia(request):
     if periodo_id:
         asistencias = asistencias.filter(course_group__academic_period_id=periodo_id)
     
-    # =========================
-    # MÉTRICAS GENERALES
-    # =========================
+ 
     total_registros = asistencias.count()
     total_presentes = asistencias.filter(status='PRESENTE').count()
     total_faltas = asistencias.filter(status='FALTA').count()
     
     tasa_asistencia_global = (total_presentes / total_registros * 100) if total_registros > 0 else 0
     
-    # Estudiantes únicos
     estudiantes_unicos = asistencias.values('student').distinct().count()
     
-    # Cursos con registro de asistencia
     cursos_activos = asistencias.values('course_group').distinct().count()
     
-    # =========================
-    # ALERTAS: Estudiantes en riesgo (>20% inasistencias)
-    # =========================
+   
     estudiantes_riesgo = _obtener_estudiantes_en_riesgo(fecha_inicio, fecha_fin)
     
-    # =========================
-    # TOP 10: Cursos con mejor/peor asistencia
-    # =========================
+   
     cursos_stats = _obtener_estadisticas_por_curso(fecha_inicio, fecha_fin)
     
-    # =========================
-    # GRÁFICO: Evolución semanal de asistencia
-    # =========================
+
     evolucion_semanal = _obtener_evolucion_semanal(fecha_inicio, fecha_fin)
     
-    # =========================
-    # Listas para filtros
-    # =========================
+   
     cursos = CourseGroup.objects.select_related('course', 'academic_period').order_by('course__name')
     estudiantes = Student.objects.select_related('user').order_by('user__last_name')
     periodos = AcademicPeriod.objects.all().order_by('-start_date')
@@ -138,9 +124,7 @@ def dashboard_asistencia(request):
     return render(request, 'administrador/asistencia_estudiante/dashboard.html', context)
 
 
-# =============================================================================
-# REPORTE POR CURSO
-# =============================================================================
+#reportXcurso
 
 @login_required
 @user_passes_test(es_admin_o_secretaria)
@@ -244,9 +228,7 @@ def reporte_por_curso(request, curso_id):
     return render(request, 'administrador/asistencia_estudiante/reporte_curso.html', context)
 
 
-# =============================================================================
-# REPORTE POR ESTUDIANTE
-# =============================================================================
+#reportXestudiante
 
 @login_required
 @user_passes_test(es_admin_o_secretaria)
@@ -368,9 +350,7 @@ def reporte_por_estudiante(request, estudiante_id):
     return render(request, 'administrador/asistencia_estudiante/reporte_estudiante.html', context)
 
 
-# =============================================================================
-# ALERTAS: ESTUDIANTES EN RIESGO
-# =============================================================================
+#riesgoXestudiantes
 
 @login_required
 @user_passes_test(es_admin_o_secretaria)
@@ -405,9 +385,7 @@ def estudiantes_en_riesgo(request):
     return render(request, 'administrador/asistencia_estudiante/estudiantes_riesgo.html', context)
 
 
-# =============================================================================
-# FUNCIONES AUXILIARES
-# =============================================================================
+    #funcXaux
 
 def _obtener_estudiantes_en_riesgo(fecha_inicio, fecha_fin):
     """
@@ -506,7 +484,7 @@ def _obtener_estadisticas_por_curso(fecha_inicio, fecha_fin):
     # Ordenar por porcentaje de asistencia
     cursos_stats.sort(key=lambda x: x['porcentaje_asistencia'], reverse=True)
     
-    return cursos_stats[:10]  # Top 10
+    return cursos_stats[:10] 
 
 
 def _obtener_evolucion_semanal(fecha_inicio, fecha_fin):

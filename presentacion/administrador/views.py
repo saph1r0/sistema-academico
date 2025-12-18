@@ -352,10 +352,37 @@ class AdminReportesView(AdminRequiredMixin, TemplateView):
         categoria = request.POST.get('categoria_reporte')
         
         try:
+            #reportXasiste
             if categoria == 'asistencia':
-                return self._generar_reporte_asistencia(request)
+                from .forms import ReporteAsistenciaForm
+                from servicios.servicioReporteAsistencia import ServicioReporteAsistencia
+                
+                form = ReporteAsistenciaForm(request.POST)
+                
+                if form.is_valid():
+                    filtros = form.cleaned_data
+                    servicio = ServicioReporteAsistencia()
+                    
+                    # Generar datos usando el nuevo servicio
+                    data_pdf = servicio.generar_data_reporte(filtros)
+                    
+                    if not data_pdf or not data_pdf.get('tablas'):
+                        messages.warning(request, "No se encontraron registros de asistencia con esos filtros.")
+                        return redirect('administrador:reportes')
+
+                    # Renderizar PDF (Usamos el nuevo template reporte_asistencia.html)
+                    return self._render_pdf('administrador/reportes/reporte_asistencia.html', {
+                        'reporte': data_pdf
+                    }, filename=f"Reporte_Asistencia_{filtros['tipo_reporte']}.pdf")
+                else:
+                    for field, errors in form.errors.items():
+                        for error in errors:
+                            messages.error(request, f"{field}: {error}")
+                    return redirect('administrador:reportes')
+
+        #reprotXnotas
             elif categoria == 'notas':
-                from .forms import ReporteNotasForm  # Importación local
+                from .forms import ReporteNotasForm
                 from servicios.servicioReporteNotas import ServicioReporteNotas
             
                 form = ReporteNotasForm(request.POST)
@@ -371,25 +398,26 @@ class AdminReportesView(AdminRequiredMixin, TemplateView):
                         return redirect('administrador:reportes')
 
                     return self._render_pdf('administrador/reportes/acta_notas.html', {
-                    'reporte': data_pdf,
-                    'headers': ['CUI', 'ALUMNO', 'NOTA FINAL', 'ESTADO']
-                }, filename=f"Reporte_Notas_{filtros['tipo_reporte']}.pdf")
+                        'reporte': data_pdf,
+                        'headers': ['CUI', 'ALUMNO', 'NOTA FINAL', 'ESTADO']
+                    }, filename=f"Reporte_Notas_{filtros['tipo_reporte']}.pdf")
             
                 else:
                     for field, errors in form.errors.items():
                         for error in errors:
                             messages.error(request, f"{field}: {error}")
                     return redirect('administrador:reportes')
-            
+           #sta
             elif categoria == 'estadisticas':
                 return self._generar_reporte_estadisticas(request)
+            
             else:
                 messages.error(request, 'Tipo de reporte no válido.')
-                return redirect('admin:reportes')
+                return redirect('administrador:reportes')
                 
         except ReporteGeneracionException as e:
             messages.error(request, f'Error generando reporte: {str(e)}')
-            return redirect('admin:reportes')
+            return redirect('administrador:reportes')
         except Exception as e:
             messages.error(request, f'Error inesperado: {str(e)}')
             return redirect('administrador:reportes')

@@ -69,31 +69,7 @@
         </div>
         {% endif %}
 
-        <!-- Report Type Tabs -->
-        <div class="mb-8">
-            <div class="border-b border-gray-200">
-                <nav class="-mb-px flex space-x-8">
-                    <button type="button"
-                        class="tab-button active py-2 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600"
-                        data-tab="asistencia">
-                        <i data-lucide="users" class="w-4 h-4 inline mr-2"></i>
-                        Reportes de Asistencia
-                    </button>
-                    <button type="button"
-                        class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                        data-tab="notas">
-                        <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-2"></i>
-                        Reportes de Notas
-                    </button>
-                    <button type="button"
-                        class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                        data-tab="estadisticas">
-                        <i data-lucide="pie-chart" class="w-4 h-4 inline mr-2"></i>
-                        Estadísticas Generales
-                    </button>
-                </nav>
-            </div>
-        </div>
+        
 
         <!-- Report Forms -->
         <div class="space-y-8">
@@ -105,77 +81,62 @@
                             <i data-lucide="users" class="w-6 h-6 text-blue-600"></i>
                         </div>
                         <div>
-                            <h2 class="text-xl font-semibold text-gray-900">Reporte de Asistencia Global</h2>
-                            <p class="text-gray-600">Genera reportes de asistencia para períodos específicos</p>
+                            <h2 class="text-xl font-semibold text-gray-900">Reporte de Asistencia</h2>
+                            <p class="text-gray-600">Genera reportes por curso o individual de estudiantes</p>
                         </div>
                     </div>
 
                     <form method="post" class="report-form" data-tipo="asistencia">
                         {% csrf_token %}
-                        <input type="hidden" name="tipo_reporte" value="asistencia">
+                        <input type="hidden" name="categoria_reporte" value="asistencia">
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
                             <div>
-                                <label for="{{ form_asistencia.fecha_inicio.id_for_label }}"
-                                    class="block text-sm font-medium text-gray-700 mb-2">
-                                    {{ form_asistencia.fecha_inicio.label }}
+                                <label for="{{ form_asistencia.tipo_reporte.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    {{ form_asistencia.tipo_reporte.label }}
                                 </label>
-                                {{ form_asistencia.fecha_inicio }}
-                                {% if form_asistencia.fecha_inicio.help_text %}
-                                <p class="mt-1 text-sm text-gray-500">{{ form_asistencia.fecha_inicio.help_text }}</p>
-                                {% endif %}
+                                {{ form_asistencia.tipo_reporte }}
                             </div>
 
                             <div>
-                                <label for="{{ form_asistencia.fecha_fin.id_for_label }}"
-                                    class="block text-sm font-medium text-gray-700 mb-2">
-                                    {{ form_asistencia.fecha_fin.label }}
+                                <label for="{{ form_asistencia.ciclo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    {{ form_asistencia.ciclo.label }}
                                 </label>
-                                {{ form_asistencia.fecha_fin }}
-                                {% if form_asistencia.fecha_fin.help_text %}
-                                <p class="mt-1 text-sm text-gray-500">{{ form_asistencia.fecha_fin.help_text }}</p>
-                                {% endif %}
+                                {{ form_asistencia.ciclo }}
+                            </div>
+
+                            <div id="campo-curso-asistencia" style="display:none;">
+                                <label for="{{ form_asistencia.curso_codigo.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    {{ form_asistencia.curso_codigo.label }}
+                                </label>
+                                {{ form_asistencia.curso_codigo }}
+                                <p class="text-xs text-gray-500 mt-1">Ingrese el código del curso (Ej: 1703240)</p>
+                            </div>
+
+                            <div id="campo-estudiante-asistencia" style="display:none;">
+                                <label for="{{ form_asistencia.estudiante_cui.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    {{ form_asistencia.estudiante_cui.label }}
+                                </label>
+                                {{ form_asistencia.estudiante_cui }}
+                                <p class="text-xs text-gray-500 mt-1">Ingrese el CUI del estudiante</p>
                             </div>
 
                             <div>
-                                <label for="{{ form_asistencia.formato.id_for_label }}"
-                                    class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="{{ form_asistencia.formato.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
                                     {{ form_asistencia.formato.label }}
                                 </label>
                                 {{ form_asistencia.formato }}
                             </div>
-
-                            <div class="flex items-center">
-                                <div class="flex items-center h-5">
-                                    {{ form_asistencia.incluir_detalle }}
-                                </div>
-                                <div class="ml-3 text-sm">
-                                    <label for="{{ form_asistencia.incluir_detalle.id_for_label }}"
-                                        class="font-medium text-gray-700">
-                                        {{ form_asistencia.incluir_detalle.label }}
-                                    </label>
-                                    {% if form_asistencia.incluir_detalle.help_text %}
-                                    <p class="text-gray-500">{{ form_asistencia.incluir_detalle.help_text }}</p>
-                                    {% endif %}
-                                </div>
-                            </div>
                         </div>
 
                         <div class="mt-6 flex justify-end">
-                            <button type="submit"
-                                class="submit-btn bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
-                                <span class="loading-spinner animate-spin w-4 h-4 mr-2">
-                                    <i data-lucide="loader-2"></i>
-                                </span>
-                                <span class="button-text">
-                                    <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
-                                    Generar Reporte
-                                </span>
+                            <button type="submit" class="submit-btn bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                                <span class="loading-spinner animate-spin w-4 h-4 mr-2 hidden"><i data-lucide="loader-2"></i></span>
+                                <span class="button-text flex items-center"><i data-lucide="download" class="w-4 h-4 mr-2"></i> Generar Reporte</span>
                             </button>
                         </div>
                     </form>
-                </div>
-            </div>
 
             <!-- Reporte de Notas -->
             <div id="form-notas" class="form-section">
@@ -244,20 +205,6 @@
                                 {{ form_notas.formato }}
                             </div>
 
-                            <div class="flex items-center">
-                                <div class="flex items-center h-5">
-                                    {{ form_notas.incluir_estadisticas }}
-                                </div>
-                                <div class="ml-3 text-sm">
-                                    <label for="{{ form_notas.incluir_estadisticas.id_for_label }}"
-                                        class="font-medium text-gray-700">
-                                        {{ form_notas.incluir_estadisticas.label }}
-                                    </label>
-                                    {% if form_notas.incluir_estadisticas.help_text %}
-                                    <p class="text-gray-500">{{ form_notas.incluir_estadisticas.help_text }}</p>
-                                    {% endif %}
-                                </div>
-                            </div>
                         </div>
 
                         <div class="mt-6 flex justify-end">
@@ -325,21 +272,6 @@
                                 </label>
                                 {{ form_estadisticas.fecha_fin }}
                             </div>
-
-                            <div class="flex items-center md:col-span-2">
-                                <div class="flex items-center h-5">
-                                    {{ form_estadisticas.incluir_graficos }}
-                                </div>
-                                <div class="ml-3 text-sm">
-                                    <label for="{{ form_estadisticas.incluir_graficos.id_for_label }}"
-                                        class="font-medium text-gray-700">
-                                        {{ form_estadisticas.incluir_graficos.label }}
-                                    </label>
-                                    {% if form_estadisticas.incluir_graficos.help_text %}
-                                    <p class="text-gray-500">{{ form_estadisticas.incluir_graficos.help_text }}</p>
-                                    {% endif %}
-                                </div>
-                            </div>
                         </div>
 
                         <div class="mt-6 flex justify-end">
@@ -359,200 +291,71 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="mt-12">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="report-card bg-white rounded-lg p-4 cursor-pointer"
-                    onclick="generateQuickReport('asistencia_mensual')">
-                    <div class="flex items-center">
-                        <div class="p-2 bg-blue-50 rounded-lg mr-3">
-                            <i data-lucide="calendar" class="w-5 h-5 text-blue-600"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-medium text-gray-900">Asistencia Mensual</h4>
-                            <p class="text-sm text-gray-500">Reporte del mes actual</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="report-card bg-white rounded-lg p-4 cursor-pointer"
-                    onclick="generateQuickReport('notas_ciclo_actual')">
-                    <div class="flex items-center">
-                        <div class="p-2 bg-green-50 rounded-lg mr-3">
-                            <i data-lucide="trending-up" class="w-5 h-5 text-green-600"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-medium text-gray-900">Notas Ciclo Actual</h4>
-                            <p class="text-sm text-gray-500">Reporte del ciclo en curso</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="report-card bg-white rounded-lg p-4 cursor-pointer"
-                    onclick="generateQuickReport('estadisticas_trimestrales')">
-                    <div class="flex items-center">
-                        <div class="p-2 bg-purple-50 rounded-lg mr-3">
-                            <i data-lucide="activity" class="w-5 h-5 text-purple-600"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-medium text-gray-900">Estadísticas Trimestrales</h4>
-                            <p class="text-sm text-gray-500">Resumen del trimestre</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+       
 {% endblock %}
 
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Tab functionality
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const formSections = document.querySelectorAll('.form-section');
+        
 
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const targetTab = this.dataset.tab;
+        //asistencia
+        const formAsis = document.querySelector('form[data-tipo="asistencia"]');
+        
+        if (formAsis) {
+            const selectTipo = formAsis.querySelector('select[name="tipo_reporte"]');
+            const divCurso = document.getElementById('campo-curso-asistencia');
+            const divEstudiante = document.getElementById('campo-estudiante-asistencia');
 
-                // Update tab buttons
-                tabButtons.forEach(btn => {
-                    btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
-                    btn.classList.add('border-transparent', 'text-gray-500');
-                });
+            if (selectTipo && divCurso && divEstudiante) {
+                console.log("Sistema de reportes: Elementos de asistencia encontrados.");
 
-                this.classList.add('active', 'border-blue-500', 'text-blue-600');
-                this.classList.remove('border-transparent', 'text-gray-500');
+                function actualizarCamposAsistencia() {
+                    const valor = selectTipo.value;
+                    console.log("Cambio de tipo reporte:", valor);
 
-                // Update form sections
-                formSections.forEach(section => {
-                    section.classList.remove('active');
-                });
+                    divCurso.style.display = 'none';
+                    divEstudiante.style.display = 'none';
 
-                document.getElementById(`form-${targetTab}`).classList.add('active');
-            });
-        });
+                    if (valor === 'por_curso') {
+                        divCurso.style.display = 'block';
+                        const inputEst = divEstudiante.querySelector('input');
+                        if(inputEst) inputEst.value = ''; 
+                    } 
+                    else if (valor === 'por_estudiante') {
+                        divEstudiante.style.display = 'block';
+                 
+                        const inputCur = divCurso.querySelector('input');
+                        if(inputCur) inputCur.value = '';
+                    }
+                    
+                }
 
-        // Form submission with loading state
+                selectTipo.addEventListener('change', actualizarCamposAsistencia);
+                
+                actualizarCamposAsistencia();
+            } else {
+                console.error("Error: No se encontraron los IDs 'campo-curso-asistencia' o 'campo-estudiante-asistencia' en el HTML.");
+            }
+        }
+
+       //notasXestadisticas
         const reportForms = document.querySelectorAll('.report-form');
         reportForms.forEach(form => {
             form.addEventListener('submit', function (e) {
-                const submitBtn = this.querySelector('.submit-btn');
-                submitBtn.classList.add('loading');
-                submitBtn.disabled = true;
-
-                // Re-enable button after 5 seconds (in case of error)
-                setTimeout(() => {
-                    submitBtn.classList.remove('loading');
-                    submitBtn.disabled = false;
+                const btn = this.querySelector('button[type="submit"]');
+                if(btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin mr-2"></i> Generando...';
+                }
+                setTimeout(() => { 
+                    if(btn) { 
+                        btn.disabled = false; 
+                        btn.innerHTML = '<i data-lucide="download" class="mr-2"></i> Generar Reporte';
+                    }
                 }, 5000);
             });
         });
-
-        // Show/hide custom date fields for statistics
-        const periodoSelect = document.querySelector('#id_periodo');
-        if (periodoSelect) {
-            periodoSelect.addEventListener('change', function () {
-                const fechaPersonalizada = document.getElementById('fecha-personalizada');
-                const fechaPersonalizadaFin = document.getElementById('fecha-personalizada-fin');
-
-                if (this.value === 'personalizado') {
-                    fechaPersonalizada.style.display = 'block';
-                    fechaPersonalizadaFin.style.display = 'block';
-                } else {
-                    fechaPersonalizada.style.display = 'none';
-                    fechaPersonalizadaFin.style.display = 'none';
-                }
-            });
-        }
-
-        // Show/hide conditional fields for notes report
-        const tipoReporteSelect = document.querySelector('#id_tipo_reporte');
-        if (tipoReporteSelect) {
-            tipoReporteSelect.addEventListener('change', function () {
-                const cursoField = document.querySelector('#id_curso_codigo').closest('div');
-                const docenteField = document.querySelector('#id_docente_email').closest('div');
-
-                // Reset visibility
-                cursoField.style.display = 'block';
-                docenteField.style.display = 'block';
-
-                if (this.value === 'por_curso') {
-                    docenteField.style.display = 'none';
-                } else if (this.value === 'por_docente') {
-                    cursoField.style.display = 'none';
-                } else if (this.value === 'global') {
-                    cursoField.style.display = 'none';
-                    docenteField.style.display = 'none';
-                }
-            });
-
-            // Trigger initial state
-            tipoReporteSelect.dispatchEvent(new Event('change'));
-        }
     });
-
-    // Quick report generation
-    function generateQuickReport(type) {
-        const today = new Date();
-        let form, data;
-
-        switch (type) {
-            case 'asistencia_mensual':
-                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-                form = document.querySelector('[data-tipo="asistencia"]');
-                form.querySelector('#id_fecha_inicio').value = firstDay.toISOString().split('T')[0];
-                form.querySelector('#id_fecha_fin').value = today.toISOString().split('T')[0];
-                form.querySelector('#id_formato').value = 'pdf';
-                break;
-
-            case 'notas_ciclo_actual':
-                form = document.querySelector('[data-tipo="notas"]');
-                form.querySelector('#id_ciclo').value = `${today.getFullYear()}-${Math.ceil((today.getMonth() + 1) / 6)}`;
-                form.querySelector('#id_tipo_reporte').value = 'global';
-                form.querySelector('#id_formato').value = 'pdf';
-                break;
-
-            case 'estadisticas_trimestrales':
-                form = document.querySelector('[data-tipo="estadisticas"]');
-                form.querySelector('#id_periodo').value = 'trimestral';
-                form.querySelector('#id_formato').value = 'pdf';
-                break;
-        }
-
-        if (form) {
-            // Switch to the appropriate tab
-            const tabName = form.dataset.tipo;
-            document.querySelector(`[data-tab="${tabName}"]`).click();
-
-            // Scroll to form
-            form.scrollIntoView({ behavior: 'smooth' });
-
-            // Highlight the form briefly
-            form.style.border = '2px solid #3b82f6';
-            setTimeout(() => {
-                form.style.border = '';
-            }, 2000);
-        }
-    }
-
-    // Toast notification function
-    function showToast(message, type = 'info') {
-        const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white ${type === 'error' ? 'bg-red-500' :
-                type === 'success' ? 'bg-green-500' :
-                    'bg-blue-500'
-            }`;
-        toast.textContent = message;
-
-        document.body.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 5000);
-    }
 </script>
 {% endblock %}

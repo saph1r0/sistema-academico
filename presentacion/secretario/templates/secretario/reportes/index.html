@@ -1,0 +1,320 @@
+{% extends 'base_secretario.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card { border: 1px solid #e5e7eb; transition: all 0.3s ease; }
+    .report-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); border-color: #3b82f6; }
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+    .tab-button.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+    .loading .loading-spinner { display: inline-block; }
+    .loading .button-text { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">{{ page_title }}</h1>
+            <p class="mt-2 text-gray-600">Generación de Reportes Oficiales y Actas Académicas</p>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8">
+                    <button type="button" class="tab-button active py-2 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600" data-tab="asistencia">
+                        <i data-lucide="users" class="w-4 h-4 inline mr-2"></i> Reportes de Asistencia
+                    </button>
+                    <button type="button" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="notas">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-2"></i> Actas de Notas
+                    </button>
+                    <button type="button" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700" data-tab="estadisticas">
+                        <i data-lucide="pie-chart" class="w-4 h-4 inline mr-2"></i> Estadísticas
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            
+            <div id="form-asistencia" class="form-section active">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-blue-50 rounded-full mr-4"><i data-lucide="users" class="w-6 h-6 text-blue-600"></i></div>
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900">Reporte de Asistencia</h2>
+                            <p class="text-gray-600">Generación de reportes por curso o estudiante</p>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="report-form" data-tipo="asistencia">
+                        {% csrf_token %}
+                        <input type="hidden" name="categoria_reporte" value="asistencia">
+                        {{ form_asistencia.incluir_detalle }} 
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_asistencia.tipo_reporte.label }}</label>
+                                {{ form_asistencia.tipo_reporte }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_asistencia.ciclo.label }}</label>
+                                {{ form_asistencia.ciclo }}
+                            </div>
+
+                            <div id="campo-curso-asistencia" style="display:none;">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_asistencia.curso_codigo.label }}</label>
+                                {{ form_asistencia.curso_codigo }}
+                                <p class="text-xs text-gray-500 mt-1">Ingrese código del curso (Ej: 1703240)</p>
+                            </div>
+
+                            <div id="campo-estudiante-asistencia" style="display:none;">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_asistencia.estudiante_cui.label }}</label>
+                                {{ form_asistencia.estudiante_cui }}
+                                <p class="text-xs text-gray-500 mt-1">Ingrese CUI del estudiante</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_asistencia.formato.label }}</label>
+                                {{ form_asistencia.formato }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="submit-btn bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                                <span class="loading-spinner animate-spin w-4 h-4 mr-2 hidden"><i data-lucide="loader-2"></i></span>
+                                <span class="button-text flex items-center"><i data-lucide="download" class="w-4 h-4 mr-2"></i> Generar Reporte</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="form-notas" class="form-section">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-green-50 rounded-full mr-4"><i data-lucide="bar-chart-3" class="w-6 h-6 text-green-600"></i></div>
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900">Actas de Notas</h2>
+                            <p class="text-gray-600">Generación de actas oficiales por curso o docente</p>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="report-form" data-tipo="notas">
+                        {% csrf_token %}
+                        <input type="hidden" name="categoria_reporte" value="notas">
+                        {{ form_notas.incluir_estadisticas }}
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_notas.tipo_reporte.label }}</label>
+                                {{ form_notas.tipo_reporte }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_notas.ciclo.label }}</label>
+                                {{ form_notas.ciclo }}
+                            </div>
+
+                            <div id="campo-curso-notas">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_notas.curso_codigo.label }}</label>
+                                {{ form_notas.curso_codigo }}
+                            </div>
+
+                            <div id="campo-docente-notas">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_notas.docente_email.label }}</label>
+                                {{ form_notas.docente_email }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_notas.formato.label }}</label>
+                                {{ form_notas.formato }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="submit-btn bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center">
+                                <span class="loading-spinner animate-spin w-4 h-4 mr-2 hidden"><i data-lucide="loader-2"></i></span>
+                                <span class="button-text flex items-center"><i data-lucide="download" class="w-4 h-4 mr-2"></i> Generar Acta</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="form-estadisticas" class="form-section">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="p-3 bg-purple-50 rounded-full mr-4"><i data-lucide="pie-chart" class="w-6 h-6 text-purple-600"></i></div>
+                        <div>
+                            <h2 class="text-xl font-semibold text-gray-900">Estadísticas Generales</h2>
+                            <p class="text-gray-600">Métricas globales del sistema académico</p>
+                        </div>
+                    </div>
+                    
+                    <form method="post" class="report-form" data-tipo="estadisticas">
+                        {% csrf_token %}
+                        <input type="hidden" name="categoria_reporte" value="estadisticas">
+                        {{ form_estadisticas.incluir_graficos }}
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_estadisticas.periodo.label }}</label>
+                                {{ form_estadisticas.periodo }}
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_estadisticas.formato.label }}</label>
+                                {{ form_estadisticas.formato }}
+                            </div>
+
+                            <div id="fecha-personalizada" style="display: none;">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_estadisticas.fecha_inicio.label }}</label>
+                                {{ form_estadisticas.fecha_inicio }}
+                            </div>
+
+                            <div id="fecha-personalizada-fin" style="display: none;">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">{{ form_estadisticas.fecha_fin.label }}</label>
+                                {{ form_estadisticas.fecha_fin }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end">
+                            <button type="submit" class="submit-btn bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center">
+                                <span class="loading-spinner animate-spin w-4 h-4 mr-2 hidden"><i data-lucide="loader-2"></i></span>
+                                <span class="button-text flex items-center"><i data-lucide="download" class="w-4 h-4 mr-2"></i> Generar Estadísticas</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const formSections = document.querySelectorAll('.form-section');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const targetTab = this.dataset.tab;
+                
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                });
+                this.classList.add('active', 'border-blue-500', 'text-blue-600');
+                this.classList.remove('border-transparent', 'text-gray-500');
+
+                formSections.forEach(section => section.classList.remove('active'));
+                document.getElementById(`form-${targetTab}`).classList.add('active');
+            });
+        });
+
+        const formAsis = document.querySelector('form[data-tipo="asistencia"]');
+        if (formAsis) {
+            const selectTipo = formAsis.querySelector('select[name="tipo_reporte"]');
+            const divCurso = document.getElementById('campo-curso-asistencia');
+            const divEstudiante = document.getElementById('campo-estudiante-asistencia');
+
+            if (selectTipo && divCurso && divEstudiante) {
+                const updateAsis = () => {
+                    divCurso.style.display = 'none';
+                    divEstudiante.style.display = 'none';
+                    
+                    if (selectTipo.value === 'por_curso') {
+                        divCurso.style.display = 'block';
+                    } else if (selectTipo.value === 'por_estudiante') {
+                        divEstudiante.style.display = 'block';
+                    }
+                };
+                selectTipo.addEventListener('change', updateAsis);
+                updateAsis(); // Ejecutar al inicio
+            }
+        }
+
+        const formNotas = document.querySelector('form[data-tipo="notas"]');
+        if (formNotas) {
+            const selectTipo = formNotas.querySelector('select[name="tipo_reporte"]');
+            const divCurso = document.getElementById('campo-curso-notas');
+            const divDocente = document.getElementById('campo-docente-notas');
+
+            if (selectTipo && divCurso && divDocente) {
+                const updateNotas = () => {
+                    // Reset
+                    divCurso.style.display = 'block';
+                    divDocente.style.display = 'block';
+                    
+                    if (selectTipo.value === 'por_curso') {
+                        divDocente.style.display = 'none';
+                    } else if (selectTipo.value === 'por_docente') {
+                        divCurso.style.display = 'none';
+                    } else if (selectTipo.value === 'global') {
+                        divCurso.style.display = 'none';
+                        divDocente.style.display = 'none';
+                    }
+                };
+                selectTipo.addEventListener('change', updateNotas);
+                updateNotas();
+            }
+        }
+
+        const periodoSelect = document.querySelector('#id_periodo');
+        if (periodoSelect) {
+            periodoSelect.addEventListener('change', function () {
+                const fechaP = document.getElementById('fecha-personalizada');
+                const fechaF = document.getElementById('fecha-personalizada-fin');
+                if (this.value === 'personalizado') {
+                    fechaP.style.display = 'block';
+                    fechaF.style.display = 'block';
+                } else {
+                    fechaP.style.display = 'none';
+                    fechaF.style.display = 'none';
+                }
+            });
+        }
+
+        const reportForms = document.querySelectorAll('.report-form');
+        reportForms.forEach(form => {
+            form.addEventListener('submit', function (e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if(btn) {
+                    btn.disabled = true;
+                    const originalText = btn.innerHTML;
+                    btn.setAttribute('data-original', originalText);
+                    btn.innerHTML = '<span class="loading-spinner"><i data-lucide="loader-2" class="animate-spin mr-2"></i></span> Generando...';
+                    
+                    setTimeout(() => { 
+                        btn.disabled = false; 
+                        btn.innerHTML = '<i data-lucide="download" class="w-4 h-4 mr-2"></i> Generar Reporte';
+                    }, 5000);
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
