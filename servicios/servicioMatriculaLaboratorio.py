@@ -98,8 +98,8 @@ class ServicioMatriculaLaboratorio:
 
         try:
             # 1️⃣ Estudiante
+            student = Student.objects.get(id=student_id),
             enrollment_qs = Enrollment.objects.filter(
-                student_id=student_id,
                 status='active'
             ).select_related(
                 'course_group__course'
@@ -143,11 +143,26 @@ class ServicioMatriculaLaboratorio:
                 tiene_cupos = cupos_disponibles > 0
 
                 # 5️⃣ Ya matriculado en este LAB
-                ya_matriculado = LaboratoryEnrollment.objects.filter(
+                enrollment_actual = LaboratoryEnrollment.objects.filter(
                     laboratory=lab,
                     student_id=student_id,
                     status='active'
-                ).exists()
+                ).first()
+
+                ya_matriculado = enrollment_actual is not None
+
+                puede_desmatricularse = False
+                info_matricula = None
+
+                if enrollment_actual:
+                    puede_desmatricularse = self._puede_desmatricularse(enrollment_actual)
+                    info_matricula = {
+                        'fecha_matricula': enrollment_actual.enrollment_date,
+                        'puede_cambiar': puede_desmatricularse,
+                        'dias_restantes': self._calcular_dias_restantes(enrollment_actual),
+                    }
+
+                
 
                 # 6️⃣ Horarios
                 horarios_qs = Horario.objects.filter(
@@ -184,6 +199,8 @@ class ServicioMatriculaLaboratorio:
                     'tiene_cupos': tiene_cupos,
                     'porcentaje_ocupacion': int((matriculados / lab.capacity) * 100) if lab.capacity else 0,
                     'ya_matriculado': ya_matriculado,
+                    'puede_desmatricularse': puede_desmatricularse,
+                    'info_matricula': info_matricula,
                     'tiene_conflicto': tiene_conflicto,
                     'mensaje_conflicto': mensaje_conflicto,
                     'puede_matricularse': (
@@ -191,7 +208,8 @@ class ServicioMatriculaLaboratorio:
                         tiene_cupos and
                         not tiene_conflicto and
                         self._verificar_periodo_matricula()
-                    )
+                    ),
+    
                 })
 
             return {
