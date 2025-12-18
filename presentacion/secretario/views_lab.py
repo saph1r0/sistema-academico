@@ -21,6 +21,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic import TemplateView
 from django.db import transaction
 
+from collections import defaultdict
+
 # 4. Importaciones de la Aplicación (Modelos y Servicios)
 from repositorio.postgres_repository.models import (
     Course, CourseGroup, AcademicPeriod, Aula, Horario, Classroom, Laboratory, User, Teacher
@@ -28,6 +30,10 @@ from repositorio.postgres_repository.models import (
 from .mixins import SecretarioRequiredMixin
 from servicios.servicioMatriculaLaboratorio import servicio_matricula_laboratorio 
 from servicios.servicioReservas import servicio_reservas 
+
+
+def _intervals_conflict(start1, end1, start2, end2) -> bool:
+    return (start1 < end2) and (start2 < end1)
 
 
 # --- Funciones de Utilidad (Limpieza de texto) ---
@@ -52,12 +58,31 @@ class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+        periodo_activo = AcademicPeriod.objects.filter(is_active=True).first()
+        docentes = Teacher.objects.select_related('user').all().order_by('user__last_name', 'user__first_name')
+
         # 1. Obtener la lista de ambientes físicos (LAB 01, LAB 02, ...) que tienen horarios cargados
         laboratorios_fisicos = Aula.objects.filter(
             tipo='laboratorio',
             horarios__laboratory__isnull=False
         ).distinct().order_by('codigo')
+
+        # 2. Construir un diccionario de disponibilidad de docentes
+        teacher_busy = defaultdict(lambda: defaultdict(list))  
+        # teacher_busy[teacher_id][dia] = [(inicio, fin, lab_id), ...]
+
+        qs_busy = Horario.objects.filter(laboratory__teacher_id__isnull=False)
+
+        if periodo_activo:
+            qs_busy = qs_busy.filter(laboratory__course_group__academic_period=periodo_activo)
+
+        qs_busy = qs_busy.values('laboratory__teacher_id', 'dia_semana', 'hora_inicio', 'hora_fin', 'laboratory_id')
+
+        for r in qs_busy:
+            tid = r['laboratory__teacher_id']
+            dia = (r['dia_semana'] or '').lower()
+            teacher_busy[tid][dia].append((r['hora_inicio'], r['hora_fin'], r['laboratory_id']))
+
 
         # Diccionario para almacenar la información resumida por GRUPO DE LABORATORIO
         # Clave: (Codigo_Aula_Fisica, lab_code) -> Valor: Info Resumida
@@ -85,6 +110,8 @@ class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
                 if clave_grupo not in grupos_lab_resumidos:
                     # Inicializar la entrada del grupo de laboratorio
                     grupos_lab_resumidos[clave_grupo] = {
+                        'laboratory_id': lab_group.id,
+                        'teacher_id': lab_group.teacher_id if lab_group.teacher else None,
                         'codigo_aula_fisica': lab_fisico.codigo,
                         'capacidad_aula': lab_fisico.capacidad,
                         'curso_nombre': course.name,
@@ -93,14 +120,20 @@ class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
                         'profesor': teacher.user.get_full_name() if teacher and teacher.user else 'Pendiente',
                         'matriculados': lab_group.enrolled_students, 
                         'capacidad_grupo': lab_group.capacity,
-                        'horarios_list': [] # Lista para almacenar los bloques de horario
-                    }
+                        'horarios_list': [], # Lista para almacenar los bloques de horario
+                        'horarios_raw': [], # Lista para almacenar los objetos Horario completos     
+                    }   
                 
                 # Agregar el bloque de horario a la lista
                 dia = h.dia_semana.capitalize()[:3] # LUN, MAR, MIE, etc.
                 horario_str = f"{h.hora_inicio.strftime('%H:%M')}-{h.hora_fin.strftime('%H:%M')}"
                 grupos_lab_resumidos[clave_grupo]['horarios_list'].append(f"{dia} {horario_str}")
-
+                # ✅ NUEVO: guardar horario "raw" para validar cruces (día + horas reales)
+                grupos_lab_resumidos[clave_grupo]['horarios_raw'].append((
+                    (h.dia_semana or "").lower(),
+                    h.hora_inicio,
+                    h.hora_fin
+                ))
 
         # Convertir la lista de bloques de horario en un solo string por grupo
         horarios_finales = []
@@ -113,6 +146,39 @@ class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
             
         # Ordenar por código de aula física y luego por lab_code
         horarios_finales.sort(key=lambda x: (x['codigo_aula_fisica'], x['lab_code']))
+        # ✅ NUEVO: calcular docentes disponibles por cada laboratorio (sin cruce)
+        for row in horarios_finales:
+            lab_id = row['laboratory_id']
+            lab_slots = row.get('horarios_raw', [])
+
+            disponibles = []
+
+            for t in docentes:
+                conflicto = False
+
+                for dia, ini, fin in lab_slots:
+                    for b_ini, b_fin, b_lab_id in teacher_busy.get(t.id, {}).get(dia, []):
+                        if b_lab_id == lab_id:
+                            continue  # no comparar consigo mismo
+                        if _intervals_conflict(ini, fin, b_ini, b_fin):
+                            conflicto = True
+                            break
+                    if conflicto:
+                        break
+
+                if not conflicto:
+                    disponibles.append({
+                        'id': t.id,
+                        'nombre': t.user.get_full_name()
+                    })
+
+            row['docentes_disponibles'] = disponibles
+
+            # opcional: marcar si el docente actual está en conflicto
+            row['teacher_conflicto'] = False
+            if row.get('teacher_id'):
+                row['teacher_conflicto'] = not any(d['id'] == row['teacher_id'] for d in disponibles)
+
         periodo_activo = AcademicPeriod.objects.filter(is_active=True).first()
 
         context.update({
@@ -324,6 +390,65 @@ def configurar_periodo_matricula_laboratorio(request):
         messages.error(request, 'Período académico no encontrado.')
     except ValueError:
         messages.error(request, 'Formato de fecha inválido.')
+    except Exception as e:
+        messages.error(request, f'Error: {e}')
+
+    return redirect('secretario:laboratorios')
+
+@login_required
+@require_POST
+def asignar_docente_laboratorio(request):
+    if not request.user.is_secretary():
+        messages.error(request, 'No tienes permisos.')
+        return redirect('secretario:laboratorios')
+
+    lab_id = request.POST.get('laboratory_id')
+    teacher_id = request.POST.get('teacher_id') or None
+
+    try:
+        lab = Laboratory.objects.select_related('course_group__academic_period').get(id=lab_id)
+
+        # si quieren quitar docente
+        if teacher_id is None:
+            lab.teacher = None
+            lab.save(update_fields=['teacher'])
+            messages.success(request, '✅ Docente retirado del laboratorio.')
+            return redirect('secretario:laboratorios')
+
+        teacher = Teacher.objects.select_related('user').get(id=teacher_id)
+
+        # ✅ revalidar cruce en backend
+        lab_horarios = Horario.objects.filter(laboratory=lab).values('dia_semana', 'hora_inicio', 'hora_fin')
+
+        busy = Horario.objects.filter(laboratory__teacher=teacher).exclude(laboratory=lab)
+
+        # filtra por periodo activo si quieres (recomendado)
+        periodo_activo = AcademicPeriod.objects.filter(is_active=True).first()
+        if periodo_activo:
+            busy = busy.filter(laboratory__course_group__academic_period=periodo_activo)
+
+        busy = busy.values('dia_semana', 'hora_inicio', 'hora_fin')
+
+        for lh in lab_horarios:
+            dia = (lh['dia_semana'] or '').lower()
+            ini, fin = lh['hora_inicio'], lh['hora_fin']
+
+            for bh in busy:
+                if (bh['dia_semana'] or '').lower() != dia:
+                    continue
+                if _intervals_conflict(ini, fin, bh['hora_inicio'], bh['hora_fin']):
+                    messages.error(request, f'❌ Cruce de horario: {teacher.user.get_full_name()} no está disponible.')
+                    return redirect('secretario:laboratorios')
+
+        lab.teacher = teacher
+        lab.save(update_fields=['teacher'])
+        messages.success(request, f'✅ Docente asignado: {teacher.user.get_full_name()}')
+        return redirect('secretario:laboratorios')
+
+    except Laboratory.DoesNotExist:
+        messages.error(request, 'Laboratorio no encontrado.')
+    except Teacher.DoesNotExist:
+        messages.error(request, 'Docente no encontrado.')
     except Exception as e:
         messages.error(request, f'Error: {e}')
 

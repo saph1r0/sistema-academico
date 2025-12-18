@@ -12,7 +12,8 @@ from .views_exam_accreditation import (
 )
 from .views_lab import (
     configurar_cupo_global_laboratorio,
-    configurar_periodo_matricula_laboratorio
+    configurar_periodo_matricula_laboratorio,
+    asignar_docente_laboratorio
 )
 
 
@@ -36,6 +37,8 @@ urlpatterns = [
     path('laboratorios/configurar-cupo-global/', configurar_cupo_global_laboratorio, name='configurar_cupo_global_laboratorio'),
     path('laboratorios/configurar-periodo-lab/', configurar_periodo_matricula_laboratorio,
          name='configurar_periodo_matricula_laboratorio'),
+    path('laboratorios/asignar-docente/', asignar_docente_laboratorio, name='asignar_docente_laboratorio'),
+
 
 
     path('exam-accreditation/',SecretaryExamAccreditationView.as_view(),name='exam_accreditation'),
