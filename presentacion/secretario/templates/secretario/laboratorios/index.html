@@ -83,6 +83,76 @@
 </div>
 
 
+    <div class="bg-white rounded-lg shadow-sm mt-6">
+        <div class="p-6 border-b border-gray-200 bg-gray-50">
+            <h2 class="text-lg font-semibold text-gray-900">
+                Configuración – Período de Matrícula de Laboratorio
+            </h2>
+            <p class="text-sm text-gray-600">
+                Define las fechas de inicio y fin de la matrícula de laboratorios (tabla <b>academic_periods</b>).
+            </p>
+        </div>
+
+        {% if periodo_activo %}
+        <form method="post" action="{% url 'secretario:configurar_periodo_matricula_laboratorio' %}">
+            {% csrf_token %}
+
+            <input type="hidden" name="periodo_id" value="{{ periodo_activo.id }}">
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Inicio (laboratory_enrollment_start)
+                    </label>
+                    <input
+                        type="date"
+                        name="laboratory_enrollment_start"
+                        required
+                        value="{{ periodo_activo.laboratory_enrollment_start|date:'Y-m-d' }}"
+                        class="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                    />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Fin (laboratory_enrollment_end)
+                    </label>
+                    <input
+                        type="date"
+                        name="laboratory_enrollment_end"
+                        required
+                        value="{{ periodo_activo.laboratory_enrollment_end|date:'Y-m-d' }}"
+                        class="w-full px-3 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+                    />
+                </div>
+            </div>
+
+            <div class="px-6 pb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div class="text-sm text-gray-600">
+                    <span class="font-semibold text-gray-800">Período activo:</span>
+                    {{ periodo_activo.name|default:"(sin nombre)" }}
+                    <span class="text-gray-400">•</span>
+                    {{ periodo_activo.start_date }} — {{ periodo_activo.end_date }}
+                </div>
+
+                <button
+                    type="submit"
+                    class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                    Guardar período
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="p-6">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 text-sm">
+                ⚠️ No hay un <b>AcademicPeriod</b> activo (<code>is_active=True</code>).
+                Activa uno para configurar el período de matrícula de laboratorio.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
     {% if grupos_lab_resumidos %}
     <div class="bg-white rounded-lg shadow-sm mt-6">
         <div class="p-6 border-b border-gray-200 bg-gray-100">

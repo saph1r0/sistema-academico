@@ -113,13 +113,15 @@ class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
             
         # Ordenar por código de aula física y luego por lab_code
         horarios_finales.sort(key=lambda x: (x['codigo_aula_fisica'], x['lab_code']))
+        periodo_activo = AcademicPeriod.objects.filter(is_active=True).first()
 
         context.update({
             # Cambiamos el nombre de la variable para reflejar que es una lista plana
             'grupos_lab_resumidos': horarios_finales, 
             # Los demás servicios se mantienen
             'cursos_disponibles': servicio_matricula_laboratorio.obtener_cursos_con_laboratorio(),
-             })
+            'periodo_activo': periodo_activo,
+            })
         return context  
 
 # --- FUNCIONES BASADAS EN VISTAS (Procesamiento de Archivos) ---
@@ -288,3 +290,42 @@ def configurar_cupo_global_laboratorio(request):
     )
 
     return redirect('secretario:laboratorios')
+
+@login_required
+@require_POST
+def configurar_periodo_matricula_laboratorio(request):
+    if not request.user.is_secretary():
+        messages.error(request, 'No tienes permisos.')
+        return redirect('secretario:laboratorios')
+
+    periodo_id = request.POST.get('periodo_id')
+    inicio = request.POST.get('laboratory_enrollment_start')
+    fin = request.POST.get('laboratory_enrollment_end')
+
+    if not periodo_id or not inicio or not fin:
+        messages.error(request, 'Datos incompletos.')
+        return redirect('secretario:laboratorios')
+
+    try:
+        inicio_date = datetime.strptime(inicio, "%Y-%m-%d").date()
+        fin_date = datetime.strptime(fin, "%Y-%m-%d").date()
+
+        if inicio_date > fin_date:
+            messages.error(request, 'La fecha de inicio no puede ser mayor que la fecha fin.')
+            return redirect('secretario:laboratorios')
+
+        period = AcademicPeriod.objects.get(id=periodo_id)
+        period.laboratory_enrollment_start = inicio_date
+        period.laboratory_enrollment_end = fin_date
+        period.save(update_fields=["laboratory_enrollment_start", "laboratory_enrollment_end"])
+
+        messages.success(request, '✅ Período de matrícula de laboratorio actualizado.')
+    except AcademicPeriod.DoesNotExist:
+        messages.error(request, 'Período académico no encontrado.')
+    except ValueError:
+        messages.error(request, 'Formato de fecha inválido.')
+    except Exception as e:
+        messages.error(request, f'Error: {e}')
+
+    return redirect('secretario:laboratorios')
+

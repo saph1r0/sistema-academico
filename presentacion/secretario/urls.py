@@ -10,7 +10,11 @@ from .views_exam_accreditation import (
     SecretaryExamAccreditationView,
     ExamAccreditationDownloadView
 )
-from .views_lab import configurar_cupo_global_laboratorio
+from .views_lab import (
+    configurar_cupo_global_laboratorio,
+    configurar_periodo_matricula_laboratorio
+)
+
 
 
 
@@ -30,6 +34,8 @@ urlpatterns = [
     path('cargar-estudiantes/', views.cargar_estudiantes, name='cargar_estudiantes'),
     path('cargar-horarios-laboratorios/', views_lab.cargar_horarios_laboratorios, name='cargar_horarios_laboratorios'),
     path('laboratorios/configurar-cupo-global/', configurar_cupo_global_laboratorio, name='configurar_cupo_global_laboratorio'),
+    path('laboratorios/configurar-periodo-lab/', configurar_periodo_matricula_laboratorio,
+         name='configurar_periodo_matricula_laboratorio'),
 
 
     path('exam-accreditation/',SecretaryExamAccreditationView.as_view(),name='exam_accreditation'),
