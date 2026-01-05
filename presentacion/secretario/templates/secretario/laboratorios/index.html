@@ -179,7 +179,38 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ g.codigo }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ g.curso_nombre }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-blue-600">{{ g.lab_code }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ g.profesor }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">
+                            <form method="post" action="{% url 'secretario:asignar_docente_laboratorio' %}" class="flex items-center gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="laboratory_id" value="{{ g.laboratory_id }}">
+
+                                <select name="teacher_id"
+                                        class="min-w-[220px] px-3 py-2 border rounded-lg text-sm focus:ring focus:ring-blue-200">
+                                    <option value="">— Por asignar —</option>
+
+                                    {% if g.docentes_disponibles %}
+                                        {% for d in g.docentes_disponibles %}
+                                            <option value="{{ d.id }}" {% if g.teacher_id == d.id %}selected{% endif %}>
+                                                {{ d.nombre }}
+                                            </option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+
+                                <button type="submit"
+                                        class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
+                                    Guardar
+                                </button>
+                            </form>
+
+                            {% if g.teacher_conflicto %}
+                                <p class="text-xs text-red-600 mt-1">⚠️ El docente actual tiene cruce con otro horario.</p>
+                            {% endif %}
+
+                            {% if not g.docentes_disponibles %}
+                                <p class="text-xs text-gray-500 mt-1">No hay docentes disponibles sin cruce.</p>
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ g.codigo_aula_fisica }}</td>
                         <td class="px-6 py-4 text-sm text-gray-700 font-mono text-xs" style="line-height: 1.25;">
                             {{ g.horarios|safe }}
