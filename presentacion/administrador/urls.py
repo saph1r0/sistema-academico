@@ -34,7 +34,7 @@ urlpatterns = [
     path('reservas/api/dia/', views_reservas.api_reservas_del_dia, name='api_reservas_dia'),
     path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
     path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
-    path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
+    path( 'reservas/api/cancelar/<uuid:reserva_id>/',views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
 
     path("asistencia-profesor/", AdminAsistenciaProfesorView.as_view(), name="asistencia_profesor"),
     #ASISTENCIA ESTUDIANTES

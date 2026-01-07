@@ -576,22 +576,48 @@ async function validarAntesDeReservar(fecha) {
         }
 
         function actualizarResumen(occupied) {
-            const delSlot = (occupied || []).slice().sort((a, b) => a.code.localeCompare(b.code));
             resumenDia.innerHTML = '';
-            if (delSlot.length === 0) {
+            if (!occupied || occupied.length === 0) {
                 const li = document.createElement('li');
                 li.textContent = 'No hay reservas/clases para la fecha y hora seleccionadas.';
                 resumenDia.appendChild(li);
                 return;
             }
-            delSlot.forEach(o => {
+
+            occupied.forEach(o => {
                 const li = document.createElement('li');
-                const tag = (o.reason === 'class') ? 'Clase'
+                li.className = 'flex items-center justify-between gap-2';
+
+                // Texto base
+                const texto = document.createElement('span');
+                const tag = (o.reason === 'class')
+                    ? 'Clase'
                     : (o.mine ? 'Mi reserva' : 'Reserva');
-                li.textContent = `${o.code} — ${tag}${o.label ? ' — ' + o.label : ''}`;
+
+                texto.textContent = `${o.code} — ${tag}${o.label ? ' — ' + o.label : ''}`;
+
+                // Estado visual
+                let badge = document.createElement('span');
+
+                if (o.reason === 'class') {
+                    badge.className = 'px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800';
+                    badge.textContent = 'Clase';
+                }
+                else if (o.status === 'cancelled') {
+                    badge.className = 'px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700';
+                    badge.textContent = 'Cancelada';
+                }
+                else {
+                    badge.className = 'px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700';
+                    badge.textContent = 'Activa';
+                }
+
+                li.appendChild(texto);
+                li.appendChild(badge);
                 resumenDia.appendChild(li);
             });
         }
+
 
          // ==========================
         // API: Crear / Eliminar reserva

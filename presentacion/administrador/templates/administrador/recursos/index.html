@@ -2,7 +2,7 @@
 {% load static %}
 {% load custom_filters %}
 {% block title %}Dashboard de Reservas{% endblock %}
-
+{% csrf_token %}
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -253,7 +253,7 @@
             </div>
         </div>
 
-        <!-- LISTA DE RESERVAS -->
+            <!-- LISTA DE RESERVAS -->
         <div class="bg-white border rounded-xl p-6 shadow-sm mt-8">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-lg font-bold text-gray-900">Últimas Reservas</h2>
@@ -272,52 +272,128 @@
                             <th class="px-3 py-2">Aula</th>
                             <th class="px-3 py-2">Docente</th>
                             <th class="px-3 py-2">Estado</th>
+                            <th class="px-3 py-2">Acciones</th>
                         </tr>
                     </thead>
+
                     <tbody id="tabla-reservas">
+                        <!-- PRIMERAS 10 RESERVAS -->
                         {% for r in reservas|slice:":10" %}
                         <tr class="border-t">
                             <td class="px-3 py-2">{{ r.date }}</td>
                             <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
                             <td class="px-3 py-2">{{ r.classroom.code }}</td>
                             <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
+
+                            <!-- ESTADO -->
                             <td class="px-3 py-2">
+                                {% if r.status == 'cancelled' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                                    Cancelada
+                                </span>
+                                {% else %}
                                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                                     Confirmada
                                 </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ACCIONES -->
+                            <td class="px-3 py-2">
+                                {% if r.status != 'cancelled' and user.is_staff %}
+                                <button
+                                    onclick="cancelarReserva('{{ r.id }}')"
+                                    class="text-red-600 hover:text-red-800 text-sm font-semibold">
+                                    Cancelar
+                                </button>
+                                {% else %}
+                                <span class="text-gray-400 text-sm">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                    <!-- RESERVAS OCULTAS -->
+                    <tbody id="mas-reservas" class="hidden">
+                        {% for r in reservas|slice:"10:" %}
+                        <tr class="border-t">
+                            <td class="px-3 py-2">{{ r.date }}</td>
+                            <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
+                            <td class="px-3 py-2">{{ r.classroom.code }}</td>
+                            <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
+
+                            <!-- ESTADO -->
+                            <td class="px-3 py-2">
+                                {% if r.status == 'cancelled' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                                    Cancelada
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    Confirmada
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            <!-- ACCIONES -->
+                            <td class="px-3 py-2">
+                                {% if r.status != 'cancelled' and user.is_staff %}
+                                <button
+                                    onclick="cancelarReserva('{{ r.id }}')"
+                                    class="text-red-600 hover:text-red-800 text-sm font-semibold">
+                                    Cancelar
+                                </button>
+                                {% else %}
+                                <span class="text-gray-400 text-sm">—</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-                <div id="mas-reservas" class="hidden">
-                    {% for r in reservas|slice:"10:" %}
-                    <tr class="border-t">
-                        <td class="px-3 py-2">{{ r.date }}</td>
-                        <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
-                        <td class="px-3 py-2">{{ r.classroom.code }}</td>
-                        <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
-                        <td class="px-3 py-2">
-                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                                Confirmada
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </div>
             </div>
+
             {% else %}
-                <p class="text-gray-600">No hay reservas registradas.</p>
+            <p class="text-gray-600">No hay reservas registradas.</p>
             {% endif %}
         </div>
 
+
     </div>
 </div>
-
+<input type="hidden" id="csrf-token" value="{{ csrf_token }}">
 <!-- CHART.JS -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+function cancelarReserva(reservaId) {
+    const csrfToken = document.getElementById("csrf-token").value;
+
+    fetch(`/administrador/reservas/api/cancelar/${reservaId}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": csrfToken,
+            "Content-Type": "application/json"
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Error al cancelar");
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || "No se pudo cancelar la reserva");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error al cancelar la reserva");
+    });
+}
+
     // Variables globales para los gráficos
     let chartDocentes, chartAulas, chartFechas, chartDocenteDetalle, chartAulaDetalle;
     
