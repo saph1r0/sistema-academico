@@ -15,14 +15,19 @@
                     <i data-lucide="flask-conical" class="h-6 w-6 text-purple-600"></i>
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir Horarios de Laboratorio</h3>
-                <p class="text-sm text-gray-600 mb-4">PDF (Formato: DÍA HH:MM/HH:MM CURSO LAB X)</p>
                 <form method="post" action="{% url 'secretario:cargar_horarios_laboratorios' %}" enctype="multipart/form-data" id="form-horarios-lab">
                     {% csrf_token %}
                     <button type="button" onclick="document.getElementById('file-laboratorios').click()" 
                             class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
                         Seleccionar Archivo
                     </button>
-                    <input type="file" id="file-laboratorios" name="pdf_file" accept=".pdf" class="hidden" onchange="this.form.submit()">
+                    <input type="file"
+                        id="file-laboratorios"
+                        name="excel_file"
+                        accept=".xlsx"
+                        class="hidden"
+                        onchange="this.form.submit()">
+
                 </form>
             </div>
         </div>
@@ -185,17 +190,29 @@
                                 <input type="hidden" name="laboratory_id" value="{{ g.laboratory_id }}">
 
                                 <select name="teacher_id"
-                                        class="min-w-[220px] px-3 py-2 border rounded-lg text-sm focus:ring focus:ring-blue-200">
+                                        class="min-w-[260px] px-3 py-2 border rounded-lg text-sm focus:ring focus:ring-blue-200">
+
                                     <option value="">— Por asignar —</option>
 
-                                    {% if g.docentes_disponibles %}
-                                        {% for d in g.docentes_disponibles %}
-                                            <option value="{{ d.id }}" {% if g.teacher_id == d.id %}selected{% endif %}>
+                                    {# ===== DOCENTE ACTUAL ===== #}
+                                    {% if g.teacher_id %}
+                                        <option value="{{ g.teacher_id }}" selected
+                                                {% if g.teacher_conflicto %}class="text-red-600 font-semibold"{% endif %}>
+                                            {{ g.profesor }}
+                                            {% if g.teacher_conflicto %} (Tiene cruce de horario){% endif %}
+                                        </option>
+                                    {% endif %}
+
+                                    {# ===== DOCENTES DISPONIBLES (SIN CRUCE) ===== #}
+                                    {% for d in g.docentes_disponibles %}
+                                        {% if d.id != g.teacher_id %}
+                                            <option value="{{ d.id }}">
                                                 {{ d.nombre }}
                                             </option>
-                                        {% endfor %}
-                                    {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
                                 </select>
+
 
                                 <button type="submit"
                                         class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition text-sm">
