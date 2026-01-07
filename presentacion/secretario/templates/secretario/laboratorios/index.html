@@ -36,14 +36,24 @@
             <h3 class="text-lg font-semibold text-gray-900 mb-3">Estadísticas Rápidas</h3>
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-blue-50 p-4 rounded-lg text-center">
-                    <p class="text-xl font-bold text-blue-800">{{ estadisticas_ocupacion.total_laboratorios|default:0 }}</p>
-                    <p class="text-sm text-blue-600">Ambientes Físicos Registrados</p>
+                    <p class="text-xl font-bold text-blue-800">
+                        {{ total_ambientes_fisicos|default:0 }}
+                    </p>
+                    <p class="text-sm text-blue-600">
+                        Ambientes Físicos Registrados
+                    </p>
                 </div>
+
                 <div class="bg-green-50 p-4 rounded-lg text-center">
-                    <p class="text-xl font-bold text-green-800">{{ estadisticas_ocupacion.porcentaje_ocupacion_promedio|default:'0' }}%</p>
-                    <p class="text-sm text-green-600">Ocupación Promedio (Matrícula)</p>
+                    <p class="text-xl font-bold text-green-800">
+                        {{ ocupacion_promedio|default:0 }}%
+                    </p>
+                    <p class="text-sm text-green-600">
+                        Ocupación Promedio (Matrícula)
+                    </p>
                 </div>
             </div>
+
         </div>
     </div>
     <div class="bg-white rounded-lg shadow-sm mt-6">

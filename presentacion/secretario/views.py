@@ -27,7 +27,7 @@ from django.template.loader import get_template
 
 # 4. Importaciones de la Aplicación (Modelos y Servicios)
 from repositorio.postgres_repository.models import (
-    User, Teacher, Course, CourseGroup, AcademicPeriod, Aula, Horario, Student, Enrollment,Classroom
+    User, Teacher, Course, CourseGroup, AcademicPeriod, Aula, Horario,Laboratory, Student, Enrollment,Classroom
 )
 from .mixins import SecretarioRequiredMixin
 from servicios.servicioMatriculaLaboratorio import ServicioMatriculaLaboratorio, servicio_matricula_laboratorio
@@ -62,12 +62,42 @@ class SecretarioDashboardView(SecretarioRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context.update({
-            'resumen_inscripciones': {},
-            #'laboratorios_ocupacion': ServicioReservas.obtener_ocupacion_laboratorios(),
-            'alertas_sistema': ServicioMonitoreo.obtener_alertas_academicas(),
-            'estadisticas_generales': ServicioReportes.obtener_estadisticas_generales()
-        })
+        # Período activo
+        current_period = AcademicPeriod.objects.filter(is_active=True).first()
+
+        # Contadores principales
+        context['total_teachers'] = Teacher.objects.count()
+        context['total_students'] = Student.objects.count()
+        context['total_courses'] = Course.objects.count()
+
+        # Alertas simples: labs sin docente
+        context['alerts_count'] = Laboratory.objects.filter(
+            teacher__isnull=True
+        ).count()
+
+        # Profesores para el panel (máx 5)
+        teachers = Teacher.objects.select_related('user')[:5]
+        context['teachers_stats'] = [
+            {
+                'teacher': t,
+                'courses_count': CourseGroup.objects.filter(teacher=t).count(),
+                'hours_per_week': Horario.objects.filter(
+                    laboratory__teacher=t
+                ).count(),
+                'status': 'activo' if t.user.is_active else 'inactivo',
+                'virtual_percentage': 0
+            }
+            for t in teachers
+        ]
+
+        # Alertas del sistema (placeholder compatible con el HTML)
+        context['system_alerts'] = []
+
+        # Usuarios conectados (simple)
+        context['active_users'] = User.objects.filter(is_active=True).count()
+
+        context['current_period'] = current_period
+
         return context
 
 
