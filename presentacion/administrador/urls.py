@@ -3,13 +3,14 @@ from . import views
 from . import views_reservas
 from . import views_asistencia_estudiantes
 from .views_asistencia_profesor_admin import AdminAsistenciaProfesorView
-
+from django.views.generic import RedirectView
 from . import views_notas_estudiantes
 from . import views_export_asistestudiante
 from . import views_export_asistestudiantespdffiltro
 app_name = 'admin'
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='dashboard/'), name='index'),
     # Dashboard principal
     path('dashboard/', views.AdminDashboardView.as_view(), name='dashboard'),
     path('dashboard/api/', views.AdminDashboardAPIView.as_view(), name='dashboard_api'),

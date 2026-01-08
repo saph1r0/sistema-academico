@@ -10,6 +10,7 @@ from django.views.generic import RedirectView
 from . import views_asistencia_estudiantes  
 from . import views_export_asistestudiante 
 from . import views_export_asistestudiantespdffiltro
+from . import views_asistencia_profesor
 
 from .views_exam_accreditation import (
     SecretaryExamAccreditationView,
@@ -76,4 +77,5 @@ urlpatterns = [
     path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
     path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
     path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
+    path('asistencia-profesor/', views_asistencia_profesor.SecretarioAsistenciaProfesorView.as_view(), name='asistencia_profesor'),
 ]
