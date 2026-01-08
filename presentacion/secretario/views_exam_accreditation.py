@@ -40,6 +40,8 @@ class ExamAccreditationDownloadView(View):
             if user.is_teacher():
                 if str(acc.uploaded_by_id) != str(user.teacher.id):
                     raise Http404("No tiene permiso para descargar este archivo")
+            elif user.is_staff or user.is_superuser:
+                pass
             elif not user.is_secretary():
                 raise Http404("No tiene permiso para descargar archivos")
 
@@ -73,14 +75,24 @@ class ExamAccreditationDownloadView(View):
 
 class SecretaryExamAccreditationView(TemplateView):
     """Vista de secretaría para ver todas las acreditaciones"""
-    template_name = 'secretario/acreditacion/index.html'
+    template_name = None
 
     def dispatch(self, request, *args, **kwargs):
-        """Verificar que el usuario sea secretaría"""
-        if not request.user.is_secretary():
-            messages.error(request, 'No tiene permiso para acceder a esta sección.')
-            return redirect('home')
-        return super().dispatch(request, *args, **kwargs)
+        user = request.user
+
+        if not user.is_authenticated:
+            return redirect('login')
+
+        if user.is_staff or user.is_superuser:
+            self.template_name = 'administrador/acreditacion/index.html'
+            return super().dispatch(request, *args, **kwargs)
+
+        if user.is_secretary():
+            self.template_name = 'secretario/acreditacion/index.html'
+            return super().dispatch(request, *args, **kwargs)
+
+        messages.error(request, 'No tiene permiso para acceder.')
+        return redirect('home')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

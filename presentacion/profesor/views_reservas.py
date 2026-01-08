@@ -3,9 +3,8 @@
 
 """
 Vistas para gestión de reservas de ambientes del profesor
-Reserva automática de 9 ambientes (3 pisos)
+Ahora incluye visualización del estado (Activo/Inactivo)
 """
-
 
 import json
 from datetime import datetime
@@ -15,7 +14,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from servicios.servicioReservas    import servicio_reservas
+from servicios.servicioReservas import servicio_reservas
 
 # -----------------------------
 # Página principal
@@ -106,6 +105,8 @@ def reserva_api_detail(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
 
     return JsonResponse({'ok': True})
+
+
 # -----------------------------
 # GET /profesor/reservas/mis/
 # -----------------------------
@@ -113,23 +114,28 @@ def reserva_api_detail(request, pk):
 @require_GET
 def reservas_mis(request):
     """
-    Devuelve TODAS las reservas del profesor autenticado.
+    Devuelve TODAS las reservas del profesor autenticado con su estado.
     NO usa date ni slot.
     """
     qs = servicio_reservas.obtener_reservas_profesor(request.user)
 
     reservas = []
     for r in qs:
+        # Determinar estado legible
+        estado_display = 'Activo' if r.status == 'approved' else 'Inactivo'
+        
         reservas.append({
             "id": str(r.id),
-            "aula": r.classroom.name,  # o r.classroom.code según tu modelo
-            "curso": r.course.name,
+            "aula": r.classroom.name if r.classroom else 'N/A',
+            "curso": r.course.name if r.course else 'N/A',
             "fecha": r.date.strftime("%Y-%m-%d"),
             "slot": f"{r.start_time.strftime('%H:%M')} - {r.end_time.strftime('%H:%M')}",
-            "estado": r.status,            # o r.get_status_display()
+            "estado": r.status,  # approved o cancelled
+            "estado_display": estado_display,  # Activo o Inactivo
         })
 
     return JsonResponse({"reservas": reservas})
+
 
 @login_required
 @require_http_methods(["GET"])
@@ -137,11 +143,7 @@ def api_restricciones_profesor(request):
     """
     GET /profesor/reservas/api/restricciones/
     
-    Devuelve información sobre las restricciones del profesor actual:
-    - Cuántas reservas tiene esta semana
-    - Cuántas le quedan disponibles
-    - Límites configurados
-    - Detalle de sus reservas actuales
+    Devuelve información sobre las restricciones del profesor actual
     """
     try:
         info = servicio_reservas.obtener_info_restricciones(request.user)
@@ -162,9 +164,6 @@ def api_validar_reserva_profesor(request):
     Body: { "fecha": "2025-12-10" }
     
     Valida si el profesor puede hacer una reserva en la fecha indicada
-    Verifica:
-    - Límite semanal (4 reservas)
-    - Límite de anticipación (3 días)
     """
     import json
     from datetime import datetime
@@ -213,7 +212,6 @@ def api_reporte_semanal_profesor(request):
     GET /profesor/reservas/api/reporte-semanal/
     
     Devuelve un reporte de todas las reservas de la semana actual
-    (no solo del profesor actual, sino de todos)
     """
     from datetime import datetime
     

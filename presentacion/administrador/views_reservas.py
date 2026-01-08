@@ -2,22 +2,26 @@
 # -*- coding: utf-8 -*-
 
 """
-Vista para visualización y gestión de reservas por Administrador y Secretaria
-Incluye filtros avanzados y validaciones automáticas
+Vista para visualización y gestión de reservas por Administrador
+Incluye:
+- Dashboard con gráficos y reportes
+- Sistema de reservas (igual que profesor pero sin restricciones)
+- Cancelación de cualquier reserva
 """
 
+import json
 from datetime import datetime, timedelta, time
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.db.models import Count
 from django.utils import timezone
-from django.views.decorators.http import require_http_methods
-import json
+from django.views.decorators.http import require_http_methods, require_GET, require_POST
 
 from repositorio.postgres_repository.models import (
-    Reservation, Teacher, Classroom, Course, Horario, Aula
+    Reservation, Teacher, Classroom, Course
 )
+from servicios.servicioReservas import servicio_reservas
 
 
 def es_admin_o_secretaria(user):
@@ -25,11 +29,15 @@ def es_admin_o_secretaria(user):
     return user.is_staff or user.groups.filter(name__in=['Secretaria', 'Administrador']).exists()
 
 
+# ==========================
+# DASHBOARD DE REPORTES
+# ==========================
+
 @login_required
 @user_passes_test(es_admin_o_secretaria)
 def dashboard_reservas(request):
     """
-    Vista principal del dashboard de reservas
+    Vista principal del dashboard de reservas con gráficos
     """
     # Obtener parámetros de filtro
     fecha_inicio = request.GET.get('fecha_inicio')
@@ -43,7 +51,6 @@ def dashboard_reservas(request):
     hoy = timezone.now().date()
     
     if not fecha_inicio:
-        # Mostrar últimos 30 días por defecto
         fecha_inicio = hoy - timedelta(days=30)
     else:
         try:
@@ -52,7 +59,6 @@ def dashboard_reservas(request):
             fecha_inicio = hoy - timedelta(days=30)
     
     if not fecha_fin:
-        # Mostrar hasta mañana para ver reservas futuras
         fecha_fin = hoy + timedelta(days=7)
     else:
         try:
@@ -60,15 +66,11 @@ def dashboard_reservas(request):
         except ValueError:
             fecha_fin = hoy + timedelta(days=7)
     
-    print(f"=== DEBUG: Filtro fechas {fecha_inicio} a {fecha_fin} ===")
-    
     # Query base
     reservas_query = Reservation.objects.filter(
         date__gte=fecha_inicio,
         date__lte=fecha_fin
     )
-    
-    print(f"Reservas en rango: {reservas_query.count()}")
     
     # Solo aplicar filtro de estado si no es 'all'
     if estado and estado != 'all':
@@ -97,8 +99,6 @@ def dashboard_reservas(request):
         'course'
     ).order_by('-date', 'start_time')[:100]
     
-    print(f"Reservas a mostrar: {len(reservas)}")
-    
     # Estadísticas
     estadisticas = {
         'total_reservas': reservas_query.count(),
@@ -113,7 +113,6 @@ def dashboard_reservas(request):
     
     # Agrupar por profesor
     try:
-        from django.db.models import Count
         reservas_por_profesor = reservas_query.values(
             'teacher__user__first_name',
             'teacher__user__last_name'
@@ -122,8 +121,9 @@ def dashboard_reservas(request):
         ).order_by('-total')[:10]
         
         for item in reservas_por_profesor:
-            nombre = f"{item['teacher__user__first_name']} {item['teacher__user__last_name']}"
-            estadisticas['reservas_por_docente'][nombre] = item['total']
+            if item['teacher__user__first_name']:
+                nombre = f"{item['teacher__user__first_name']} {item['teacher__user__last_name']}"
+                estadisticas['reservas_por_docente'][nombre] = item['total']
     except Exception as e:
         print(f"Error estadísticas docente: {e}")
     
@@ -178,69 +178,146 @@ def dashboard_reservas(request):
     return render(request, 'administrador/recursos/index.html', context)
 
 
-def _detectar_profesores_excedidos(fecha_inicio, fecha_fin):
+# ==========================
+# SISTEMA DE RESERVAS ADMIN
+# ==========================
+
+@login_required
+@user_passes_test(es_admin_o_secretaria)
+def reservas_admin_page(request):
     """
-    Detecta profesores que han hecho más de 4 reservas en la semana
+    Página de reservas para administrador (igual que profesor pero sin restricciones)
     """
-    # Calcular inicio y fin de la semana actual
-    inicio_semana = fecha_inicio - timedelta(days=fecha_inicio.weekday())
-    fin_semana = inicio_semana + timedelta(days=6)
-    
-    profesores_count = Reservation.objects.filter(
-        date__gte=inicio_semana,
-        date__lte=fin_semana,
-        status__in=['approved', 'pending']
-    ).values(
-        'teacher__id',
-        'teacher__user__first_name',
-        'teacher__user__last_name'
-    ).annotate(
-        total_reservas=Count('id')
-    ).filter(
-        total_reservas__gt=4
-    ).order_by('-total_reservas')
-    
-    return [
-        {
-            'profesor_id': p['teacher__id'],
-            'nombre': f"{p['teacher__user__first_name']} {p['teacher__user__last_name']}",
-            'total': p['total_reservas'],
-            'exceso': p['total_reservas'] - 4
-        }
-        for p in profesores_count
-    ]
+    return render(request, 'administrador/recursos/reservas_admin.html')
 
 
-def _detectar_reservas_anticipadas(reservas):
+@login_required
+@user_passes_test(es_admin_o_secretaria)
+@require_GET
+def reservas_admin_estado(request):
     """
-    Detecta reservas hechas con más de 3 días de anticipación
+    GET /administrador/reservas/estado/
+    Obtiene el estado de ocupación de ambientes
     """
-    hoy = timezone.now().date()
-    anticipadas = []
-    
-    for reserva in reservas:
-        dias_anticipacion = (reserva.date - hoy).days
-        if dias_anticipacion > 3:
-            anticipadas.append({
-                'id': str(reserva.id),
-                'profesor': reserva.teacher.user.get_full_name(),
-                'aula': reserva.classroom.code,
-                'fecha': reserva.date,
-                'dias_anticipacion': dias_anticipacion,
-                'created_at': reserva.created_at
-            })
-    
-    return sorted(anticipadas, key=lambda x: x['dias_anticipacion'], reverse=True)[:20]
+    date_str = request.GET.get('date')
+    slot = request.GET.get('slot')
+
+    if not date_str or not slot:
+        return JsonResponse({'error': 'Faltan parámetros (date, slot).'}, status=400)
+
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Formato de fecha inválido.'}, status=400)
+
+    try:
+        occupied = servicio_reservas.obtener_estado(date, slot, request.user)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'occupied': occupied})
 
 
-# ... (resto del código de las API se mantiene igual)
+@login_required
+@user_passes_test(es_admin_o_secretaria)
+@require_POST
+def reservas_admin_crear(request):
+    """
+    POST /administrador/reservas/api/
+    Crea una nueva reserva (admin sin restricciones)
+    """
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'JSON inválido.'}, status=400)
+
+    resource_code = data.get('resource_code')
+    date_str = data.get('date')
+    slot = data.get('slot')
+
+    if not all([resource_code, date_str, slot]):
+        return JsonResponse({'error': 'Parámetros incompletos.'}, status=400)
+
+    try:
+        date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Formato de fecha inválido.'}, status=400)
+
+    try:
+        reserva = servicio_reservas.crear_reserva(
+            request.user, 
+            resource_code, 
+            date, 
+            slot,
+            purpose=f"Reserva administrativa - {resource_code}"
+        )
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=409)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'id': str(reserva.id)}, status=201)
+
+
+@login_required
+@user_passes_test(es_admin_o_secretaria)
+@require_http_methods(["DELETE"])
+def reservas_admin_cancelar(request, pk):
+    """
+    DELETE /administrador/reservas/api/<uuid:pk>/
+    Cancela una reserva (cambia estado a cancelled/Inactivo)
+    """
+    try:
+        servicio_reservas.eliminar_reserva(request.user, pk)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=404)
+    except PermissionError as e:
+        return JsonResponse({'error': str(e)}, status=403)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@user_passes_test(es_admin_o_secretaria)
+@require_GET
+def reservas_admin_todas(request):
+    """
+    GET /administrador/reservas/mis/
+    Devuelve TODAS las reservas del sistema con estado
+    """
+    qs = servicio_reservas.obtener_reservas_profesor(request.user)
+
+    reservas = []
+    for r in qs:
+        estado_display = 'Activo' if r.status == 'approved' else 'Inactivo'
+        profesor_nombre = r.teacher.user.get_full_name() if r.teacher else 'Reserva administrativa'
+        
+        reservas.append({
+            "id": str(r.id),
+            "aula": r.classroom.name if r.classroom else 'N/A',
+            "curso": r.course.name if r.course else 'N/A',
+            "profesor": profesor_nombre,
+            "fecha": r.date.strftime("%Y-%m-%d"),
+            "slot": f"{r.start_time.strftime('%H:%M')} - {r.end_time.strftime('%H:%M')}",
+            "estado": r.status,
+            "estado_display": estado_display,
+        })
+
+    return JsonResponse({"reservas": reservas})
+
+
+# ==========================
+# APIs ADICIONALES
+# ==========================
+
 @login_required
 @user_passes_test(es_admin_o_secretaria)
 @require_http_methods(["GET"])
 def api_reservas_del_dia(request):
     """
     API: Devuelve todas las reservas del día actual
-    GET /administrador/reservas/api/dia/
     """
     fecha = request.GET.get('fecha')
     if fecha:
@@ -260,7 +337,7 @@ def api_reservas_del_dia(request):
     for r in reservas:
         data.append({
             'id': str(r.id),
-            'profesor': r.teacher.user.get_full_name() if r.teacher else 'N/A',
+            'profesor': r.teacher.user.get_full_name() if r.teacher else 'Reserva administrativa',
             'profesor_id': r.teacher.id if r.teacher else None,
             'aula': r.classroom.code if r.classroom else 'N/A',
             'aula_nombre': r.classroom.name if r.classroom else 'N/A',
@@ -272,7 +349,7 @@ def api_reservas_del_dia(request):
             'duracion_horas': (datetime.combine(r.date, r.end_time) - datetime.combine(r.date, r.start_time)).seconds / 3600,
             'proposito': r.purpose or '',
             'estado': r.status,
-            'estado_display': r.get_status_display() if hasattr(r, 'get_status_display') else r.status,
+            'estado_display': 'Activo' if r.status == 'approved' else 'Inactivo',
             'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S'),
         })
     
@@ -286,153 +363,10 @@ def api_reservas_del_dia(request):
 
 @login_required
 @user_passes_test(es_admin_o_secretaria)
-@require_http_methods(["GET"])
-def api_validar_restricciones(request):
-    """
-    API: Valida si un profesor puede hacer una nueva reserva
-    GET /administrador/reservas/api/validar/?profesor_id=X&fecha=YYYY-MM-DD
-    """
-    profesor_id = request.GET.get('profesor_id')
-    fecha_str = request.GET.get('fecha')
-    
-    if not all([profesor_id, fecha_str]):
-        return JsonResponse({
-            'success': False,
-            'error': 'Parámetros incompletos'
-        }, status=400)
-    
-    try:
-        profesor = Teacher.objects.get(id=profesor_id)
-        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-    except (Teacher.DoesNotExist, ValueError):
-        return JsonResponse({
-            'success': False,
-            'error': 'Profesor o fecha inválidos'
-        }, status=400)
-    
-    # VALIDACIÓN 1: Más de 4 reservas a la semana
-    inicio_semana = fecha - timedelta(days=fecha.weekday())
-    fin_semana = inicio_semana + timedelta(days=6)
-    
-    reservas_semana = Reservation.objects.filter(
-        teacher=profesor,
-        date__gte=inicio_semana,
-        date__lte=fin_semana,
-        status__in=['approved', 'pending']
-    ).count()
-    
-    puede_reservar_semana = reservas_semana < 4
-    
-    # VALIDACIÓN 2: Más de 3 días de anticipación
-    hoy = timezone.now().date()
-    dias_anticipacion = (fecha - hoy).days
-    puede_reservar_anticipacion = dias_anticipacion <= 3
-    
-    # Resultado
-    validaciones = {
-        'puede_reservar': puede_reservar_semana and puede_reservar_anticipacion,
-        'reservas_semana': reservas_semana,
-        'limite_semana': 4,
-        'reservas_restantes': max(0, 4 - reservas_semana),
-        'dias_anticipacion': dias_anticipacion,
-        'limite_anticipacion': 3,
-        'restricciones': []
-    }
-    
-    if not puede_reservar_semana:
-        validaciones['restricciones'].append(
-            f"El profesor ya tiene {reservas_semana} reservas esta semana (límite: 4)"
-        )
-    
-    if not puede_reservar_anticipacion:
-        validaciones['restricciones'].append(
-            f"La reserva es con {dias_anticipacion} días de anticipación (límite: 3 días)"
-        )
-    
-    return JsonResponse({
-        'success': True,
-        'validaciones': validaciones,
-        'profesor': profesor.user.get_full_name()
-    })
-
-
-@login_required
-@user_passes_test(es_admin_o_secretaria)
-@require_http_methods(["GET"])
-def api_reservas_por_filtro(request):
-    """
-    API: Filtra reservas por múltiples criterios
-    GET /administrador/reservas/api/filtrar/?profesor=X&aula=Y&fecha_inicio=...
-    """
-    profesor_id = request.GET.get('profesor')
-    aula_id = request.GET.get('aula')
-    fecha_inicio = request.GET.get('fecha_inicio')
-    fecha_fin = request.GET.get('fecha_fin')
-    dia_semana = request.GET.get('dia')
-    estado = request.GET.get('estado')
-    
-    # Query base
-    reservas = Reservation.objects.select_related(
-        'teacher__user', 'classroom', 'course'
-    )
-    
-    # Aplicar filtros
-    if profesor_id:
-        reservas = reservas.filter(teacher_id=profesor_id)
-    
-    if aula_id:
-        reservas = reservas.filter(classroom_id=aula_id)
-    
-    if fecha_inicio:
-        fecha_inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
-        reservas = reservas.filter(date__gte=fecha_inicio)
-    
-    if fecha_fin:
-        fecha_fin = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
-        reservas = reservas.filter(date__lte=fecha_fin)
-    
-    if estado:
-        reservas = reservas.filter(status=estado)
-    
-    if dia_semana:
-        dias_map = {
-            'lunes': 0, 'martes': 1, 'miércoles': 2, 'miercoles': 2,
-            'jueves': 3, 'viernes': 4, 'sábado': 5, 'sabado': 5, 'domingo': 6
-        }
-        dia_num = dias_map.get(dia_semana.lower())
-        if dia_num is not None:
-            reservas = reservas.filter(date__week_day=dia_num + 2)
-    
-    reservas = reservas.order_by('-date', 'start_time')[:200]
-    
-    data = []
-    for r in reservas:
-        data.append({
-            'id': str(r.id),
-            'profesor': r.teacher.user.get_full_name() if r.teacher else 'N/A',
-            'aula': r.classroom.code if r.classroom else 'N/A',
-            'curso': r.course.name if r.course else 'N/A',
-            'fecha': r.date.strftime('%Y-%m-%d'),
-            'dia_semana': r.date.strftime('%A'),
-            'hora_inicio': r.start_time.strftime('%H:%M'),
-            'hora_fin': r.end_time.strftime('%H:%M'),
-            'estado': r.status,
-            'proposito': r.purpose or ''
-        })
-    
-    return JsonResponse({
-        'success': True,
-        'total': len(data),
-        'reservas': data
-    })
-
-
-@login_required
-@user_passes_test(es_admin_o_secretaria)
 @require_http_methods(["POST"])
-def api_cancelar_reserva(request, reserva_id):
+def api_cancelar_reserva_dashboard(request, reserva_id):
     """
-    API: Permite a admin/secretaria cancelar una reserva
+    API: Permite cancelar una reserva desde el dashboard
     POST /administrador/reservas/api/cancelar/<uuid>/
     """
     try:
@@ -443,11 +377,11 @@ def api_cancelar_reserva(request, reserva_id):
             'error': 'Reserva no encontrada'
         }, status=404)
     
-    # Solo cancelar si no está ya cancelada o rechazada
-    if reserva.status in ['cancelled', 'rejected']:
+    # Solo cancelar si no está ya cancelada
+    if reserva.status == 'cancelled':
         return JsonResponse({
             'success': False,
-            'error': f'La reserva ya está {reserva.get_status_display()}'
+            'error': 'La reserva ya está cancelada'
         }, status=400)
     
     reserva.status = 'cancelled'
@@ -458,3 +392,21 @@ def api_cancelar_reserva(request, reserva_id):
         'message': 'Reserva cancelada exitosamente',
         'reserva_id': str(reserva.id)
     })
+
+
+@login_required
+@user_passes_test(es_admin_o_secretaria)
+@require_http_methods(["GET"])
+def api_restricciones_admin(request):
+    """
+    GET /administrador/reservas/api/restricciones/
+    Devuelve info de restricciones (admin no tiene restricciones)
+    """
+    try:
+        info = servicio_reservas.obtener_info_restricciones(request.user)
+        return JsonResponse(info)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

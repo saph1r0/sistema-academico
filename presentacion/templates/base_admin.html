@@ -26,13 +26,13 @@
             <!-- Navigation -->
             <nav class="flex-1 p-4">
                 <ul class="space-y-2">
-                    <li>
+                     <!-- <li>
                         <a href="{% url 'administrador:dashboard' %}"
                             class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if request.resolver_match.url_name == 'dashboard' %}bg-blue-700{% endif %}">
                             <span>📊</span>
                             <span class="ml-3">Dashboard</span>
                         </a>
-                    </li>
+                    </li>-->
                     <li>
                         <a href="{% url 'administrador:usuarios' %}"
                             class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if 'usuarios' in request.resolver_match.url_name %}bg-blue-700{% endif %}">
@@ -72,8 +72,8 @@
                     </li>
 
                     <li>
-                        <a href="{% url 'administrador:reservas_dashboard' %}"
-                            class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if 'reservas_dashboard' in request.resolver_match.url_name %}bg-blue-700{% endif %}">
+                        <a href="{% url 'administrador:reservas_admin_page' %}"
+                            class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if 'reservas_admin_page' in request.resolver_match.url_name %}bg-blue-700{% endif %}">
                             <span>🖥️</span>
                             <span class="ml-3"><Ri:a></Ri:a>Reservas</span>
                         </a>
@@ -83,6 +83,13 @@
                             class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if 'configuracion' in request.resolver_match.url_name %}bg-blue-700{% endif %}">
                             <span>⚙️</span>
                             <span class="ml-3">Configuración</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'administrador:acreditaciones' %}"
+                            class="flex items-center px-4 py-2 rounded-lg hover:bg-blue-700 {% if request.resolver_match.url_name == 'acreditaciones' %}bg-blue-700{% endif %}">
+                            <span>📊</span>
+                            <span class="ml-3">Acreditaciones</span>
                         </a>
                     </li>
                 </ul>

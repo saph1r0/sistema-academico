@@ -7,6 +7,11 @@ from .views_asistencia_profesor_admin import AdminAsistenciaProfesorView
 from . import views_notas_estudiantes
 from . import views_export_asistestudiante
 from . import views_export_asistestudiantespdffiltro
+from presentacion.secretario.views_exam_accreditation  import (
+    SecretaryExamAccreditationView,
+    ExamAccreditationDownloadView
+)
+
 app_name = 'admin'
 
 urlpatterns = [
@@ -32,9 +37,16 @@ urlpatterns = [
      # RESERVAS
     path('reservas/', views_reservas.dashboard_reservas, name='reservas_dashboard'),
     path('reservas/api/dia/', views_reservas.api_reservas_del_dia, name='api_reservas_dia'),
-    path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
-    path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
-    path( 'reservas/api/cancelar/<uuid:reserva_id>/',views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
+   # path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
+    #path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
+   #path( 'reservas/api/cancelar/<uuid:reserva_id>/',views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
+
+     path('reservas/hacer/', views_reservas.reservas_admin_page, name='reservas_admin_page'),
+    path('reservas/estado/', views_reservas.reservas_admin_estado, name='reservas_admin_estado'),
+    path('reservas/api/', views_reservas.reservas_admin_crear, name='reservas_admin_crear'),
+    path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva_dashboard,name='api_cancelar_reserva_dashboard'),
+    path('reservas/mis/', views_reservas.reservas_admin_todas, name='reservas_admin_todas'),
+    path('reservas/api/restricciones/', views_reservas.api_restricciones_admin, name='api_restricciones_admin'),
 
     path("asistencia-profesor/", AdminAsistenciaProfesorView.as_view(), name="asistencia_profesor"),
     #ASISTENCIA ESTUDIANTES
@@ -52,6 +64,11 @@ urlpatterns = [
     path('asistencia/exportar/curso/<uuid:curso_id>/pdf/', views_export_asistestudiantespdffiltro.exportar_curso_pdf, name='exportar_curso_pdf'),
     path('asistencia/exportar/estudiante/<uuid:estudiante_id>/pdf/', views_export_asistestudiantespdffiltro.exportar_estudiante_pdf, name='exportar_estudiante_pdf'),
     
+    #SACREDITACIONES
+
+    path( 'acreditaciones/', SecretaryExamAccreditationView.as_view(), name='acreditaciones'),
+    path('acreditaciones/download/<uuid:accreditation_id>/<str:file_type>/',ExamAccreditationDownloadView.as_view(),name='exam_accreditation_download'),
+
     # Sistema de monitoreo y supervisión
     path('monitoreo/', views.AdminMonitoreoView.as_view(), name='monitoreo'),
     path('monitoreo/api/<str:endpoint>/', views.AdminMonitoreoAPIView.as_view(), name='monitoreo_api'),

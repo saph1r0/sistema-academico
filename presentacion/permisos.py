@@ -322,7 +322,7 @@ def get_user_dashboard_url(user):
     user_role = get_user_role(user)
     
     dashboard_urls = {
-        ADMIN_ROL_NAME: 'administrador:dashboard',
+        ADMIN_ROL_NAME: 'administrador:usuarios',
         DOCENTE_ROL_NAME: 'profesor:dashboard',
         ESTUDIANTE_ROL_NAME: 'estudiante:dashboard',
         SECRETARIA_ROL_NAME: 'secretario:dashboard',

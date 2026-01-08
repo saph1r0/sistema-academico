@@ -283,7 +283,13 @@
                             <td class="px-3 py-2">{{ r.date }}</td>
                             <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
                             <td class="px-3 py-2">{{ r.classroom.code }}</td>
-                            <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
+                           <td class="px-3 py-2">
+                                {% if r.teacher %}
+                                    {{ r.teacher.user.get_full_name }}
+                                {% else %}
+                                    <span class="italic text-gray-500">Reserva del administrador</span>
+                                {% endif %}
+                            </td>
 
                             <!-- ESTADO -->
                             <td class="px-3 py-2">
@@ -321,7 +327,13 @@
                             <td class="px-3 py-2">{{ r.date }}</td>
                             <td class="px-3 py-2">{{ r.start_time }} - {{ r.end_time }}</td>
                             <td class="px-3 py-2">{{ r.classroom.code }}</td>
-                            <td class="px-3 py-2">{{ r.teacher.user.get_full_name }}</td>
+                            <td class="px-3 py-2">
+                                {% if r.teacher %}
+                                    {{ r.teacher.user.get_full_name }}
+                                {% else %}
+                                    <span class="italic text-gray-500">Reserva del administrador</span>
+                                {% endif %}
+                            </td>
 
                             <!-- ESTADO -->
                             <td class="px-3 py-2">

@@ -97,15 +97,17 @@
                                     <p class="text-sm text-gray-600">{{ curso.estudiantes_matriculados }} estudiantes
                                         matriculados</p>
                                 </div>
+                                
                                 <div class="flex-shrink-0 text-right">
                                     <p class="text-sm text-gray-500">Avance</p>
                                     <div class="flex items-center mt-1">
-                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                            <div class="bg-green-600 h-2 rounded-full"
-                                                style="width: {{ curso.avance_porcentaje }}%"></div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                            <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                                                style="width: {{ info.progress_info.progress_percentage }}%"></div>
                                         </div>
-                                        <span class="text-sm font-medium text-gray-900">{{curso_info.avance_porcentaje|default:0 }}%</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ info.progress_info.progress_percentage|floatformat:1 }}%</span>
                                     </div>
+                                     
                                 </div>
                             </div>
 

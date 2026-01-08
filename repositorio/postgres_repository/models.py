@@ -620,7 +620,7 @@ class Reservation(models.Model):
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='reservations')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='reservations', null=True,blank=True)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE, related_name='reservations')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='reservations')
     date = models.DateField(verbose_name='Fecha')
@@ -638,7 +638,11 @@ class Reservation(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.teacher.user.get_full_name()} - {self.classroom.name} - {self.date}"
+        if self.teacher:
+            nombre = self.teacher.user.get_full_name()
+        else:
+            nombre = "Reserva administrativa"
+        return f"{nombre} - {self.classroom.name} - {self.date}"
 
 
 # Métodos adicionales para el modelo Course (sin campos adicionales por ahora)
