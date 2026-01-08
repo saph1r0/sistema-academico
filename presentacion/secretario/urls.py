@@ -48,20 +48,20 @@ urlpatterns = [
     ),
 
     #reservas
-   # path('reservas/', views_reservas.dashboard_reservas, name='reservas_dashboard'),
-   # path('reservas/api/dia/', views_reservas.api_reservas_del_dia, name='api_reservas_dia'),
-    #path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
-    #path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
-    #path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
+    path('reservas/', views_reservas.dashboard_reservas, name='reservas_dashboard'),
+    path('reservas/api/dia/', views_reservas.api_reservas_del_dia, name='api_reservas_dia'),
+    path('reservas/api/validar/', views_reservas.api_validar_restricciones, name='api_validar_restricciones'),
+    path('reservas/api/filtrar/', views_reservas.api_reservas_por_filtro, name='api_reservas_filtrar'),
+    path('reservas/api/cancelar/<uuid:reserva_id>/', views_reservas.api_cancelar_reserva, name='api_cancelar_reserva'),
 
 
      # ==========================
-    path('reservas/', views_reservas.dashboard_reservas_secretario, name='dashboard_reservas'),
+    #path('reservas/', views_reservas.dashboard_reservas_secretario, name='dashboard_reservas'),
     
     # APIs de consulta
-    path('reservas/api/dia/', views_reservas.api_reservas_del_dia_secretario, name='api_reservas_del_dia'),
-    path('reservas/api/estadisticas/', views_reservas.api_estadisticas_generales_secretario, name='api_estadisticas'),
-    path('reservas/api/profesor/<uuid:profesor_id>/', views_reservas.api_reservas_por_profesor_secretario, name='api_reservas_profesor'),
-    path('reservas/api/aula/<uuid:aula_id>/', views_reservas.api_reservas_por_aula_secretario, name='api_reservas_aula'),
+    #path('reservas/api/dia/', views_reservas.api_reservas_del_dia_secretario, name='api_reservas_del_dia'),
+    #path('reservas/api/estadisticas/', views_reservas.api_estadisticas_generales_secretario, name='api_estadisticas'),
+    #path('reservas/api/profesor/<uuid:profesor_id>/', views_reservas.api_reservas_por_profesor_secretario, name='api_reservas_profesor'),
+    #path('reservas/api/aula/<uuid:aula_id>/', views_reservas.api_reservas_por_aula_secretario, name='api_reservas_aula'),
     
 ]
