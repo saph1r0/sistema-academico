@@ -1,8 +1,6 @@
+{% extends "base_admin.html" %}
 
-{% extends "base_secretario.html" %}
-
-
-{% block title %}Cargar Documentos - Portal Secretaría{% endblock %}
+{% block title %}Cargar Documentos - Portal Admin{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
@@ -22,7 +20,7 @@
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir Estudiantes</h3>
                 <p class="text-sm text-gray-600 mb-4">Excel (.xlsx, .xls)</p>
-                <form method="post" action="{% url 'secretario:cargar_estudiantes' %}" enctype="multipart/form-data" id="form-estudiantes">
+                <form method="post" action="{% url 'administrador:cargar_estudiantes' %}" enctype="multipart/form-data" id="form-estudiantes">
                     {% csrf_token %}
                     <button type="button" onclick="document.getElementById('file-estudiantes').click()" 
                             class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
@@ -41,7 +39,7 @@
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir Horarios por Aula</h3>
                 <p class="text-sm text-gray-600 mb-4">PDF</p>
-                <form method="post" action="{% url 'secretario:cargar_horarios' %}" enctype="multipart/form-data" id="form-horarios">
+                <form method="post" action="{% url 'administrador:cargar_horarios' %}" enctype="multipart/form-data" id="form-horarios">
                     {% csrf_token %}
                     <button type="button" onclick="document.getElementById('file-horarios').click()" 
                             class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
@@ -60,7 +58,7 @@
                 </div>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Subir Cursos y Docentes</h3>
                 <p class="text-sm text-gray-600 mb-4">PDF</p>
-                <form method="post" action="{% url 'secretario:cargar_cursos_docentes' %}" enctype="multipart/form-data" id="form-cursos">
+                <form method="post" action="{% url 'administrador:cargar_cursos_docentes' %}" enctype="multipart/form-data">
                     {% csrf_token %}
                     <button type="button" onclick="document.getElementById('file-cursos').click()" 
                             class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">

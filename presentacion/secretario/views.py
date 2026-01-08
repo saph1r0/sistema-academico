@@ -29,7 +29,6 @@ from django.template.loader import get_template
 from repositorio.postgres_repository.models import (
     User, Teacher, Course, CourseGroup, AcademicPeriod, Aula, Horario,Laboratory, Student, Enrollment,Classroom
 )
-from .mixins import SecretarioRequiredMixin
 from servicios.servicioMatriculaLaboratorio import ServicioMatriculaLaboratorio, servicio_matricula_laboratorio
 from servicios.servicioReservas import servicio_reservas
 from servicios.servicioReportes import ServicioReportes
@@ -37,6 +36,9 @@ from servicios.servicioMonitoreo import ServicioMonitoreo
 # Servicios de Reportes Específicos
 from servicios.servicioReporteAsistencia import ServicioReporteAsistencia
 from servicios.servicioReporteNotas import ServicioReporteNotas
+from .mixins import SecretarioRequiredMixin, SecretariaOrAdminMixin
+
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
 # --- Funciones de Utilidad ---
 
@@ -286,9 +288,15 @@ class SecretarioMonitoreoView(SecretarioRequiredMixin, TemplateView):
         return context
 
 
-class CargarDocumentosView(SecretarioRequiredMixin, TemplateView):
-    """Vista principal para cargar documentos"""
+from .mixins import SecretariaOrAdminMixin
+
+class CargarDocumentosView(SecretariaOrAdminMixin, TemplateView):
     template_name = 'secretario/cargar_documentos/index.html'
+
+    def get_template_names(self):
+        if self.request.user.is_admin():
+            return ["secretario/cargar_documentos/index_admin.html"]
+        return ["secretario/cargar_documentos/index.html"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -329,7 +337,7 @@ class CargarDocumentosView(SecretarioRequiredMixin, TemplateView):
 @require_POST
 def cargar_cursos_docentes(request):
     """Procesa el PDF de cursos y docentes"""
-    if not request.user.is_secretary(): # Si NO es secretario, deniega
+    if not (request.user.is_secretary() or request.user.is_admin()):
         messages.error(request, 'No tienes permisos.')
         return redirect('secretario:cargar_documentos')
     
@@ -457,7 +465,7 @@ def cargar_cursos_docentes(request):
 @require_POST
 def cargar_horarios(request):
     """Procesa el PDF de horarios (por aula, día y curso)"""
-    if not request.user.is_secretary():        
+    if not (request.user.is_secretary() or request.user.is_admin()):
         messages.error(request, 'No tienes permisos.')
         return redirect('secretario:cargar_documentos')
 
@@ -590,7 +598,7 @@ def cargar_estudiantes(request):
     Identifica el CURSO por el CÓDIGO en el nombre del archivo.
     Identifica el GRUPO en el contenido del archivo Excel.
     """
-    if not request.user.is_secretary():        
+    if not (request.user.is_secretary() or request.user.is_admin()):
         messages.error(request, 'No tienes permisos.')
         return redirect('secretario:cargar_documentos')
 

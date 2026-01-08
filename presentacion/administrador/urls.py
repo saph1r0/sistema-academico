@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from presentacion.secretario.views import CargarDocumentosView
 from . import views_reservas
 from . import views_asistencia_estudiantes
 from .views_asistencia_profesor_admin import AdminAsistenciaProfesorView
@@ -10,6 +11,12 @@ from . import views_export_asistestudiantespdffiltro
 from presentacion.secretario.views_exam_accreditation  import (
     SecretaryExamAccreditationView,
     ExamAccreditationDownloadView
+)
+from presentacion.secretario.views import (
+    CargarDocumentosView,
+    cargar_cursos_docentes,
+    cargar_horarios,
+    cargar_estudiantes
 )
 
 app_name = 'admin'
@@ -23,6 +30,11 @@ urlpatterns = [
     path('usuarios/', views.AdminUsuariosView.as_view(), name='usuarios'),
     path('usuarios/api/', views.AdminUsuariosAPIView.as_view(), name='usuarios_api'),
     
+    path('cargar-documentos/', CargarDocumentosView.as_view(), name='cargar_documentos'),
+    path('cargar-cursos-docentes/', cargar_cursos_docentes, name='cargar_cursos_docentes'),
+
+    path('cargar-horarios/', cargar_horarios, name='cargar_horarios'),
+    path('cargar-estudiantes/', cargar_estudiantes, name='cargar_estudiantes'),
     # Reportes
     path('reportes/', views.AdminReportesView.as_view(), name='reportes'),
 
@@ -75,4 +87,5 @@ urlpatterns = [
     
     # Configuración del sistema
     path('configuracion/', views.AdminConfiguracionView.as_view(), name='configuracion'),
+
 ]
