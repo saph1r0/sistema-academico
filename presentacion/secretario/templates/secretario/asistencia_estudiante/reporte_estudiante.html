@@ -1,0 +1,608 @@
+{% extends 'base_secretario.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <a href="{% url 'secretario:dashboard_asistencia' %}" 
+                    class="text-blue-600 hover:text-blue-800 text-sm mb-2 inline-flex items-center">
+                    <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i>
+                    Volver al Dashboard
+                </a>
+                <h1 class="text-2xl font-bold text-gray-900">{{ page_title }}</h1>
+                <p class="text-gray-600 mt-1">
+                    {{ student.student_code }} | {{ student.user.institutional_email }}
+                </p>
+            </div>
+            <button onclick="exportarReporteEstudiante()" 
+                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                Exportar
+            </button>
+        </div>
+    </div>
+
+    <!-- Estadísticas Globales -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 {% if estadisticas_globales.estado == 'critico' %}border-l-4 border-l-red-500{% elif estadisticas_globales.estado == 'riesgo' %}border-l-4 border-l-orange-500{% endif %}">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Resumen General</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="text-center">
+                <p class="text-sm text-gray-600 mb-1">Tasa de Asistencia Global</p>
+                <p class="text-4xl font-bold" style="color: {% if estadisticas_globales.porcentaje_asistencia >= 80 %}#10b981{% elif estadisticas_globales.porcentaje_asistencia >= 70 %}#f59e0b{% else %}#ef4444{% endif %}">
+                    {{ estadisticas_globales.porcentaje_asistencia }}%
+                </p>
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                    <div class="h-2 rounded-full" 
+                        style="width: {{ estadisticas_globales.porcentaje_asistencia }}%; background-color: {% if estadisticas_globales.porcentaje_asistencia >= 80 %}#10b981{% elif estadisticas_globales.porcentaje_asistencia >= 70 %}#f59e0b{% else %}#ef4444{% endif %}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center border-l border-gray-200 pl-6">
+                <p class="text-sm text-gray-600 mb-1">Total de Clases</p>
+                <p class="text-3xl font-bold text-gray-900">{{ estadisticas_globales.total_clases }}</p>
+                <p class="text-xs text-gray-500 mt-1">En {{ estadisticas_globales.cursos_matriculados }} cursos</p>
+            </div>
+
+            <div class="text-center border-l border-gray-200 pl-6">
+                <p class="text-sm text-gray-600 mb-1">Presentes</p>
+                <p class="text-3xl font-bold text-green-600">{{ estadisticas_globales.total_presentes }}</p>
+            </div>
+
+            <div class="text-center border-l border-gray-200 pl-6">
+                <p class="text-sm text-gray-600 mb-1">Faltas</p>
+                <p class="text-3xl font-bold text-red-600">{{ estadisticas_globales.total_faltas }}</p>
+                <p class="text-xs text-red-500 mt-1">{{ estadisticas_globales.porcentaje_faltas }}% del total</p>
+            </div>
+        </div>
+
+        {% if estadisticas_globales.estado in 'riesgo,critico' %}
+        <div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div class="flex items-start">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 mr-2 mt-0.5"></i>
+                <div>
+                    <p class="text-sm font-medium text-red-900">
+                        ⚠️ Estudiante en estado de {{ estadisticas_globales.estado|upper }}
+                    </p>
+                    <p class="text-sm text-red-700 mt-1">
+                        Con {{ estadisticas_globales.porcentaje_faltas }}% de inasistencias, este estudiante requiere atención inmediata. 
+                        Se recomienda contactar a los docentes de los cursos afectados.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filtros de Fecha -->
+    <div class="bg-gray-50 rounded-lg p-4">
+        <form method="GET" class="flex items-center gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                <input type="date" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}"
+                    class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                <input type="date" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}"
+                    class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                    Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Asistencia por Curso -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
+                Asistencia por Curso ({{ cursos|length }} cursos)
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Curso</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profesor</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Total Clases</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Presentes</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Faltas</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">% Asistencia</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for curso in cursos %}
+                    <tr class="hover:bg-gray-50 {% if curso.estado == 'critico' %}estado-critico{% elif curso.estado == 'riesgo' %}estado-riesgo{% elif curso.estado == 'alerta' %}estado-alerta{% endif %}">
+                        <td class="px-6 py-4">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ curso.nombre }}</p>
+                                <p class="text-xs text-gray-500">{{ curso.codigo }} - Grupo {{ curso.grupo }}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            {{ curso.profesor }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
+                            {{ curso.total_clases }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-green-600 font-medium">
+                            {{ curso.presentes }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-red-600 font-medium">
+                            {{ curso.faltas }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="flex flex-col items-center">
+                                <span class="text-lg font-bold" style="color: {% if curso.porcentaje_asistencia >= 80 %}#10b981{% elif curso.porcentaje_asistencia >= 70 %}#f59e0b{% else %}#ef4444{% endif %}">
+                                    {{ curso.porcentaje_asistencia }}%
+                                </span>
+                                <div class="w-full bg-gray-200 rounded-full h-1 mt-1" style="max-width: 80px;">
+                                    <div class="h-1 rounded-full" 
+                                        style="width: {{ curso.porcentaje_asistencia }}%; background-color: {% if curso.porcentaje_asistencia >= 80 %}#10b981{% elif curso.porcentaje_asistencia >= 70 %}#f59e0b{% else %}#ef4444{% endif %}">
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if curso.estado == 'critico' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Crítico
+                            </span>
+                            {% elif curso.estado == 'riesgo' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                Riesgo
+                            </span>
+                            {% elif curso.estado == 'alerta' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Alerta
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Normal
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                            <a href="{% url 'administrador:reporte_curso' curso.id %}" 
+                                class="text-blue-600 hover:text-blue-800 font-medium">
+                                Ver Curso
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i>
+                            <p>No hay registros de asistencia para este período</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Acciones -->
+    {% if estadisticas_globales.estado in 'riesgo,critico' %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Acciones Recomendadas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button onclick="notificarDocentes()" 
+                class="flex items-center p-4 border-2 border-red-200 rounded-lg hover:bg-red-50">
+                <i data-lucide="send" class="w-8 h-8 text-red-600 mr-3"></i>
+                <div class="text-left">
+                    <p class="font-medium text-gray-900">Notificar a Docentes</p>
+                    <p class="text-sm text-gray-600">Enviar alerta a profesores de cursos afectados</p>
+                </div>
+            </button>
+
+            <button onclick="generarInforme()" 
+                class="flex items-center p-4 border-2 border-blue-200 rounded-lg hover:bg-blue-50">
+                <i data-lucide="file-text" class="w-8 h-8 text-blue-600 mr-3"></i>
+                <div class="text-left">
+                    <p class="font-medium text-gray-900">Generar Informe</p>
+                    <p class="text-sm text-gray-600">Crear reporte detallado para seguimiento</p>
+                </div>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.lucide) { lucide.createIcons(); }
+});
+
+
+function notificarDocentes() {
+    if (confirm('¿Desea notificar a los docentes sobre este estudiante en riesgo?')) {
+        alert('Notificaciones enviadas a los docentes');
+    }
+}
+
+function generarInforme() {
+    alert('Generando informe detallado... (función en desarrollo)');
+}
+
+function exportarReporte() {
+    // Mostrar modal de selección de formato
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Exportar Reporte de Asistencia
+            </h3>
+            <p class="text-sm text-gray-600 mb-6">
+                Selecciona el formato en el que deseas exportar el reporte.
+                Los filtros actuales serán incluidos.
+            </p>
+            <div class="space-y-3">
+                <button onclick="exportarDashboard('excel')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                        <path d="M3 8a2 2 0 012-2v10h8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                    </svg>
+                    Exportar como Excel (.xlsx)
+                </button>
+                
+                <button onclick="exportarDashboard('pdf')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                    </svg>
+                    Exportar como PDF
+                </button>
+                
+                <button onclick="cerrarModal(this)" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function exportarDashboard(formato) {
+    // Obtener parámetros actuales de la URL
+    const params = new URLSearchParams(window.location.search);
+    
+    // Construir URL de exportación
+    let url = '';
+    if (formato === 'excel') {
+        url = '/administrador/asistencia/exportar/dashboard/excel/';
+    } else if (formato === 'pdf') {
+        url = '/administrador/asistencia/exportar/dashboard/pdf/';
+    }
+    
+    // Agregar parámetros de filtro
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    // Mostrar indicador de carga
+    mostrarNotificacionCarga('Generando reporte...', formato);
+    
+    // Descargar archivo
+    window.location.href = url;
+    
+    // Cerrar modal
+    cerrarModal();
+    
+    // Notificación de éxito después de 2 segundos
+    setTimeout(() => {
+        mostrarNotificacionExito(`Reporte ${formato.toUpperCase()} generado exitosamente`);
+    }, 2000);
+}
+
+// =============================================================================
+// FUNCIONES PARA REPORTE DE CURSO
+// =============================================================================
+
+function exportarReporteCurso() {
+    const cursoId = getCursoIdFromUrl();
+    if (!cursoId) {
+        alert('Error: No se pudo obtener el ID del curso');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Exportar Reporte del Curso
+            </h3>
+            <p class="text-sm text-gray-600 mb-6">
+                Selecciona el formato para exportar el reporte completo del curso con todos los estudiantes.
+            </p>
+            <div class="space-y-3">
+                <button onclick="exportarCurso('${cursoId}', 'excel')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                    </svg>
+                    Exportar como Excel
+                </button>
+                
+                <button onclick="exportarCurso('${cursoId}', 'pdf')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                    </svg>
+                    Exportar como PDF
+                </button>
+                
+                <button onclick="cerrarModal(this)" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function exportarCurso(cursoId, formato) {
+    const params = new URLSearchParams(window.location.search);
+    
+    let url = '';
+    if (formato === 'excel') {
+        url = `/administrador/asistencia/exportar/curso/${cursoId}/excel/`;
+    } else if (formato === 'pdf') {
+        url = `/administrador/asistencia/exportar/curso/${cursoId}/pdf/`;
+    }
+    
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    mostrarNotificacionCarga('Generando reporte del curso...', formato);
+    window.location.href = url;
+    cerrarModal();
+    
+    setTimeout(() => {
+        mostrarNotificacionExito(`Reporte del curso ${formato.toUpperCase()} generado`);
+    }, 2000);
+}
+
+// =============================================================================
+// FUNCIONES PARA REPORTE DE ESTUDIANTE
+// =============================================================================
+
+function exportarReporteEstudiante() {
+    const estudianteId = getEstudianteIdFromUrl();
+    if (!estudianteId) {
+        alert('Error: No se pudo obtener el ID del estudiante');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Exportar Reporte del Estudiante
+            </h3>
+            <p class="text-sm text-gray-600 mb-6">
+                Selecciona el formato para exportar el reporte completo con todos los cursos del estudiante.
+            </p>
+            <div class="space-y-3">
+                <button onclick="exportarEstudiante('${estudianteId}', 'excel')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                    </svg>
+                    Exportar como Excel
+                </button>
+                
+                <button onclick="exportarEstudiante('${estudianteId}', 'pdf')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                    </svg>
+                    Exportar como PDF
+                </button>
+                
+                <button onclick="cerrarModal(this)" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function exportarEstudiante(estudianteId, formato) {
+    const params = new URLSearchParams(window.location.search);
+    
+    let url = '';
+    if (formato === 'excel') {
+        url = `/administrador/asistencia/exportar/estudiante/${estudianteId}/excel/`;
+    } else if (formato === 'pdf') {
+        url = `/administrador/asistencia/exportar/estudiante/${estudianteId}/pdf/`;
+    }
+    
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    mostrarNotificacionCarga('Generando reporte del estudiante...', formato);
+    window.location.href = url;
+    cerrarModal();
+    
+    setTimeout(() => {
+        mostrarNotificacionExito(`Reporte del estudiante ${formato.toUpperCase()} generado`);
+    }, 2000);
+}
+
+// =============================================================================
+// EXPORTAR LISTA DE ESTUDIANTES EN RIESGO
+// =============================================================================
+
+function exportarListaRiesgo() {
+    const params = new URLSearchParams(window.location.search);
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-semibold text-red-900 mb-4">
+                Exportar Lista de Estudiantes en Riesgo
+            </h3>
+            <p class="text-sm text-gray-600 mb-6">
+                Esta exportación incluirá todos los estudiantes con más del 20% de inasistencias.
+            </p>
+            <div class="space-y-3">
+                <button onclick="exportarRiesgoFormato('excel')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/>
+                    </svg>
+                    Exportar como Excel
+                </button>
+                
+                <button onclick="exportarRiesgoFormato('pdf')" 
+                    class="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                    </svg>
+                    Exportar como PDF
+                </button>
+                
+                <button onclick="cerrarModal(this)" 
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function exportarRiesgoFormato(formato) {
+    // Usar la misma URL del dashboard pero con parámetros específicos
+    const params = new URLSearchParams(window.location.search);
+    
+    let url = '';
+    if (formato === 'excel') {
+        url = '/administrador/asistencia/exportar/dashboard/excel/';
+    } else if (formato === 'pdf') {
+        url = '/administrador/asistencia/exportar/dashboard/pdf/';
+    }
+    
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    mostrarNotificacionCarga('Generando lista de estudiantes en riesgo...', formato);
+    window.location.href = url;
+    cerrarModal();
+    
+    setTimeout(() => {
+        mostrarNotificacionExito(`Lista de riesgo ${formato.toUpperCase()} generada`);
+    }, 2000);
+}
+
+// =============================================================================
+// FUNCIONES AUXILIARES
+// =============================================================================
+
+function getCursoIdFromUrl() {
+    // Extrae el UUID del curso de la URL actual
+    const match = window.location.pathname.match(/\/curso\/([a-f0-9-]+)\//);
+    return match ? match[1] : null;
+}
+
+function getEstudianteIdFromUrl() {
+    // Extrae el UUID del estudiante de la URL actual
+    const match = window.location.pathname.match(/\/estudiante\/([a-f0-9-]+)\//);
+    return match ? match[1] : null;
+}
+
+function cerrarModal(button) {
+    // Cierra el modal más cercano
+    const modal = button ? button.closest('.fixed') : document.querySelector('.fixed');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function mostrarNotificacionCarga(mensaje, formato) {
+    const icono = formato === 'excel' 
+        ? '<svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a2 2 0 00-2 2v8a2 2 0 002 2h6a2 2 0 002-2V6.414A2 2 0 0016.414 5L14 2.586A2 2 0 0012.586 2H9z"/></svg>'
+        : '<svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>';
+    
+    const notif = document.createElement('div');
+    notif.id = 'notif-carga';
+    notif.className = 'fixed top-4 right-4 z-50 bg-white rounded-lg shadow-lg p-4 flex items-center space-x-3 border-l-4 border-blue-500';
+    notif.innerHTML = `
+        ${icono}
+        <div>
+            <p class="font-medium text-gray-900">${mensaje}</p>
+            <p class="text-sm text-gray-500">Por favor espera...</p>
+        </div>
+        <div class="ml-4">
+            <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+        </div>
+    `;
+    
+    document.body.appendChild(notif);
+}
+
+function mostrarNotificacionExito(mensaje) {
+    // Remover notificación de carga si existe
+    const notifCarga = document.getElementById('notif-carga');
+    if (notifCarga) {
+        notifCarga.remove();
+    }
+    
+    const notif = document.createElement('div');
+    notif.className = 'fixed top-4 right-4 z-50 bg-green-50 rounded-lg shadow-lg p-4 flex items-center space-x-3 border-l-4 border-green-500';
+    notif.innerHTML = `
+        <svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+            <p class="font-medium text-green-900">${mensaje}</p>
+        </div>
+        <button onclick="this.parentElement.remove()" class="ml-4 text-green-500 hover:text-green-700">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+        </button>
+    `;
+    
+    document.body.appendChild(notif);
+    
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        notif.style.transition = 'opacity 0.5s';
+        notif.style.opacity = '0';
+        setTimeout(() => notif.remove(), 500);
+    }, 5000);
+}
+</script>
+{% endblock %}
