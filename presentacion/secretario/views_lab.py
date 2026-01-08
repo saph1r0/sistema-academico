@@ -176,12 +176,41 @@ class SecretarioLaboratoriosView(SecretarioRequiredMixin, TemplateView):
                 g['teacher_conflicto'] = not any(
                     d['id'] == g['teacher_id'] for d in disponibles
                 )
+        # =========================
+        # ESTADÍSTICAS RÁPIDAS (LABS)
+        # =========================
+
+        ambientes_fisicos = set()
+        capacidad_total = 0
+        ocupacion_total = 0
+
+        for g in resultado:
+            # aulas físicas únicas
+            if g.get('codigo_aula_fisica'):
+                ambientes_fisicos.add(g['codigo_aula_fisica'])
+
+            # capacidad y ocupación
+            if g.get('capacidad_grupo'):
+                capacidad_total += g['capacidad_grupo']
+
+            if g.get('matriculados'):
+                ocupacion_total += g['matriculados']
+
+        total_ambientes_fisicos = len(ambientes_fisicos)
+
+        ocupacion_promedio = 0
+        if capacidad_total > 0:
+            ocupacion_promedio = round((ocupacion_total / capacidad_total) * 100)
+        context.update({
+            'total_ambientes_fisicos': total_ambientes_fisicos,
+            'ocupacion_promedio': ocupacion_promedio,
+        })
 
         context['grupos_lab_resumidos'] = resultado
         context['periodo_activo'] = periodo_activo
         context['cursos_disponibles'] = servicio_matricula_laboratorio.obtener_cursos_con_laboratorio()
         return context
-
+    
 @login_required
 @require_POST
 def cargar_horarios_laboratorios(request):
